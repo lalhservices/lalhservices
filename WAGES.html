@@ -683,10 +683,11 @@ function renderBody() {
     });
     {
       const parts=[];
-      if(_tp>0) parts.push('$'+_tp.toFixed(0)+'P');
-      if(_tm>0) parts.push('$'+_tm.toFixed(0)+'M');
-      if(_tf>0) parts.push('$'+_tf.toFixed(0)+'F');
-      h += `<div class="park-subtotal" id="ext_sub_${pid}" style="display:${_te>0?'block':'none'}">${parts.length?parts.join(' + ')+' = $'+_te.toFixed(0):''}</div>`;
+      if(_tp>0) parts.push('$'+Math.round(_tp)+'P');
+      if(_tm>0) parts.push('$'+Math.round(_tm)+'M');
+      if(_tf>0) parts.push('$'+Math.round(_tf)+'F');
+      const subLine = parts.length ? parts.join(' + ') + ' =' : '';
+      h += `<div class="park-subtotal" id="ext_sub_${pid}" style="display:${_te>0?'block':'none'};font-size:9px;line-height:1.5;">${subLine}<br><strong>$${Math.round(_te)}</strong></div>`;
     }
     h += `</div></td>`;
 
