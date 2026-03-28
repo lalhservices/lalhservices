@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jobs Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #dce5ef;
+    --bg2:       #e8eef5;
+    --surface:   #f0f4f8;
+    --white:     #ffffff;
+    --border:    #c8d4e0;
+    --border2:   #d8e2ec;
+    --text:      #0f1a20;
+    --text2:     #1e3040;
+    --text3:     #5a6a7a;
+    --accent:    #2e6da4;
+    --accent2:   #1a4f7a;
+    --green:     #2a7a56;
+    --green-bg:  #e8f5ee;
+    --green-bd:  #b8deca;
+    --orange:    #b56020;
+    --font:      'JetBrains Mono', 'Courier New', monospace;
+    --font-head: 'Space Grotesk', sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+  input, textarea { background: transparent; border: none; outline: none; color: var(--text); font-family: var(--font); width: 100%; resize: none; }
+  input::placeholder, textarea::placeholder { color: var(--border); }
+  input:disabled { opacity: 0.25; }
+  button { cursor: pointer; font-family: var(--font); }
+  ::-webkit-scrollbar { height: 5px; width: 5px; background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Header ── */
+  #header {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 1px 6px rgba(30,60,100,0.07);
+  }
+  #header h1 { font-family: var(--font-head); font-size: 21px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+  #header h1 span { color: var(--accent); }
+  #week-label { font-size: 10px; color: var(--text2); letter-spacing: 0.07em; font-weight: 500; }
+  .tab-btn {
+    padding: 6px 18px; border-radius: 5px; border: 1px solid var(--border2);
+    background: var(--surface); color: var(--text2); font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  #new-week-btn {
+    background: var(--accent); border: 1px solid var(--accent2); color: #fff;
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer;
+    font-family: var(--font); font-weight: 600;
+    box-shadow: 0 1px 4px rgba(46,109,164,0.2); transition: all 0.15s;
+  }
+  #new-week-btn:hover { background: var(--accent2); }
+
+  /* ── Main table ── */
+  #jobs-wrap { padding: 20px 28px; overflow-x: auto; }
+  #jobs-table {
+    border-collapse: collapse; min-width: 980px; width: 100%;
+    background: var(--white); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(30,60,100,0.09);
+  }
+  #jobs-table thead tr { background: var(--surface); border-bottom: 2px solid var(--border); }
+  #jobs-table th {
+    padding: 9px 6px 11px; color: var(--text2); font-size: 9px; letter-spacing: 0.12em;
+    font-weight: 700; text-align: center; border-left: 1px solid var(--border2);
+    text-transform: uppercase;
+  }
+  #jobs-table th:first-child { text-align: left; padding-left: 14px; border-left: none; }
+  #jobs-table th:last-child  { text-align: right; padding-right: 14px; }
+  .th-day-total { font-family: var(--font-head); font-size: 13px; font-weight: 700; margin-bottom: 2px; color: var(--border); }
+  .th-day-total.has-hours { color: var(--accent); }
+
+  /* ── Job rows ── */
+  .job-row { border-top: 1px solid var(--border2); }
+  .job-cell { padding: 8px 14px; vertical-align: top; background: var(--surface); min-width: 160px; }
+  .job-inner { display: flex; align-items: flex-start; gap: 8px; }
+  .job-bar { width: 3px; min-height: 50px; border-radius: 2px; flex-shrink: 0; margin-top: 2px; }
+  .job-fields { flex: 1; min-width: 0; }
+  .job-name-input { font-size: 13px; font-weight: 700; color: var(--text); width: 100%; }
+  .job-rate-row { display: flex; align-items: center; gap: 3px; margin-top: 4px; }
+  .rate-sym { color: var(--text3); font-size: 10px; flex-shrink: 0; }
+  .rate-input { font-size: 11px; font-weight: 600; width: 42px; border-bottom: 1px solid var(--border2); }
+  .remove-btn { background: none; border: none; color: var(--border); font-size: 18px; padding: 0 3px; line-height: 1; margin-top: 2px; }
+  .remove-btn:hover { color: #c0362a; }
+
+  /* ── Day cells ── */
+  .day-cell { padding: 4px; vertical-align: top; border-left: 1px solid var(--border2); min-width: 160px; }
+  .day-inner {
+    border: 1px solid var(--border2); border-radius: 6px; padding: 7px 9px; min-height: 100px;
+    background: var(--white); position: relative;
+  }
+  .day-inner.has-data { background: var(--surface); }
+
+  /* Worker entries inside a day cell */
+  .worker-list { margin-bottom: 6px; }
+  .worker-entry {
+    border-bottom: 1px dashed var(--border2); padding-bottom: 5px; margin-bottom: 5px;
+  }
+  .worker-entry:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+  .worker-name-row { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+  .worker-name-inp {
+    font-size: 10px; font-weight: 600; color: var(--text); border-bottom: 1px solid transparent;
+    transition: border-color 0.1s; flex: 1;
+  }
+  .worker-name-inp:focus { border-bottom-color: var(--accent); }
+  .worker-name-inp::placeholder { color: var(--border); font-weight: 400; }
+  .worker-times-row { display: flex; align-items: center; gap: 4px; margin-bottom: 1px; }
+  .wt-sym { font-size: 7px; color: var(--border); flex-shrink: 0; }
+  .worker-time-inp {
+    font-size: 10px; color: var(--text2); font-weight: 500; border-bottom: 1px solid transparent;
+    transition: border-color 0.1s;
+  }
+  .worker-time-inp:focus { border-bottom-color: var(--accent); }
+  .worker-time-inp.filled { color: var(--text); font-weight: 600; }
+  .worker-time-inp.error { color: #c0362a !important; }
+  .worker-hrs-badge {
+    font-family: var(--font-head); font-size: 11px; font-weight: 700;
+    color: var(--border); white-space: nowrap;
+  }
+  .worker-hrs-badge.has-hrs { color: var(--accent); }
+  .del-worker-btn {
+    background: none; border: none; color: var(--border); font-size: 12px;
+    padding: 0; line-height: 1; flex-shrink: 0;
+  }
+  .del-worker-btn:hover { color: #c0362a; }
+
+  /* Cell footer — totals + add worker + parking/materials */
+  .cell-footer { border-top: 1px solid var(--border2); margin-top: 5px; padding-top: 5px; }
+  .cell-total-hrs {
+    font-family: var(--font-head); font-size: 13px; font-weight: 800;
+    color: var(--accent); margin-bottom: 4px;
+  }
+  .cell-extra-row { display: flex; align-items: center; gap: 3px; margin-bottom: 2px; }
+  .cell-extra-lbl { font-size: 8px; color: var(--text3); flex-shrink: 0; width: 16px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .cell-extra-sym { font-size: 9px; color: var(--text3); flex-shrink: 0; }
+  .cell-extra-inp { font-size: 10px; color: var(--text2); font-weight: 500; }
+  .cell-extra-inp.filled { color: var(--text); font-weight: 600; }
+  .add-worker-btn {
+    display: block; width: 100%; margin-top: 5px; padding: 3px 0;
+    background: none; border: 1px dashed var(--border2); border-radius: 3px;
+    font-size: 8px; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.12s;
+  }
+  .add-worker-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Total cell ── */
+  .total-cell { text-align: right; padding: 8px 14px 8px 10px; vertical-align: top; background: var(--surface); min-width: 110px; }
+  .total-hrs-lbl { font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .total-wages-lbl { font-size: 10px; color: var(--text2); margin-top: 3px; font-weight: 500; }
+  .total-extras-lbl { font-size: 10px; color: var(--green); margin-top: 2px; font-weight: 600; }
+  .total-grand-lbl { font-family: var(--font-head); font-size: 14px; font-weight: 800; color: var(--text); margin-top: 6px; padding-top: 6px; border-top: 2px solid var(--border); white-space: nowrap; }
+
+  /* ── Footer ── */
+  #jobs-footer { display: flex; justify-content: space-between; align-items: center; padding: 14px 28px 28px; flex-wrap: wrap; gap: 12px; }
+  #add-job-btn {
+    background: var(--white); border: 1px dashed var(--border); color: var(--text3);
+    font-size: 10px; padding: 9px 18px; border-radius: 5px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  #add-job-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #delete-week-btn {
+    background: none; border: 1px solid #e0c0c0; color: #c0362a;
+    font-size: 10px; padding: 9px 16px; border-radius: 5px;
+    letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font);
+  }
+  #grand-total-box {
+    text-align: right; background: var(--white); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 20px; box-shadow: 0 2px 6px rgba(30,60,100,0.08);
+  }
+  #grand-total-label { font-size: 9px; color: var(--text3); letter-spacing: 0.12em; margin-bottom: 3px; text-transform: uppercase; }
+  #grand-total-hours { font-family: var(--font-head); font-size: 22px; font-weight: 800; color: var(--accent); }
+  #grand-total-pay { font-size: 14px; color: var(--text); font-weight: 600; margin-top: 2px; }
+
+  /* ── Summary tab ── */
+  #summary-wrap { padding: 24px 28px; }
+  #summary-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .summary-card {
+    background: var(--white); border-radius: 10px; padding: 16px 18px;
+    border: 1px solid var(--border2); box-shadow: 0 2px 6px rgba(30,60,100,0.07);
+    border-top-width: 3px;
+  }
+  .summary-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .summary-lbl { font-size: 8px; color: var(--text3); letter-spacing: 0.1em; margin-bottom: 2px; text-transform: uppercase; }
+  .summary-val { font-family: var(--font-head); font-size: 18px; font-weight: 700; }
+  .summary-extra-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 8px; background: var(--green-bg); border-radius: 4px;
+    border: 1px solid var(--green-bd); margin-bottom: 6px;
+  }
+  .summary-extra-lbl { font-size: 9px; color: var(--green); font-weight: 600; letter-spacing: 0.05em; }
+  .summary-extra-val { font-size: 11px; color: var(--green); font-weight: 700; }
+  .summary-total-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 10px; border-radius: 5px;
+  }
+  .summary-total-lbl { font-size: 9px; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; }
+  .summary-total-val { font-family: var(--font-head); font-size: 16px; font-weight: 800; color: var(--text); }
+  .summary-bars { display: flex; gap: 4px; margin-top: 10px; }
+  .summary-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--border2); }
+  .summary-meta { font-size: 9px; color: var(--text3); margin-top: 5px; font-weight: 500; }
+  #summary-footer {
+    margin-top: 14px; display: flex; justify-content: flex-end; gap: 32px;
+    background: var(--white); border: 1px solid var(--border2); border-radius: 10px;
+    padding: 18px 24px; box-shadow: 0 2px 6px rgba(30,60,100,0.07);
+  }
+  .sf-label { font-size: 9px; color: var(--text3); letter-spacing: 0.1em; margin-bottom: 3px; text-transform: uppercase; }
+  .sf-hours { font-family: var(--font-head); font-size: 28px; color: var(--accent); font-weight: 800; }
+  .sf-pay   { font-family: var(--font-head); font-size: 28px; color: var(--text); font-weight: 800; }
+
+  /* ── Confirm modal ── */
+  #confirm-modal {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(15,26,32,0.45); backdrop-filter: blur(3px);
+    align-items: center; justify-content: center;
+  }
+  #confirm-modal.open { display: flex; }
+  #confirm-box {
+    background: var(--white); border-radius: 12px; padding: 26px 28px;
+    width: 90%; max-width: 380px; box-shadow: 0 8px 32px rgba(15,26,32,0.2);
+    border: 1px solid var(--border);
+  }
+  #confirm-box h2 { font-family: var(--font-head); font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  #confirm-box p  { font-size: 11px; color: var(--text3); margin-bottom: 20px; line-height: 1.6; }
+  #confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .confirm-btn { padding: 8px 18px; border-radius: 5px; font-family: var(--font); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+  .confirm-cancel { background: var(--surface); border: 1px solid var(--border2); color: var(--text2); }
+  .confirm-ok { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+  .confirm-ok:hover { background: var(--accent2); }
+  .confirm-danger { background: #c0362a !important; border-color: #c0362a !important; color: #fff; }
+  .confirm-danger:hover { background: #a02020 !important; }
+
+  /* ── Share modal ── */
+  #share-modal {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(15,26,32,0.45); backdrop-filter: blur(3px);
+    align-items: center; justify-content: center;
+  }
+  #share-modal.open { display: flex; }
+  #share-box {
+    background: var(--white); border-radius: 12px; padding: 24px 26px;
+    width: 90%; max-width: 540px; box-shadow: 0 8px 32px rgba(15,26,32,0.2);
+    border: 1px solid var(--border);
+  }
+  #share-box h2 { font-family: var(--font-head); font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  #share-box p  { font-size: 10px; color: var(--text3); margin-bottom: 14px; }
+  #share-textarea {
+    width: 100%; height: 280px; border: 1px solid var(--border2); border-radius: 7px;
+    padding: 12px 14px; font-family: var(--font); font-size: 11px; color: var(--text);
+    background: var(--surface); resize: none; outline: none; line-height: 1.7;
+  }
+  #share-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+  .share-btn-style {
+    padding: 8px 18px; border-radius: 5px; font-family: var(--font); font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid var(--border2);
+    background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s;
+  }
+  .share-btn-style.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .share-btn-style.success { background: var(--green); border-color: var(--green); color: #fff; }
+
+  /* ── Save badge ── */
+  #save-badge {
+    position: fixed; bottom: 18px; right: 18px;
+    background: var(--green); color: #fff; font-size: 10px; padding: 7px 14px;
+    border-radius: 20px; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; letter-spacing: 0.07em; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  #save-badge.show { opacity: 1; }
+
+  /* ── Toolbar buttons ── */
+  .tool-btn {
+    background: var(--white); border: 1px solid var(--border); color: var(--text2);
+    font-size: 10px; padding: 9px 18px; border-radius: 5px;
+    letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font); transition: all 0.15s;
+  }
+  .tool-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #share-btn { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 2px 6px rgba(46,109,164,0.25); }
+  #share-btn:hover { background: var(--accent2); }
+
+
+  /* ── Read Only Mode ── */
+  body.read-only input, body.read-only button:not(#read-only-badge) { pointer-events: none !important; opacity: 0.8; }
+  body.read-only .add-worker-btn, body.read-only .del-worker-btn,
+  body.read-only #add-job-btn, body.read-only #delete-week-btn,
+  body.read-only #add-person-btn, body.read-only #share-btn { display: none !important; }
+  #read-only-badge {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+    background: #2e6da4; color: #fff; text-align: center;
+    font-size: 11px; padding: 6px; letter-spacing: 0.1em;
+    font-family: 'JetBrains Mono', monospace; text-transform: uppercase;
+    display: none;
+  }
+  body.read-only #read-only-badge { display: block; }
+  body.read-only #header { margin-top: 32px; }
+
+
+  /* ── Invoice ── */
+  #tab-invoice { display: none; }
+  #tab-invoice.active { display: block; }
+  #invoice-wrap {
+    padding: 20px 28px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  #invoice-body {
+    background: #fff;
+    border-radius: 10px;
+    padding: 36px 40px;
+    box-shadow: 0 2px 8px rgba(30,60,100,0.09);
+    font-family: var(--font);
+  }
+  .inv-logo { font-family: var(--font-head); font-size: 28px; font-weight: 800; color: #1a3a6a; margin-bottom: 6px; }
+  .inv-meta { font-size: 11px; color: var(--text2); line-height: 1.8; margin-bottom: 20px; }
+  .inv-meta strong { color: var(--text); }
+  .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+  .inv-table thead tr { background: #1a3a6a; color: #fff; }
+  .inv-table thead th { padding: 9px 12px; text-align: left; font-weight: 600; letter-spacing: 0.06em; font-size: 10px; }
+  .inv-table thead th:not(:first-child) { text-align: right; }
+  .inv-table .day-header td { background: #e8eef8; color: #1a3a6a; font-weight: 700; font-size: 11px; padding: 7px 12px; border-top: 1px solid #c8d4e8; }
+  .inv-table .job-row td { padding: 6px 12px; border-bottom: 1px solid #f0f4f8; color: var(--text2); }
+  .inv-table .job-row td:not(:first-child) { text-align: right; }
+  .inv-table .job-row:hover td { background: #f8fafc; }
+  .inv-table .nil-row td { padding: 6px 12px; color: #aaa; font-style: italic; border-bottom: 1px solid #f0f4f8; }
+  .inv-table .grand-row td { background: #1a3a6a; color: #fff; font-weight: 700; padding: 10px 12px; font-size: 11px; }
+  .inv-table .grand-row td:not(:first-child) { text-align: right; }
+  .inv-totals { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; border: 1px solid #c8d4e0; border-radius: 6px; overflow: hidden; }
+  .inv-totals th { background: #f0f4f8; padding: 8px 14px; text-align: center; font-size: 10px; color: var(--text2); letter-spacing: 0.06em; border-right: 1px solid #c8d4e0; }
+  .inv-totals td { padding: 10px 14px; text-align: center; font-weight: 700; font-size: 13px; color: var(--text); border-right: 1px solid #c8d4e0; font-family: var(--font-head); }
+  .inv-gst-box { margin-left: auto; width: 280px; border: 1px solid #c8d4e0; border-radius: 6px; overflow: hidden; margin-bottom: 24px; }
+  .inv-gst-row { display: flex; justify-content: space-between; padding: 8px 14px; font-size: 11px; border-bottom: 1px solid #c8d4e0; }
+  .inv-gst-row:last-child { border-bottom: none; background: #fff0f0; font-weight: 800; font-size: 13px; color: #c0362a; font-family: var(--font-head); }
+  .inv-gst-row.gst-line { color: var(--text2); }
+  .inv-footer-note { font-size: 10px; color: var(--text3); border-top: 1px solid var(--border2); padding-top: 14px; line-height: 1.8; }
+  .inv-print-btn {
+    background: var(--accent); border: none; color: #fff;
+    font-size: 10px; padding: 9px 20px; border-radius: 5px;
+    letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font);
+    cursor: pointer; margin-bottom: 16px; display: block;
+  }
+  @media print {
+    #tab-invoice .inv-print-btn { display: none !important; }
+  }
+
+  /* ── Print ── */
+  @media print {
+    body { background: #fff !important; }
+    #header { position: static !important; box-shadow: none !important; }
+    #jobs-footer, #tab-summary, .tab-btn, #share-btn, #save-badge,
+    #share-modal, #confirm-modal, #new-week-btn, .no-print,
+    .add-worker-btn, .del-worker-btn { display: none !important; }
+    #tab-jobs { display: block !important; }
+    #jobs-wrap { padding: 0 !important; overflow: visible !important; }
+    #jobs-table { box-shadow: none !important; border-radius: 0 !important; min-width: unset !important; width: 100% !important; }
+    .day-inner { min-height: unset !important; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div id="read-only-badge">👁 View Only — Contact Aman to make changes</div>
+
+<div id="header">
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    <h1>JOBS <span>/ WK</span></h1>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+      <span style="font-size:10px;color:var(--text3);">Rate:</span>
+      <span style="font-size:10px;color:var(--text3);">$</span>
+      <input id="global-rate" type="number" min="0" step="1" value="40"
+        oninput="setGlobalRate(this.value)"
+        style="font-size:13px;font-weight:700;color:var(--accent);width:44px;border-bottom:1px solid var(--border2);outline:none;background:transparent;font-family:var(--font);">
+      <span style="font-size:10px;color:var(--text3);">/hr — all jobs</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="changeWeek(-1)" title="Previous week" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);width:24px;height:24px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;">&#8592;</button>
+      <div id="week-label"></div>
+      <button onclick="changeWeek(1)" title="Next week" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);width:24px;height:24px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;">&#8594;</button>
+      <button id="new-week-btn" onclick="confirmNextWeek()">&#8594; Next Week</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="tool-btn no-print" onclick="printJobs()">&#10515; PDF</button>
+    <button class="tool-btn no-print" id="share-btn" onclick="openShare()">&#9654; Copy Summary</button>
+    <button class="tab-btn active" onclick="switchTab('jobs',this)">Jobs</button>
+    <button class="tab-btn" onclick="switchTab('summary',this)">Summary</button>
+    <button class="tab-btn" onclick="switchTab('invoice',this)">Invoice</button>
+  </div>
+</div>
+
+<div id="tab-jobs" class="tab-content active">
+  <div id="jobs-wrap">
+    <table id="jobs-table">
+      <thead id="jobs-head"></thead>
+      <tbody id="jobs-body"></tbody>
+    </table>
+  </div>
+  <div id="jobs-footer">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="add-job-btn" onclick="addJob()">+ Add Job</button>
+      <button id="delete-week-btn" onclick="confirmDeleteWeek()">✕ Delete Week</button>
+    </div>
+    <div id="grand-total-box">
+      <div id="grand-total-label">Grand Total</div>
+      <div id="grand-total-hours">0h</div>
+      <div id="grand-total-pay">$0.00</div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-summary" class="tab-content">
+  <div id="summary-wrap">
+    <div style="display:flex;justify-content:flex-end;padding:0 0 14px;">
+      <button class="tool-btn no-print" onclick="printSummary()">&#10515; Save as PDF</button>
+    </div>
+    <div id="summary-cards"></div>
+    <div id="summary-footer">
+      <div><div class="sf-label">Total Hours</div><div class="sf-hours" id="sf-hours">0h</div></div>
+      <div><div class="sf-label">Total Value</div><div class="sf-pay" id="sf-pay">$0.00</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-invoice" class="tab-content">
+  <div id="invoice-wrap">
+    <button class="inv-print-btn no-print" onclick="printInvoice()">&#10515; Download Invoice PDF</button>
+    <div id="invoice-body">
+      <!-- rendered by renderInvoice() -->
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div id="confirm-modal">
+  <div id="confirm-box">
+    <h2 id="confirm-title">Next week?</h2>
+    <p id="confirm-msg">Current week is saved. Use ← to come back anytime.</p>
+    <div id="confirm-actions">
+      <button class="confirm-btn confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-btn confirm-ok" id="confirm-ok-btn" onclick="doConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Share Modal -->
+<div id="share-modal" onclick="if(event.target===this)closeShare()">
+  <div id="share-box">
+    <h2>Week Summary</h2>
+    <p>Copy and paste into WhatsApp, email, or anywhere.</p>
+    <textarea id="share-textarea" readonly></textarea>
+    <div id="share-actions">
+      <button class="share-btn-style" onclick="closeShare()">Close</button>
+      <button class="share-btn-style primary" id="copy-btn" onclick="copySummary()">Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<div id="save-badge">✓ Saved</div>
+
+<script>
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const COLORS = ['#2e6da4','#c0622a','#27875a','#a03070','#6b3ab5','#b56020','#1a6a8e','#c0362a'];
+
+// ── State ──
+// Each cell "rowId|day" is fully independent: own jobName, own workers, own parking/materials
+// G.rows = list of row IDs (just for ordering)
+let G = { rows:[1,2], nextRow:3, globalRate:40, currentOffset:0 };
+let cells = {};
+// cells["1|Mon"] = { jobName:'', workers:[{name,from,to},...], parking:'', materials:'' }
+
+function ck(rid, day) { return rid+'|'+day; }
+
+function getCell(rid, day) {
+  const k = ck(rid,day);
+  if (!cells[k]) cells[k] = {jobName:'', workers:[], parking:'', materials:''};
+  return cells[k];
+}
+
+function newWorker() { return {name:'', from:'', to:''}; }
+
+// ── Storage ──
+function weekKey(offset) {
+  const now=new Date(), d=now.getDay();
+  const mon=new Date(now); mon.setDate(now.getDate()-d+(d===0?-6:1)+(offset||0)*7);
+  const yr=mon.getFullYear();
+  const wn=Math.ceil(((mon-new Date(yr,0,1))/86400000+new Date(yr,0,1).getDay()+1)/7);
+  return yr+'-W'+String(wn).padStart(2,'0');
+}
+
+let saveTimer;
+function scheduleSave_local() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try {
+      localStorage.setItem('jt2_global', JSON.stringify(G));
+      localStorage.setItem('jt2_wk_'+weekKey(G.currentOffset), JSON.stringify(cells));
+      const b=document.getElementById('save-badge');
+      b.classList.add('show'); setTimeout(()=>b.classList.remove('show'),1200);
+    } catch(e){}
+  }, 800);
+}
+
+function loadState() {
+  try { const s=localStorage.getItem('jt2_global'); if(s) G=JSON.parse(s); } catch(e){}
+  loadWeek();
+}
+function loadWeek() {
+  try {
+    const s=localStorage.getItem('jt2_wk_'+weekKey(G.currentOffset));
+    cells = s ? JSON.parse(s) : {};
+  } catch(e) { cells={}; }
+}
+
+// ── Time helpers ──
+function parseTime(raw) {
+  if(!raw) return null;
+  raw=raw.trim().toLowerCase().replace(/\s+/g,'');
+  if(!raw) return null;
+  if(/^\d{1,2}:\d{2}$/.test(raw)){const[h,m]=raw.split(':').map(Number);return(h<=23&&m<=59)?pad(h)+':'+pad(m):null;}
+  let h,m=0,pm=false,am=false;
+  if(raw.endsWith('pm')){pm=true;raw=raw.slice(0,-2);}else if(raw.endsWith('am')){am=true;raw=raw.slice(0,-2);}
+  if(raw.includes('.')){const p=raw.split('.');h=parseInt(p[0]);m=parseInt(p[1].padEnd(2,'0').slice(0,2));}
+  else if(raw.length<=2){h=parseInt(raw);m=0;}
+  else if(raw.length===3){h=parseInt(raw[0]);m=parseInt(raw.slice(1));}
+  else if(raw.length===4){h=parseInt(raw.slice(0,2));m=parseInt(raw.slice(2));}
+  else return null;
+  if(isNaN(h)||isNaN(m)||m>59) return null;
+  if(pm&&h!==12) h+=12; if(am&&h===12) h=0; if(!pm&&!am&&h<6) h+=12;
+  if(h>23) return null;
+  return pad(h)+':'+pad(m);
+}
+function pad(n){return n<10?'0'+n:''+n;}
+function toDisp(hhmm){if(!hhmm)return'';const[h,m]=hhmm.split(':').map(Number);return(h%12||12)+(m>0?'.'+pad(m):'')+(h<12?'am':'pm');}
+function calcH(from,to){if(!from||!to)return 0;const[fh,fm]=from.split(':').map(Number),[th,tm]=to.split(':').map(Number);let mins=(th*60+tm)-(fh*60+fm);if(mins<0)mins+=1440;return parseFloat((mins/60).toFixed(2));}
+function fmt(h){if(!h||h<=0)return null;const hh=Math.floor(h),mm=Math.round((h-hh)*60);return mm===0?hh+'h':hh+'h '+mm+'m';}
+
+// ── Calculations ──
+function cellHrs(rid,day){return(cells[ck(rid,day)]?.workers||[]).reduce((s,w)=>s+calcH(w.from,w.to),0);}
+function cellExtras(rid,day){const c=cells[ck(rid,day)];if(!c)return 0;return(parseFloat(c.parking)||0)+(parseFloat(c.materials)||0);}
+function rowHrs(rid){return DAYS.reduce((s,d)=>s+cellHrs(rid,d),0);}
+function rowWages(rid){return rowHrs(rid)*(G.globalRate||40);}
+function rowExtras(rid){return DAYS.reduce((s,d)=>s+cellExtras(rid,d),0);}
+function rowGrand(rid){return rowWages(rid)+rowExtras(rid);}
+function dayTotalHrs(day){return G.rows.reduce((s,rid)=>s+cellHrs(rid,day),0);}
+function allHrs(){return G.rows.reduce((s,rid)=>s+rowHrs(rid),0);}
+function allPay(){return G.rows.reduce((s,rid)=>s+rowGrand(rid),0);}
+
+// ── Week nav ──
+function weekDates(offset){
+  const now=new Date(),d=now.getDay();
+  const mon=new Date(now); mon.setDate(now.getDate()-d+(d===0?-6:1)+(offset||0)*7);
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  return{mon,sun};
+}
+function dayDates(offset){
+  const{mon}=weekDates(offset);
+  return DAYS.map((_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d.toLocaleDateString('en-AU',{day:'numeric',month:'numeric',year:'2-digit'});});
+}
+function updateWeekLabel(){
+  const{mon,sun}=weekDates(G.currentOffset);
+  const f=d=>d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+  const dot=localStorage.getItem('jt2_wk_'+weekKey(G.currentOffset))?'  ●':'';
+  document.getElementById('week-label').textContent='Week of '+f(mon)+' – '+f(sun)+dot;
+}
+function changeWeek(dir){
+  clearTimeout(saveTimer);
+  localStorage.setItem('jt2_global',JSON.stringify(G));
+  localStorage.setItem('jt2_wk_'+weekKey(G.currentOffset),JSON.stringify(cells));
+  G.currentOffset+=dir; loadWeek(); updateWeekLabel(); render();
+}
+
+let _ca=null;
+function confirmNextWeek(){_ca='next';document.getElementById('confirm-title').textContent='Go to next week?';document.getElementById('confirm-msg').textContent='Current week is saved. Use ← to come back anytime.';document.getElementById('confirm-ok-btn').textContent='Next Week';document.getElementById('confirm-ok-btn').className='confirm-btn confirm-ok';document.getElementById('confirm-modal').classList.add('open');}
+function confirmDeleteWeek(){_ca='delete';document.getElementById('confirm-title').textContent='Delete this week?';document.getElementById('confirm-msg').textContent='Permanently deletes all data for this week.';document.getElementById('confirm-ok-btn').textContent='Delete Week';document.getElementById('confirm-ok-btn').className='confirm-btn confirm-danger';document.getElementById('confirm-modal').classList.add('open');}
+function closeConfirm(){document.getElementById('confirm-modal').classList.remove('open');_ca=null;}
+function doConfirm(){
+  closeConfirm();
+  if(_ca==='next'){localStorage.setItem('jt2_global',JSON.stringify(G));localStorage.setItem('jt2_wk_'+weekKey(G.currentOffset),JSON.stringify(cells));G.currentOffset+=1;loadWeek();updateWeekLabel();render();cloudScheduleSave();}
+  else if(_ca==='delete'){localStorage.removeItem('jt2_wk_'+weekKey(G.currentOffset));cells={};render();updateWeekLabel();}
+}
+
+// ── Render ──
+function render(){renderHead();renderBody();renderFooter();}
+
+function renderHead(){
+  const dates=dayDates(G.currentOffset);
+  let h=`<tr><th style="width:0;padding:0;border:none;"></th>`;
+  DAYS.forEach((d,i)=>{
+    const dt=dayTotalHrs(d);
+    h+=`<th><div class="th-day-total${dt>0?' has-hours':''}">${dt>0?(fmt(dt)||'–'):'–'}</div><div style="font-size:10px;font-weight:700;letter-spacing:0.08em;">${d.toUpperCase()}</div><div style="font-size:9px;color:var(--text3);font-weight:400;margin-top:1px;">${dates[i]}</div></th>`;
+  });
+  h+=`</tr>`;
+  document.getElementById('jobs-head').innerHTML=h;
+}
+
+function renderBody(){
+  const rowColors = COLORS;
+  let h='';
+  G.rows.forEach((rid,ri)=>{
+    const color = rowColors[ri % rowColors.length];
+    const th=rowHrs(rid), tw=rowWages(rid), te=rowExtras(rid), gt=rowGrand(rid);
+    h+=`<tr class="job-row"><td style="width:0;padding:0;border:none;"></td>`;
+
+    DAYS.forEach(day=>{
+      const k=ck(rid,day);
+      // Read cell — each key is unique so no sharing possible
+      const c = cells[k] || {jobName:'', workers:[], parking:'', materials:''};
+      const workers = c.workers || [];
+      const dh = cellHrs(rid,day);
+      const hasData = c.jobName || workers.some(w=>w.name||w.from||w.to) || c.parking || c.materials;
+
+      h+=`<td class="day-cell">
+        <div class="day-inner${hasData?' has-data':''}">
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;border-bottom:1px solid ${color}30;padding-bottom:5px;">
+            <div style="width:3px;height:14px;border-radius:2px;background:${color};flex-shrink:0;"></div>
+            <input placeholder="Job name" value="${esc(c.jobName||'')}"
+              oninput="setCellJob(${rid},'${day}',this.value)"
+              style="font-size:10px;font-weight:700;color:${color};letter-spacing:0.04em;text-transform:uppercase;border:none;outline:none;background:transparent;font-family:var(--font);flex:1;min-width:0;">
+            ${day===DAYS[0]?`<button onclick="removeRow(${rid})" title="Remove row" style="background:none;border:none;color:var(--border);font-size:13px;padding:0 2px;line-height:1;cursor:pointer;flex-shrink:0;">×</button>`:''}
+          </div>
+          <div class="worker-list" id="wl_${rid}_${day}">`;
+
+      workers.forEach((w,wi)=>{
+        const wh=calcH(w.from,w.to);
+        h+=`<div class="worker-entry">
+            <div class="worker-name-row">
+              <input class="worker-name-inp" placeholder="Name" value="${esc(w.name||'')}"
+                oninput="setW(${rid},'${day}',${wi},'name',this.value)">
+              <span class="worker-hrs-badge${wh>0?' has-hrs':''}" id="whb_${rid}_${day}_${wi}">${wh>0?(fmt(wh)||''):'–'}</span>
+              <button class="del-worker-btn" onclick="delWorker(${rid},'${day}',${wi})">×</button>
+            </div>
+            <div class="worker-times-row">
+              <span class="wt-sym">▶</span>
+              <input class="worker-time-inp${w.from?' filled':''}" style="width:54px" placeholder="9am" value="${toDisp(w.from)}"
+                onblur="parseWT(this,${rid},'${day}',${wi},'from')"
+                onkeydown="if(event.key==='Enter'||event.key==='Tab')parseWT(this,${rid},'${day}',${wi},'from')">
+              <span class="wt-sym" style="margin:0 2px">–</span>
+              <input class="worker-time-inp${w.to?' filled':''}" style="width:54px" placeholder="5pm" value="${toDisp(w.to)}"
+                onblur="parseWT(this,${rid},'${day}',${wi},'to')"
+                onkeydown="if(event.key==='Enter'||event.key==='Tab')parseWT(this,${rid},'${day}',${wi},'to')">
+            </div>
+          </div>`;
+      });
+
+      const park=c.parking||'', mats=c.materials||'';
+      h+=`</div>
+          <button class="add-worker-btn" onclick="addWorker(${rid},'${day}')">+ worker</button>
+          <div class="cell-footer">
+            <div class="cell-total-hrs" id="cdh_${rid}_${day}">${dh>0?(fmt(dh)||''):'&nbsp;'}</div>
+            <div class="cell-extra-row">
+              <span class="cell-extra-lbl">P</span><span class="cell-extra-sym">$</span>
+              <input class="cell-extra-inp${park?' filled':''}" type="number" min="0" step="1" placeholder="park"
+                value="${park}" oninput="setExtra(${rid},'${day}','parking',this.value)">
+            </div>
+            <div class="cell-extra-row">
+              <span class="cell-extra-lbl">M</span><span class="cell-extra-sym">$</span>
+              <input class="cell-extra-inp${mats?' filled':''}" type="number" min="0" step="1" placeholder="matl"
+                value="${mats}" oninput="setExtra(${rid},'${day}','materials',this.value)">
+            </div>
+          </div>
+        </div>
+      </td>`;
+    });
+
+    h+=`</tr>`;
+  });
+  document.getElementById('jobs-body').innerHTML=h;
+}
+
+function renderFooter(){
+  document.getElementById('grand-total-hours').textContent=fmt(allHrs())||'0h';
+  document.getElementById('grand-total-pay').textContent='$'+allPay().toFixed(2);
+}
+
+function updateRowTotals(rid){ return; //
+  const th=rowHrs(rid),tw=rowWages(rid),te=rowExtras(rid),gt=rowGrand(rid);
+  const ri=G.rows.indexOf(rid);
+  const color=COLORS[ri%COLORS.length];
+  const eh=document.getElementById('trh_'+rid);if(eh){eh.textContent=fmt(th)||'–';}
+  const ew=document.getElementById('trw_'+rid);if(ew)ew.textContent='$'+tw.toFixed(2);
+  const ee=document.getElementById('tre_'+rid);if(ee){ee.textContent='+$'+te.toFixed(2)+' extras';ee.style.display=te>0?'block':'none';}
+  const eg=document.getElementById('trg_'+rid);if(eg)eg.textContent='$'+gt.toFixed(2);
+  renderHead();renderFooter();
+}
+
+// ── Actions ──
+
+// Set job name for ONE specific cell only
+function setCellJob(rid, day, value){
+  const k=ck(rid,day);
+  if(!cells[k]) cells[k]={jobName:'',workers:[],parking:'',materials:''};
+  cells[k].jobName = value;
+  cloudScheduleSave();
+}
+
+function setW(rid,day,wi,field,value){
+  const k=ck(rid,day);
+  if(!cells[k]) cells[k]={jobName:'',workers:[],parking:'',materials:''};
+  if(!cells[k].workers[wi]) cells[k].workers[wi]=newWorker();
+  cells[k].workers[wi][field]=value;
+  const w=cells[k].workers[wi];
+  const wh=calcH(w.from,w.to);
+  const badge=document.getElementById('whb_'+rid+'_'+day+'_'+wi);
+  if(badge){badge.textContent=wh>0?(fmt(wh)||''):'–';badge.className='worker-hrs-badge'+(wh>0?' has-hrs':'');}
+  const dh=cellHrs(rid,day);
+  const dEl=document.getElementById('cdh_'+rid+'_'+day);
+  if(dEl)dEl.innerHTML=dh>0?(fmt(dh)||''):'&nbsp;';
+  updateRowTotals(rid);
+  cloudScheduleSave();
+}
+
+function parseWT(inp,rid,day,wi,field){
+  const raw=inp.value.trim();
+  if(!raw){inp.value='';inp.classList.remove('filled','error');setW(rid,day,wi,field,'');return;}
+  const p=parseTime(raw);
+  if(p){inp.value=toDisp(p);inp.classList.add('filled');inp.classList.remove('error');setW(rid,day,wi,field,p);}
+  else inp.classList.add('error');
+}
+
+function addWorker(rid,day){
+  const k=ck(rid,day);
+  if(!cells[k]) cells[k]={jobName:'',workers:[],parking:'',materials:''};
+  cells[k].workers.push(newWorker());
+  render();cloudScheduleSave();
+}
+
+function delWorker(rid,day,wi){
+  const k=ck(rid,day);
+  if(!cells[k]) return;
+  cells[k].workers.splice(wi,1);
+  render();cloudScheduleSave();
+}
+
+function setExtra(rid,day,field,value){
+  const k=ck(rid,day);
+  if(!cells[k]) cells[k]={jobName:'',workers:[],parking:'',materials:''};
+  cells[k][field]=value;
+  updateRowTotals(rid);cloudScheduleSave();
+}
+
+function addJob(){
+  const rid=G.nextRow++;
+  G.rows.push(rid);
+  render();cloudScheduleSave();
+}
+
+function removeRow(rid){
+  G.rows=G.rows.filter(r=>r!==rid);
+  DAYS.forEach(d=>delete cells[ck(rid,d)]);
+  render();cloudScheduleSave();
+}
+
+function setGlobalRate(value){
+  G.globalRate=parseFloat(value)||0;
+  G.rows.forEach(rid=>updateRowTotals(rid));
+  renderFooter();cloudScheduleSave();
+}
+
+// ── Share / Print ──
+function buildText(){
+  const{mon,sun}=weekDates(G.currentOffset);
+  const f=d=>d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+  const lines=['JOBS — '+f(mon)+' to '+f(sun),'═'.repeat(38)];
+
+  // Group by day first, then all jobs under each day
+  DAYS.forEach((day,i)=>{
+    const dayDate=dayDates(G.currentOffset)[i];
+    const dayJobs=G.rows.filter(rid=>{
+      const c=cells[ck(rid,day)];
+      return c&&(c.jobName||c.workers?.length>0||c.parking||c.materials);
+    });
+    if(!dayJobs.length) return;
+
+    lines.push('');
+    lines.push(day.toUpperCase()+' '+dayDate);
+    lines.push('─'.repeat(30));
+
+    dayJobs.forEach(rid=>{
+      const c=cells[ck(rid,day)];
+      if(c.jobName) lines.push('  '+c.jobName.toUpperCase());
+      (c.workers||[]).forEach(w=>{
+        const wh=calcH(w.from,w.to);
+        lines.push('    '+(w.name||'Worker')+': '+toDisp(w.from)+' – '+toDisp(w.to)+'  ('+(fmt(wh)||'–')+')');
+      });
+      const dh=cellHrs(rid,day);
+      if(dh>0) lines.push('    Total: '+fmt(dh));
+      if(parseFloat(c.parking)>0) lines.push('    Parking: $'+parseFloat(c.parking).toFixed(0));
+      if(parseFloat(c.materials)>0) lines.push('    Materials: $'+parseFloat(c.materials).toFixed(0));
+      lines.push(''); // gap between jobs
+    });
+  });
+
+  lines.push('');lines.push('═'.repeat(38));
+  lines.push('TOTAL HOURS: '+(fmt(allHrs())||'0h'));
+  lines.push('TOTAL VALUE: $'+allPay().toFixed(2));
+  return lines.join('\n');
+}
+function openShare(){document.getElementById('share-textarea').value=buildText();document.getElementById('share-modal').classList.add('open');document.getElementById('copy-btn').textContent='Copy to Clipboard';document.getElementById('copy-btn').className='share-btn-style primary';}
+function closeShare(){document.getElementById('share-modal').classList.remove('open');}
+function copySummary(){const ta=document.getElementById('share-textarea');ta.select();navigator.clipboard.writeText(ta.value).then(()=>{const b=document.getElementById('copy-btn');b.textContent='✓ Copied!';b.className='share-btn-style success';setTimeout(()=>{b.textContent='Copy to Clipboard';b.className='share-btn-style primary';},2000);}).catch(()=>document.execCommand('copy'));}
+function printJobs(){window.print();}
+function printSummary(){const r=document.getElementById('tab-jobs'),s=document.getElementById('tab-summary');r.style.display='none';s.style.display='block';window.print();r.style.display='';s.style.display='';}
+
+function renderSummary(){
+  const dates=dayDates(G.currentOffset);
+  let h='';
+
+  DAYS.forEach((day,i)=>{
+    const dayJobs=G.rows.filter(rid=>{
+      const c=cells[ck(rid,day)];
+      return c&&(c.jobName||c.workers?.length>0||c.parking||c.materials);
+    });
+    if(!dayJobs.length) return;
+
+    // Day header
+    h+=`<div style="width:100%;grid-column:1/-1;margin:16px 0 8px;font-family:var(--font-head);font-size:14px;font-weight:800;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:6px;">
+      ${day.toUpperCase()} <span style="color:var(--accent);font-size:12px;">${dates[i]}</span>
+    </div>`;
+
+    dayJobs.forEach(rid=>{
+      const c=cells[ck(rid,day)];
+      const color=COLORS[(rid-1)%COLORS.length]||COLORS[0];
+      const dh=cellHrs(rid,day);
+      const dw=dh*(G.globalRate||40);
+      const de=cellExtras(rid,day);
+      const dg=dw+de;
+      h+=`<div class="summary-card" style="border-top-color:${color}">
+        <div class="summary-name">${esc(c.jobName||'–')}</div>
+        <div class="summary-grid">
+          <div><div class="summary-lbl">Hours</div><div class="summary-val" style="color:${color}">${fmt(dh)||'0h'}</div></div>
+          <div><div class="summary-lbl">Labour</div><div class="summary-val">$${dw.toFixed(2)}</div></div>
+        </div>
+        ${de>0?`<div class="summary-extra-row"><span class="summary-extra-lbl">Extras</span><span class="summary-extra-val">$${de.toFixed(2)}</span></div>`:''}
+        <div class="summary-total-row" style="background:${color}12;border:1px solid ${color}30">
+          <span class="summary-total-lbl">Total</span><span class="summary-total-val">$${dg.toFixed(2)}</span>
+        </div>
+      </div>`;
+    });
+  });
+
+  if(!h)h='<div style="color:var(--text3);font-size:11px;padding:20px;">No job data yet.</div>';
+  document.getElementById('summary-cards').innerHTML=h;
+  document.getElementById('sf-hours').textContent=fmt(allHrs())||'0h';
+  document.getElementById('sf-pay').textContent='$'+allPay().toFixed(2);
+}
+
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='summary')renderSummary();
+  if(name==='invoice')renderInvoice();
+}
+
+// ── Invoice ──
+function getInvoiceNumber() {
+  // Base invoice 568 = week 2026-W13 (week of 23 Mar)
+  // Each subsequent week adds 1
+  const BASE_INV = 568;
+  const BASE_WEEK = 13;
+  const BASE_YEAR = 2026;
+  const now = new Date(), d = now.getDay();
+  const mon = new Date(now); mon.setDate(now.getDate()-d+(d===0?-6:1)+(G.currentOffset||0)*7);
+  const yr = mon.getFullYear();
+  const wn = Math.ceil(((mon-new Date(yr,0,1))/86400000+new Date(yr,0,1).getDay()+1)/7);
+  const weeksDiff = (yr - BASE_YEAR)*52 + (wn - BASE_WEEK);
+  return BASE_INV + weeksDiff;
+}
+
+function getWeekEndDate() {
+  const now = new Date(), d = now.getDay();
+  const mon = new Date(now); mon.setDate(now.getDate()-d+(d===0?-6:1)+(G.currentOffset||0)*7);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  return sun.toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
+}
+
+function renderInvoice() {
+  const dates = dayDates(G.currentOffset);
+  const rate = G.globalRate || 40;
+  const invNo = getInvoiceNumber();
+  const weekEnd = getWeekEndDate();
+
+  let totalHrs = 0, totalLabour = 0, totalParking = 0, totalMaterials = 0;
+
+  // Build rows
+  let rows = '';
+  let grandHrs = 0, grandLabour = 0, grandPark = 0, grandMats = 0;
+
+  DAYS.forEach((day, i) => {
+    const fullDate = (() => {
+      const now = new Date(), d = now.getDay();
+      const mon = new Date(now); mon.setDate(now.getDate()-d+(d===0?-6:1)+(G.currentOffset||0)*7);
+      const dt = new Date(mon); dt.setDate(mon.getDate()+i);
+      return dt.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'numeric',year:'2-digit'});
+    })();
+
+    const dayJobs = G.rows.filter(rid => {
+      const c = cells[ck(rid,day)];
+      return c && (c.jobName || c.workers?.length > 0);
+    });
+
+    // Day header row
+    rows += `<tr class="day-header"><td colspan="4">${fullDate}</td></tr>`;
+
+    if (dayJobs.length === 0) {
+      rows += `<tr class="nil-row"><td colspan="4">NIL</td></tr>`;
+    } else {
+      dayJobs.forEach(rid => {
+        const c = cells[ck(rid,day)];
+        const dh = cellHrs(rid,day);
+        const labour = dh * rate;
+        const park = parseFloat(c.parking)||0;
+        const mats = parseFloat(c.materials)||0;
+        grandHrs += dh; grandLabour += labour; grandPark += park; grandMats += mats;
+        rows += `<tr class="job-row">
+          <td>${esc(c.jobName||'–')}</td>
+          <td>${dh > 0 ? dh.toFixed(1) : 'TBC'}</td>
+          <td>${dh > 0 ? '$'+labour.toFixed(2) : 'TBC'}</td>
+          <td>${park > 0 ? '$'+park.toFixed(2) : '–'}</td>
+        </tr>`;
+      });
+    }
+  });
+
+  // Grand total row
+  rows += `<tr class="grand-row">
+    <td>GRAND TOTAL</td>
+    <td>${grandHrs.toFixed(1)}</td>
+    <td>$${grandLabour.toFixed(2)}</td>
+    <td>$${grandPark.toFixed(2)}</td>
+  </tr>`;
+
+  const totalExclGST = grandLabour + grandPark + grandMats;
+  const gst = grandLabour * 0.10; // GST only on labour
+  const totalPayable = totalExclGST + gst;
+
+  document.getElementById('invoice-body').innerHTML = `
+    <div class="inv-logo">NAVJOT SERVICES</div>
+    <div class="inv-meta">
+      ABN: 53 965 989 534<br>
+      Invoice Issued To: <strong>Master Cleaners Aust Pty Ltd</strong><br>
+      Invoice No: <strong>${invNo}</strong><br>
+      Tax Invoice &bull; Week Ending: Sunday ${weekEnd}
+    </div>
+
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th style="width:40%">Project</th>
+          <th>Hours</th>
+          <th>Amount ($${rate}/hr)</th>
+          <th>Parking</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <table class="inv-totals">
+      <tr>
+        <th>Total Hours</th>
+        <th>Total Amount</th>
+        <th>Total Parking</th>
+        <th>Total Materials</th>
+        <th>TOTAL (excl. GST)</th>
+      </tr>
+      <tr>
+        <td>${grandHrs.toFixed(1)}</td>
+        <td>$${grandLabour.toFixed(2)}</td>
+        <td>$${grandPark.toFixed(2)}</td>
+        <td>$${grandMats.toFixed(2)}</td>
+        <td>$${totalExclGST.toFixed(2)}</td>
+      </tr>
+    </table>
+
+    <div class="inv-gst-box">
+      <div class="inv-gst-row gst-line"><span>GST (10% on labour only)</span><span>$${gst.toFixed(2)}</span></div>
+      <div class="inv-gst-row"><span>TOTAL PAYABLE (incl. GST)</span><span>$${totalPayable.toFixed(2)}</span></div>
+    </div>
+
+    <div class="inv-footer-note">
+      Email: manni_banga89@yahoo.com.au<br>
+      Bank Details: Mentioned in email
+    </div>
+  `;
+}
+
+function printInvoice() {
+  const tabs = document.querySelectorAll('.tab-content');
+  const header = document.getElementById('header');
+  const footer = document.getElementById('jobs-footer');
+  // Hide everything except invoice
+  tabs.forEach(t => { if(t.id !== 'tab-invoice') t.style.display='none'; });
+  header.style.display = 'none';
+  window.print();
+  // Restore
+  tabs.forEach(t => { t.style.display=''; });
+  header.style.display = '';
+  // Re-apply active tab
+  document.getElementById('tab-invoice').style.display = 'block';
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+
+// ══════════════════════════════════════════
+// PASTE YOUR GOOGLE APPS SCRIPT URL BELOW
+const API_URL = 'https://script.google.com/macros/s/AKfycbyV8B4gewTmHsRUyi8J-gxpaMpcB_VlLX_16BpAQX5xmr2IlAGE1LfgN2uYX02OSaio/exec';
+// ══════════════════════════════════════════
+
+const USE_CLOUD = API_URL.length > 0;
+
+async function cloudGet(key) {
+  if (!USE_CLOUD) return null;
+  try {
+    const url = API_URL + '?action=get&key=' + encodeURIComponent(key);
+    const r = await fetch(url, {redirect: 'follow'});
+    const text = await r.text();
+    console.log('cloudGet', key, '->', text.slice(0,80));
+    const d = JSON.parse(text);
+    return (d.ok && d.value !== null && d.value !== undefined) ? d.value : null;
+  } catch(e) {
+    console.log('cloudGet error:', key, e);
+    return null;
+  }
+}
+
+async function cloudSet(key, value) {
+  if (!USE_CLOUD) return;
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'action=set&key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value),
+      redirect: 'follow'
+    });
+  } catch(e) { console.log('cloudSet error:', key, e); }
+}
+
+async function cloudLoadState() {
+  if (!USE_CLOUD) {
+    loadState(); updateWeekLabel(); render();
+    const gr=document.getElementById('global-rate');
+    if(gr&&G.globalRate)gr.value=G.globalRate;
+    return;
+  }
+  try {
+    // Load global config
+    const g = await cloudGet('jt2_global');
+    console.log('Loaded global:', g);
+    if (g) {
+      try { G = JSON.parse(g); } catch(e){ console.log('G parse error', e); }
+    }
+
+    // Load current week cells
+    const wkKey = 'jt2_wk_' + weekKey(G.currentOffset);
+    console.log('Loading week key:', wkKey);
+    const wk = await cloudGet(wkKey);
+    console.log('Loaded week data:', wk ? wk.slice(0,100) : 'null');
+
+    if (wk) {
+      try {
+        cells = JSON.parse(wk);
+        console.log('Cells loaded, keys:', Object.keys(cells).length);
+      } catch(e) {
+        console.log('cells parse error', e);
+        cells = {};
+      }
+    } else {
+      cells = {};
+    }
+  } catch(e) {
+    console.log('cloudLoadState error:', e);
+  }
+
+  updateWeekLabel();
+  render();
+  const gr = document.getElementById('global-rate');
+  if (gr && G.globalRate) gr.value = G.globalRate;
+  startPolling();
+}
+
+let _lastHash = '';
+let _isSaving = false;
+let _lastTyped = 0;
+document.addEventListener('input', () => { _lastTyped = Date.now(); });
+async function pollForChanges() {
+  if (!USE_CLOUD || _isSaving) return;
+  if (Date.now() - _lastTyped < 5000) return; // user is typing, skip
+  try {
+    const wk = await cloudGet('jt2_wk_' + weekKey(G.currentOffset));
+    if (!wk || wk === _lastHash) return;
+    _lastHash = wk;
+    const newCells = JSON.parse(wk);
+    const localStr = JSON.stringify(cells);
+    const remoteStr = JSON.stringify(newCells);
+    if (remoteStr !== localStr) {
+      cells = newCells;
+      render();
+    }
+  } catch(e) {}
+}
+
+function startPolling() {
+  setInterval(pollForChanges, 15000);
+}
+
+async function cloudScheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    if (USE_CLOUD) {
+      _isSaving = true;
+      await cloudSet('jt2_global', JSON.stringify(G));
+      const wkKey = 'jt2_wk_' + weekKey(G.currentOffset);
+      const val = JSON.stringify(cells);
+      await cloudSet(wkKey, val);
+      _lastHash = val;
+      _isSaving = false;
+    } else {
+      try {
+        localStorage.setItem('jt2_global', JSON.stringify(G));
+        localStorage.setItem('jt2_wk_' + weekKey(G.currentOffset), JSON.stringify(cells));
+      } catch(e) {}
+    }
+    const b = document.getElementById('save-badge');
+    b.classList.add('show');
+    setTimeout(() => b.classList.remove('show'), 1200);
+  }, 800);
+}
+
+
+// ── Read Only Mode ──
+const IS_READ_ONLY = window.location.search.includes('view') || window.location.hash.includes('view');
+if (IS_READ_ONLY) {
+  // Apply immediately
+  document.body.classList.add('read-only');
+  // Also re-apply after render in case it gets reset
+  const _origRender = render;
+  function render() {
+    _origRender();
+    document.body.classList.add('read-only');
+    document.querySelectorAll('input, button:not(#read-only-badge), textarea').forEach(el => {
+      el.disabled = true;
+      el.style.pointerEvents = 'none';
+    });
+  }
+}
+
+// ── Init ──
+// Pre-load existing data into cloud on first run
+async function initWithData() {
+  // Check if sheet already has data
+  const existing = await cloudGet('jt2_global');
+  if (!existing) {
+    // Sheet is empty — push local data up
+    console.log('Sheet empty, pushing local data to cloud...');
+    await cloudSet('jt2_global', '{"rows":[1,2],"nextRow":3,"globalRate":40,"currentOffset":0}');
+    const wkKey = 'jt2_wk_' + weekKey(0);
+    await cloudSet(wkKey, '{"1|Mon":{"jobName":"69 ann st pmg - M","workers":[{"name":"Kartik","from":"06:30","to":"08:00"},{"name":"Nissan","from":"06:30","to":"08:00"},{"name":"Janak","from":"06:30","to":"08:00"}],"parking":"49","materials":""},"2|Mon":{"jobName":"Nike dfo foh- M","workers":[{"name":"Giri","from":"07:00","to":"15:30"},{"name":"Meet","from":"07:00","to":"15:30"},{"name":"Nissan","from":"08:00","to":"15:30"},{"name":"kartik","from":"08:00","to":"15:30"},{"name":"Janak","from":"08:00","to":"15:30"}],"parking":"","materials":"9.20"},"1|Tue":{"jobName":"Nerang fara - t","workers":[{"name":"Karik","from":"06:30","to":"15:00"},{"name":"Janak","from":"06:30","to":"15:00"},{"name":"Meet","from":"06:30","to":"15:00"},{"name":"Nihar","from":"06:30","to":"15:00"},{"name":"Jamin","from":"06:30","to":"15:00"}],"parking":"","materials":"35"},"2|Tue":{"jobName":"nerang fara chairs - T","workers":[{"name":"Giri","from":"06:30","to":"13:30"}],"parking":"","materials":""},"1|Wed":{"jobName":"Nerang fara - W","workers":[{"name":"Kartik","from":"06:00","to":"15:00"},{"name":"Janak","from":"06:00","to":"15:00"},{"name":"Jamin","from":"06:00","to":"15:00"}],"parking":"","materials":"35"},"1|Thu":{"jobName":"Capalba marco job-t","workers":[{"name":"kartik","from":"07:00","to":"09:30"},{"name":"Nihar","from":"07:00","to":"09:30"}],"parking":"","materials":""},"2|Thu":{"jobName":"Perfumo Northlakes- t","workers":[{"name":"Nissan","from":"07:00","to":"15:30"},{"name":"Giri","from":"07:00","to":"15:30"},{"name":"Meer","from":"07:00","to":"15:30"}],"parking":"36.30","materials":""}}');
+    console.log('Data pushed to cloud successfully');
+  } else {
+    console.log('Sheet already has data, loading from cloud...');
+  }
+  cloudLoadState();
+}
+initWithData();
+</script>
+</body>
+</html>
