@@ -913,10 +913,10 @@ function renderInvoice() {
     });
 
     // Day header row
-    rows += `<tr class="day-header"><td colspan="4">${fullDate}</td></tr>`;
+    rows += `<tr class="day-header"><td colspan="5">${fullDate}</td></tr>`;
 
     if (dayJobs.length === 0) {
-      rows += `<tr class="nil-row"><td colspan="4">NIL</td></tr>`;
+      rows += `<tr class="nil-row"><td colspan="5">NIL</td></tr>`;
     } else {
       dayJobs.forEach(rid => {
         const c = cells[ck(rid,day)];
@@ -930,6 +930,7 @@ function renderInvoice() {
           <td>${dh > 0 ? dh.toFixed(1) : 'TBC'}</td>
           <td>${dh > 0 ? '$'+labour.toFixed(2) : 'TBC'}</td>
           <td>${park > 0 ? '$'+park.toFixed(2) : '–'}</td>
+          <td>${mats > 0 ? '$'+mats.toFixed(2) : '–'}</td>
         </tr>`;
       });
     }
@@ -941,6 +942,7 @@ function renderInvoice() {
     <td>${grandHrs.toFixed(1)}</td>
     <td>$${grandLabour.toFixed(2)}</td>
     <td>$${grandPark.toFixed(2)}</td>
+    <td>$${grandMats.toFixed(2)}</td>
   </tr>`;
 
   const totalExclGST = grandLabour + grandPark + grandMats;
@@ -963,6 +965,7 @@ function renderInvoice() {
           <th>Hours</th>
           <th>Amount ($${rate}/hr)</th>
           <th>Parking</th>
+          <th>Materials</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -979,8 +982,8 @@ function renderInvoice() {
       <tr>
         <td>${grandHrs.toFixed(1)}</td>
         <td>$${grandLabour.toFixed(2)}</td>
-        <td>$${grandPark.toFixed(2)}</td>
-        <td>$${grandMats.toFixed(2)}</td>
+        <td>${grandPark > 0 ? '$'+grandPark.toFixed(2) : '–'}</td>
+        <td>${grandMats > 0 ? '$'+grandMats.toFixed(2) : '–'}</td>
         <td>$${totalExclGST.toFixed(2)}</td>
       </tr>
     </table>
