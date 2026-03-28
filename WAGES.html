@@ -669,15 +669,15 @@ function renderBody() {
         <span style="font-size:8px;color:var(--text3);line-height:1.8">${day[0]}</span>
         <input type="text" inputmode="decimal" placeholder="$"
           value="${vp}" ${isOff?'disabled':''}
-          oninput="setEntry(${pid},'${day}','parking',this.value);this.style.color=this.value?'var(--green)':'var(--border)';this.style.fontWeight=this.value?'600':'400';refreshExtraTotals(${pid});"
+          oninput="updateExtra(this,${pid},'${day}','parking','var(--green)')"
           style="font-size:9px;color:${vp?'var(--green)':'var(--border)'};font-weight:${vp?'600':'400'};width:100%;text-align:center;">
         <input type="text" inputmode="decimal" placeholder="$"
           value="${vm}" ${isOff?'disabled':''}
-          oninput="setEntry(${pid},'${day}','materials',this.value);this.style.color=this.value?'var(--accent)':'var(--border)';this.style.fontWeight=this.value?'600':'400';refreshExtraTotals(${pid});"
+          oninput="updateExtra(this,${pid},'${day}','materials','var(--accent)')"
           style="font-size:9px;color:${vm?'var(--accent)':'var(--border)'};font-weight:${vm?'600':'400'};width:100%;text-align:center;">
         <input type="text" inputmode="decimal" placeholder="$"
           value="${vf}" ${isOff?'disabled':''}
-          oninput="setEntry(${pid},'${day}','fuel',this.value);this.style.color=this.value?'var(--orange)':'var(--border)';this.style.fontWeight=this.value?'600':'400';refreshExtraTotals(${pid});"
+          oninput="updateExtra(this,${pid},'${day}','fuel','var(--orange)')"
           style="font-size:9px;color:${vf?'var(--orange)':'var(--border)'};font-weight:${vf?'600':'400'};width:100%;text-align:center;">
       </div>`;
     });
@@ -773,10 +773,53 @@ function setEntry(pid, day, field, value) {
   if (elP) { elP.textContent = '+$'+te_.toFixed(2)+' extras'; elP.style.display = te_>0?'block':'none'; }
   if (elG) { elG.textContent = '$'+gt.toFixed(2); }
 
+  // If extras field changed, refresh subtotal display
+  if (field === 'parking' || field === 'materials' || field === 'fuel') {
+    refreshExtraTotals(pid);
+  }
+
   renderHead();
   renderFooter();
   cloudScheduleSave();
 }
+
+function updateExtra(inp, pid, day, field, color) {
+  const val = inp.value.trim();
+  inp.style.color = val ? '#0f1a20' : 'var(--border)';
+  inp.style.fontWeight = val ? '700' : '400';
+  if (!S.schedule[pid]) S.schedule[pid] = {};
+  if (!S.schedule[pid][day]) S.schedule[pid][day] = EMPTY();
+  S.schedule[pid][day][field] = val;
+  refreshExtraTotals(pid);
+  cloudScheduleSave();
+}
+
+function refreshExtraTotals(pid) {
+  const tp = totalPark(pid);
+  const tm = totalMats(pid);
+  const tf = totalFuel(pid);
+  const te = tp + tm + tf;
+  const el = document.getElementById('ext_sub_' + pid);
+  if (el) {
+    if (te > 0) {
+      const parts = [];
+      if (tp > 0) parts.push('$' + Math.round(tp) + 'P');
+      if (tm > 0) parts.push('$' + Math.round(tm) + 'M');
+      if (tf > 0) parts.push('$' + Math.round(tf) + 'F');
+      el.innerHTML = parts.join(' + ') + '<br>= $' + Math.round(te);
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+  const gt = totalWages(pid) + te;
+  const elP = document.getElementById('tot_park_' + pid);
+  if (elP) { elP.textContent = '+$' + te.toFixed(2) + ' extras'; elP.style.display = te > 0 ? 'block' : 'none'; }
+  const elG = document.getElementById('tot_grand_' + pid);
+  if (elG) elG.textContent = '$' + gt.toFixed(2);
+  renderHead(); renderFooter();
+}
+
 
 function toggleOff(pid, day) {
   if (!S.schedule[pid]?.[day]) return;
