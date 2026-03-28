@@ -719,7 +719,7 @@ function renderSummary() {
         <div><div class="summary-lbl">Hours</div><div class="summary-val-hours" style="color:${p.color}">${fmt(hrs)||'0h'}</div></div>
         <div><div class="summary-lbl">Wages</div><div class="summary-val-wages">$${wages.toFixed(2)}</div></div>
       </div>
-      ${park>0?`<div class="summary-parking-row"><span class="summary-parking-lbl">Parking</span><span class="summary-parking-val">$${park.toFixed(2)}</span></div>`:''}
+      ${gt-wages>0?`<div class="summary-parking-row"><span class="summary-parking-lbl">Extras</span><span class="summary-parking-val">$${(gt-wages).toFixed(2)}</span></div>`:''}
       <div class="summary-total-row" style="background:${p.color}12;border:1px solid ${p.color}30">
         <span class="summary-total-lbl">Total</span>
         <span class="summary-total-val">$${gt.toFixed(2)}</span>
@@ -880,7 +880,8 @@ function buildSummaryText() {
         const hrs = entryHrs(e);
         const park = parseFloat(e.parking||0);
         let line = '  ' + d + ':  ' + e.timeFrom + ' – ' + e.timeTo + '  (' + (fmt(hrs)||'0h') + ')';
-        if (park > 0) line += '  + $' + park.toFixed(0) + ' park';
+        const dayExtras = (parseFloat(e.parking)||0) + (parseFloat(e.materials)||0) + (parseFloat(e.fuel)||0);
+        if (dayExtras > 0) line += '  + $' + dayExtras.toFixed(0) + ' extras';
         if (e.notes) line += '  [' + e.notes + ']';
         lines.push(line);
       }
@@ -895,7 +896,7 @@ function buildSummaryText() {
     lines.push('');
     lines.push('  Hours:    ' + (fmt(th)||'0h'));
     lines.push('  Wages:    $' + tw.toFixed(2));
-    if (tp > 0) lines.push('  Parking:  $' + tp.toFixed(2));
+    const te = totalExtras(pid); if (te > 0) lines.push('  Extras:   $' + te.toFixed(2));
     lines.push('  TOTAL:    $' + gt.toFixed(2));
   });
 
