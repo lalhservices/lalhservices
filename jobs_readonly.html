@@ -718,6 +718,9 @@ function setW(rid,day,wi,field,value){
   const dEl=document.getElementById('cdh_'+rid+'_'+day);
   if(dEl)dEl.innerHTML=dh>0?(fmt(dh)||''):'&nbsp;';
   updateRowTotals(rid);
+  // Update column header day total live
+  renderHead();
+  renderFooter();
   cloudScheduleSave();
 }
 
