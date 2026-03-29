@@ -887,7 +887,16 @@ function getWeekEndDate() {
   const now = new Date(), d = now.getDay();
   const mon = new Date(now); mon.setDate(now.getDate()-d+(d===0?-6:1)+(G.currentOffset||0)*7);
   const sun = new Date(mon); sun.setDate(mon.getDate()+6);
-  return sun.toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
+  const dd=String(sun.getDate()).padStart(2,'0'), mm=String(sun.getMonth()+1).padStart(2,'0'), yy=String(sun.getFullYear()); return dd+'/'+mm+'/'+yy;
+}
+
+function getPaymentDueDate() {
+  const now = new Date(), d = now.getDay();
+  const mon = new Date(now); mon.setDate(now.getDate()-d+(d===0?-6:1)+(G.currentOffset||0)*7);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const due = new Date(sun); due.setDate(sun.getDate()+14);
+  const dd=String(due.getDate()).padStart(2,'0'), mm=String(due.getMonth()+1).padStart(2,'0'), yy=String(due.getFullYear());
+  return dd+'/'+mm+'/'+yy;
 }
 
 function renderInvoice() {
@@ -952,13 +961,18 @@ function renderInvoice() {
   const gst = grandLabour * 0.10; // GST only on labour
   const totalPayable = totalExclGST + gst;
 
+  const payDue = getPaymentDueDate();
   document.getElementById('invoice-body').innerHTML = `
     <div class="inv-logo">NAVJOT SERVICES</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:2px;letter-spacing:0.04em;">Tax Invoice</div>
     <div class="inv-meta">
       ABN: 53 965 989 534<br>
-      Invoice Issued To: <strong>Master Cleaners Aust Pty Ltd</strong><br>
+      Email: manni_banga89@yahoo.com.au<br>
+      <br>
       Invoice No: <strong>${invNo}</strong><br>
-      Tax Invoice &bull; Week Ending: Sunday ${weekEnd}
+      Invoice Issued To: <strong>Master Cleaners Aust Pty Ltd</strong><br>
+      Date: <strong>${weekEnd}</strong><br>
+      Payment Due: <strong>${payDue}</strong>
     </div>
 
     <table class="inv-table">
@@ -997,8 +1011,8 @@ function renderInvoice() {
     </div>
 
     <div class="inv-footer-note">
-      Email: manni_banga89@yahoo.com.au<br>
-      Bank Details: Mentioned in email
+      Bank Details: Mentioned in email<br>
+      <strong>Thank you for your business!</strong>
     </div>
   `;
 }
