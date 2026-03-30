@@ -625,11 +625,18 @@ function updateWeekLabel(){
   const dot=localStorage.getItem('jt2_wk_'+weekKey(G.currentOffset))?'  ●':'';
   document.getElementById('week-label').textContent='Week of '+f(mon)+' – '+f(sun)+dot;
 }
-function changeWeek(dir){
+async function changeWeek(dir){
   clearTimeout(saveTimer);
-  localStorage.setItem('jt2_global',JSON.stringify(G));
-  localStorage.setItem('jt2_wk_'+weekKey(G.currentOffset),JSON.stringify(cells));
-  G.currentOffset+=dir; loadWeek(); updateWeekLabel(); render();
+  G.currentOffset+=dir;
+  updateWeekLabel();
+  if(USE_CLOUD){
+    const wk=await cloudGet('jt2_wk_'+weekKey(G.currentOffset));
+    if(wk){try{cells=JSON.parse(wk);}catch(e){cells={};}}
+    else{cells={};}
+  } else {
+    loadWeek();
+  }
+  render();
 }
 
 let _ca=null;
@@ -638,7 +645,7 @@ function confirmDeleteWeek(){_ca='delete';document.getElementById('confirm-title
 function closeConfirm(){document.getElementById('confirm-modal').classList.remove('open');_ca=null;}
 function doConfirm(){
   closeConfirm();
-  if(_ca==='next'){localStorage.setItem('jt2_global',JSON.stringify(G));localStorage.setItem('jt2_wk_'+weekKey(G.currentOffset),JSON.stringify(cells));G.currentOffset+=1;loadWeek();updateWeekLabel();render();cloudScheduleSave();}
+  if(_ca==='next'){changeWeek(1);}
   else if(_ca==='delete'){localStorage.removeItem('jt2_wk_'+weekKey(G.currentOffset));cells={};render();updateWeekLabel();}
 }
 
@@ -1219,9 +1226,9 @@ function startPolling() {
 }
 
 async function cloudScheduleSave() {
-  const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
+    const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
     if (USE_CLOUD) {
       _isSaving = true;
       await cloudSet('jt2_global', JSON.stringify(G));

@@ -373,6 +373,7 @@
       <button id="new-week-btn" onclick="confirmNewWeek()">&#8594; Next Week</button>
     </div>
   </div>
+  <div id="last-saved" style="flex:1;text-align:center;align-self:center;font-size:9px;color:var(--text3);font-family:var(--font);letter-spacing:0.06em;"></div>
   <div style="display:flex;gap:8px;">
     <button class="tab-btn active" onclick="switchTab('roster',this)">Roster</button>
     <button class="tab-btn" onclick="switchTab('summary',this)">Summary</button>
@@ -982,16 +983,27 @@ function updateWeekLabel() {
   document.getElementById('week-label').textContent = weekLabelForOffset(G.currentOffset);
 }
 
-function changeWeek(dir) {
+async function changeWeek(dir) {
   // Save current before switching
   clearTimeout(saveTimer);
-  localStorage.setItem('roster_global', JSON.stringify(G));
-  localStorage.setItem('roster_wk_' + getISOWeekKey(G.currentOffset), JSON.stringify(schedule));
-
+  if (USE_CLOUD) await cloudSet('roster_global', JSON.stringify(G));
   G.currentOffset += dir;
-  loadWeekSchedule();
   updateWeekLabel();
+  // Load from cloud
+  if (USE_CLOUD) {
+    const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
+    const wk = await cloudGet(wkKey);
+    if (wk) {
+      try { schedule = JSON.parse(wk); } catch(e) { schedule = initSchedule(); }
+    } else {
+      schedule = initSchedule();
+    }
+  } else {
+    loadWeekSchedule();
+  }
+  await loadPayStatus();
   render();
+  renderSummary();
 }
 
 let _confirmAction = null;
@@ -1022,14 +1034,7 @@ function closeConfirm() {
 function doConfirmAction() {
   closeConfirm();
   if (_confirmAction === 'next') {
-    // Save current week, move to next
-    localStorage.setItem('roster_global', JSON.stringify(G));
-    localStorage.setItem('roster_wk_' + getISOWeekKey(G.currentOffset), JSON.stringify(schedule));
-    G.currentOffset += 1;
-    loadWeekSchedule();
-    updateWeekLabel();
-    render();
-    cloudScheduleSave();
+    changeWeek(1);
   } else if (_confirmAction === 'delete') {
     deleteCurrentWeek();
     updateWeekLabel();
@@ -1270,9 +1275,9 @@ function startPolling() {
 }
 
 async function cloudScheduleSave() {
-  const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
+    const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
     if (USE_CLOUD) {
       _isSaving = true;
       await cloudSet('roster_global', JSON.stringify(G));
@@ -1287,6 +1292,7 @@ async function cloudScheduleSave() {
       await cloudSet(wkKey, val);
       _lastHash = val;
       _isSaving = false;
+      updateSavedTimestamp();
     } else {
       try {
         localStorage.setItem('roster_global', JSON.stringify(G));
