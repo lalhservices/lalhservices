@@ -325,6 +325,15 @@
   input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
+
+  /* ── Last saved timestamp ── */
+  #last-saved {
+    font-size: 9px; color: var(--text3); letter-spacing: 0.06em;
+    font-family: var(--font); margin-top: 2px;
+  }
+  #last-saved.saving { color: var(--accent); }
+  #last-saved.saved  { color: var(--green); }
+
   /* ── Payment Status Badge ── */
   .pay-badge {
     display: inline-flex; align-items: center; justify-content: center;
@@ -365,6 +374,7 @@
     <div style="display:flex;align-items:center;gap:8px;">
       <button onclick="changeWeek(-1)" title="Previous week" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);width:24px;height:24px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;">&#8592;</button>
       <div id="week-label"></div>
+      <div id="last-saved"></div>
       <button onclick="changeWeek(1)" title="Next week" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);width:24px;height:24px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;">&#8594;</button>
       <button id="new-week-btn" onclick="confirmNewWeek()">&#8594; Next Week</button>
     </div>
@@ -1187,6 +1197,7 @@ async function cloudLoadState() {
   await loadPayStatus();
   renderSummary();
   startPolling();
+  startSavedTimer();
 }
 
 let _lastHash = '';
@@ -1265,6 +1276,7 @@ function startPolling() {
 }
 
 async function cloudScheduleSave() {
+  const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     if (USE_CLOUD) {
@@ -1303,6 +1315,24 @@ if (IS_READ_ONLY) {
       el.style.pointerEvents = 'none';
     });
   }
+}
+
+// ── Last saved timestamp ──
+let _lastSavedTime = null;
+function updateSavedTimestamp() {
+  _lastSavedTime = new Date();
+  const el = document.getElementById('last-saved');
+  if (el) { el.textContent = 'Saved ' + _lastSavedTime.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}); el.className = 'saved'; }
+}
+function startSavedTimer() {
+  setInterval(() => {
+    if (!_lastSavedTime) return;
+    const el = document.getElementById('last-saved');
+    if (!el) return;
+    const mins = Math.floor((new Date() - _lastSavedTime) / 60000);
+    if (mins < 1) { el.textContent = 'Saved just now'; el.className = 'saved'; }
+    else { el.textContent = 'Saved ' + mins + ' min' + (mins>1?'s':'') + ' ago'; el.className = ''; }
+  }, 30000);
 }
 
 // ── Init ──

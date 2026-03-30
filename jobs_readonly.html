@@ -287,6 +287,31 @@
   #share-btn:hover { background: var(--accent2); }
 
 
+
+  /* ── Worker name autocomplete ── */
+  .worker-name-wrap { position: relative; flex: 1; }
+  .worker-suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 5px; box-shadow: 0 4px 12px rgba(30,60,100,0.12);
+    max-height: 120px; overflow-y: auto; display: none;
+  }
+  .worker-suggestions.open { display: block; }
+  .worker-suggestion-item {
+    padding: 5px 8px; font-size: 10px; cursor: pointer;
+    color: var(--text); font-family: var(--font);
+  }
+  .worker-suggestion-item:hover { background: var(--surface); color: var(--accent); }
+
+
+  /* ── Last saved timestamp ── */
+  #last-saved {
+    font-size: 9px; color: var(--text3); letter-spacing: 0.06em;
+    font-family: var(--font); margin-top: 2px;
+  }
+  #last-saved.saving { color: var(--accent); }
+  #last-saved.saved  { color: var(--green); }
+
   /* ── Read Only Mode ── */
   body.read-only input, body.read-only button:not(#read-only-badge) { pointer-events: none !important; opacity: 0.8; }
   body.read-only .add-worker-btn, body.read-only .del-worker-btn,
@@ -302,6 +327,28 @@
   body.read-only #read-only-badge { display: block; }
   body.read-only #header { margin-top: 32px; }
 
+
+
+  /* ── PAID stamp ── */
+  #paid-stamp-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none; display: none; z-index: 10;
+  }
+  #paid-stamp-overlay.visible { display: block; }
+  #paid-stamp-text {
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%,-50%) rotate(-30deg);
+    font-family: var(--font-head); font-size: 80px; font-weight: 900;
+    color: rgba(42,122,86,0.18); border: 8px solid rgba(42,122,86,0.18);
+    padding: 10px 30px; border-radius: 8px; letter-spacing: 0.1em;
+    white-space: nowrap; user-select: none;
+  }
+  #paid-stamp-btn {
+    background: var(--green); border: none; color: #fff;
+    font-size: 10px; padding: 9px 20px; border-radius: 5px;
+    letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font);
+    cursor: pointer; margin-bottom: 8px; margin-left: 8px;
+  }
+  #paid-stamp-btn.stamped { background: #c0362a; }
 
   /* ── Invoice ── */
   #tab-invoice { display: none; }
@@ -387,6 +434,7 @@
     <div style="display:flex;align-items:center;gap:8px;">
       <button onclick="changeWeek(-1)" title="Previous week" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);width:24px;height:24px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;">&#8592;</button>
       <div id="week-label"></div>
+      <div id="last-saved"></div>
       <button onclick="changeWeek(1)" title="Next week" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);width:24px;height:24px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;">&#8594;</button>
       <button id="new-week-btn" onclick="confirmNextWeek()">&#8594; Next Week</button>
     </div>
@@ -435,11 +483,13 @@
 
 <div id="tab-invoice" class="tab-content">
   <div id="invoice-wrap">
-    <button class="inv-print-btn no-print" onclick="printInvoice()">&#10515; Download Invoice PDF</button>
+    <div style="display:flex;gap:8px;margin-bottom:16px;" class="no-print"><button class="inv-print-btn" style="margin-bottom:0" onclick="printInvoice()">&#10515; Download Invoice PDF</button><button id="paid-stamp-btn" onclick="togglePaidStamp()">✓ Mark as PAID</button></div>
+    <div style="position:relative"><div id="paid-stamp-overlay"><div id="paid-stamp-text">PAID</div></div>
     <div id="invoice-body">
       <!-- rendered by renderInvoice() -->
     </div>
   </div>
+</div>
 </div>
 
 <!-- Confirm Modal -->
@@ -636,8 +686,14 @@ function renderBody(){
         const wh=calcH(w.from,w.to);
         h+=`<div class="worker-entry">
             <div class="worker-name-row">
-              <input class="worker-name-inp" placeholder="Name" value="${esc(w.name||'')}"
-                oninput="setW(${rid},'${day}',${wi},'name',this.value)">
+              <div class="worker-name-wrap">
+                <input class="worker-name-inp" placeholder="Name" value="${esc(w.name||'')}"
+                  data-wkey="${rid}_${day}_${wi}"
+                  oninput="setW(${rid},'${day}',${wi},'name',this.value);showWorkerSuggestions(this,${rid},'${day}',${wi})"
+                  onfocus="showWorkerSuggestions(this,${rid},'${day}',${wi})"
+                  onblur="setTimeout(()=>this.closest('.worker-name-wrap')?.querySelector('.worker-suggestions')?.classList.remove('open'),200)">
+                <div class="worker-suggestions"></div>
+              </div>
               <span class="worker-hrs-badge${wh>0?' has-hrs':''}" id="whb_${rid}_${day}_${wi}">${wh>0?(fmt(wh)||''):'–'}</span>
               <button class="del-worker-btn" onclick="delWorker(${rid},'${day}',${wi})">×</button>
             </div>
@@ -1017,6 +1073,22 @@ function renderInvoice() {
   `;
 }
 
+function togglePaidStamp() {
+  const overlay = document.getElementById('paid-stamp-overlay');
+  const btn = document.getElementById('paid-stamp-btn');
+  if (!overlay) return;
+  const isStamped = overlay.classList.contains('visible');
+  if (isStamped) {
+    overlay.classList.remove('visible');
+    btn.textContent = '✓ Mark as PAID';
+    btn.classList.remove('stamped');
+  } else {
+    overlay.classList.add('visible');
+    btn.textContent = '✕ Remove PAID';
+    btn.classList.add('stamped');
+  }
+}
+
 function printInvoice() {
   const tabs = document.querySelectorAll('.tab-content');
   const header = document.getElementById('header');
@@ -1110,6 +1182,7 @@ async function cloudLoadState() {
   const gr = document.getElementById('global-rate');
   if (gr && G.globalRate) gr.value = G.globalRate;
   startPolling();
+  startSavedTimer();
 }
 
 let _lastHash = '';
@@ -1138,6 +1211,7 @@ function startPolling() {
 }
 
 async function cloudScheduleSave() {
+  const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     if (USE_CLOUD) {
@@ -1177,6 +1251,78 @@ if (IS_READ_ONLY) {
     });
   }
 }
+
+// ── Last saved timestamp ──
+let _lastSavedTime = null;
+function updateSavedTimestamp() {
+  _lastSavedTime = new Date();
+  const el = document.getElementById('last-saved');
+  if (el) { el.textContent = 'Saved ' + _lastSavedTime.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}); el.className = 'saved'; }
+}
+function startSavedTimer() {
+  setInterval(() => {
+    if (!_lastSavedTime) return;
+    const el = document.getElementById('last-saved');
+    if (!el) return;
+    const mins = Math.floor((new Date() - _lastSavedTime) / 60000);
+    if (mins < 1) { el.textContent = 'Saved just now'; el.className = 'saved'; }
+    else { el.textContent = 'Saved ' + mins + ' min' + (mins>1?'s':'') + ' ago'; el.className = ''; }
+  }, 30000);
+}
+
+// ── Worker name autocomplete ──
+function getKnownWorkers() {
+  const names = new Set();
+  // Collect from all current cells
+  Object.values(cells).forEach(c => {
+    (c.workers||[]).forEach(w => { if(w.name && w.name.trim()) names.add(w.name.trim()); });
+  });
+  // Also collect from localStorage for all weeks
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith('jt2_wk_')) {
+      try {
+        const wk = JSON.parse(localStorage.getItem(k));
+        Object.values(wk||{}).forEach(c => {
+          (c.workers||[]).forEach(w => { if(w.name && w.name.trim()) names.add(w.name.trim()); });
+        });
+      } catch(e) {}
+    }
+  });
+  return Array.from(names).sort();
+}
+
+function showWorkerSuggestions(inp, rid, day, wi) {
+  const val = inp.value.trim().toLowerCase();
+  const wrap = inp.closest('.worker-name-wrap');
+  if (!wrap) return;
+  let box = wrap.querySelector('.worker-suggestions');
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'worker-suggestions';
+    wrap.appendChild(box);
+  }
+  if (!val) { box.classList.remove('open'); return; }
+  const matches = getKnownWorkers().filter(n => n.toLowerCase().startsWith(val) && n.toLowerCase() !== val);
+  if (!matches.length) { box.classList.remove('open'); return; }
+  box.innerHTML = matches.map(n =>
+    `<div class="worker-suggestion-item" onmousedown="pickWorker(event,'${n}',${rid},'${day}',${wi})">${n}</div>`
+  ).join('');
+  box.classList.add('open');
+}
+
+function pickWorker(e, name, rid, day, wi) {
+  e.preventDefault();
+  const inp = document.querySelector(`input[data-wkey="${rid}_${day}_${wi}"]`);
+  if (inp) {
+    inp.value = name;
+    inp.closest('.worker-name-wrap')?.querySelector('.worker-suggestions')?.classList.remove('open');
+    setW(rid, day, wi, 'name', name);
+  }
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.worker-suggestions.open').forEach(b => b.classList.remove('open'));
+});
 
 // ── Init ──
 // Pre-load existing data into cloud on first run
