@@ -42,7 +42,7 @@
     border-bottom: 1px solid var(--border);
     padding: 16px 28px;
     display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 12px;
-    position: sticky; top: 0; z-index: 10; position: relative; position: sticky;
+    position: sticky; top: 0; z-index: 10; position: sticky;
     box-shadow: 0 1px 6px rgba(30,60,100,0.07);
   }
   #header h1 { font-family: var(--font-head); font-size: 21px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
@@ -379,7 +379,7 @@
       <button id="new-week-btn" onclick="confirmNewWeek()">&#8594; Next Week</button>
     </div>
   </div>
-  <div id="last-saved" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;font-size:9px;color:var(--text3);font-family:var(--font);letter-spacing:0.06em;white-space:nowrap;"></div>
+  <div id="last-saved" style="flex:1;text-align:center;font-size:9px;color:var(--text3);font-family:var(--font);letter-spacing:0.06em;white-space:nowrap;"></div>
   <div style="display:flex;gap:8px;">
     <button class="tab-btn active" onclick="switchTab('roster',this)">Roster</button>
     <button class="tab-btn" onclick="switchTab('summary',this)">Summary</button>
@@ -990,12 +990,12 @@ function updateWeekLabel() {
 }
 
 async function changeWeek(dir) {
-  // Save current before switching
   clearTimeout(saveTimer);
   if (USE_CLOUD) await cloudSet('roster_global', JSON.stringify(G));
   G.currentOffset += dir;
-  updateWeekLabel();
-  // Load from cloud
+  // Show loading indicator
+  const wl = document.getElementById('week-label');
+  if (wl) wl.textContent = 'Loading...';
   if (USE_CLOUD) {
     const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
     const wk = await cloudGet(wkKey);
@@ -1008,6 +1008,8 @@ async function changeWeek(dir) {
     loadWeekSchedule();
   }
   await loadPayStatus();
+  await loadLastEditTime();
+  updateWeekLabel();
   render();
   renderSummary();
 }
@@ -1165,13 +1167,11 @@ async function cloudGet(key, withMeta=false) {
     const url = API_URL + '?action=get&key=' + encodeURIComponent(key);
     const r = await fetch(url, {redirect: 'follow'});
     const text = await r.text();
-    console.log('cloudGet', key, '->', text.slice(0,80));
     const d = JSON.parse(text);
     const value = (d.ok && d.value !== null && d.value !== undefined) ? d.value : null;
     if (withMeta) return { value, updated: d.updated || null };
     return value;
   } catch(e) {
-    console.log('cloudGet error:', key, e);
     return withMeta ? {value:null,updated:null} : null;
   }
 }
@@ -1196,16 +1196,16 @@ async function cloudLoadState() {
     const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
     console.log('Loading week key:', wkKey);
     const wkResult = await cloudGet(wkKey, true);
-    const wk = wkResult.value;
-    const wkUpdated = wkResult.updated;
+    const wk = wkResult ? wkResult.value : null;
+    const wkUpdated = wkResult ? wkResult.updated : null;
     if (wk) { try { schedule = JSON.parse(wk); } catch(e){ schedule = initSchedule(); } }
     else { schedule = initSchedule(); }
-    if (wkUpdated) updateSavedTimestamp(wkUpdated);
   } catch(e) { console.log('cloudLoadState error:', e); }
   updateWeekLabel();
   render();
   await loadPayStatus();
   renderSummary();
+  await loadLastEditTime();
   startPolling();
   startSavedTimer();
 }
@@ -1303,7 +1303,7 @@ async function cloudScheduleSave() {
       await cloudSet(wkKey, val);
       _lastHash = val;
       _isSaving = false;
-      updateSavedTimestamp();
+      await saveLastEditTime();
     } else {
       try {
         localStorage.setItem('roster_global', JSON.stringify(G));
@@ -1336,6 +1336,22 @@ if (IS_READ_ONLY) {
 
 // ── Last saved timestamp ──
 let _lastSavedTime = null;
+// ── Last edit timestamp (persisted in sheet) ──
+const LAST_EDIT_KEY = 'roster_last_edit';
+
+async function saveLastEditTime() {
+  const now = new Date().toISOString();
+  await cloudSet(LAST_EDIT_KEY, now);
+  updateSavedTimestamp(now);
+}
+
+async function loadLastEditTime() {
+  try {
+    const t = await cloudGet(LAST_EDIT_KEY);
+    if (t) updateSavedTimestamp(t);
+  } catch(e) {}
+}
+
 function updateSavedTimestamp(isoString) {
   const t = isoString ? new Date(isoString) : new Date();
   _lastSavedTime = t;

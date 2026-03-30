@@ -623,7 +623,9 @@ function updateWeekLabel(){
 async function changeWeek(dir){
   clearTimeout(saveTimer);
   G.currentOffset+=dir;
-  updateWeekLabel();
+  // Show loading indicator
+  const wl = document.getElementById('week-label');
+  if(wl) wl.textContent = 'Loading...';
   if(USE_CLOUD){
     const wk=await cloudGet('jt2_wk_'+weekKey(G.currentOffset));
     if(wk){try{cells=JSON.parse(wk);}catch(e){cells={};}}
@@ -631,6 +633,8 @@ async function changeWeek(dir){
   } else {
     loadWeek();
   }
+  await loadLastEditTime();
+  updateWeekLabel();
   render();
 }
 
@@ -1123,13 +1127,11 @@ async function cloudGet(key, withMeta=false) {
     const url = API_URL + '?action=get&key=' + encodeURIComponent(key);
     const r = await fetch(url, {redirect: 'follow'});
     const text = await r.text();
-    console.log('cloudGet', key, '->', text.slice(0,80));
     const d = JSON.parse(text);
     const value = (d.ok && d.value !== null && d.value !== undefined) ? d.value : null;
     if (withMeta) return { value, updated: d.updated || null };
     return value;
   } catch(e) {
-    console.log('cloudGet error:', key, e);
     return withMeta ? {value:null,updated:null} : null;
   }
 }
@@ -1165,8 +1167,8 @@ async function cloudLoadState() {
     const wkKey = 'jt2_wk_' + weekKey(G.currentOffset);
     console.log('Loading week key:', wkKey);
     const wkResult = await cloudGet(wkKey, true);
-    const wk = wkResult.value;
-    const wkUpdated = wkResult.updated;
+    const wk = wkResult ? wkResult.value : null;
+    const wkUpdated = wkResult ? wkResult.updated : null;
     console.log('Loaded week data:', wk ? wk.slice(0,100) : 'null');
 
     if (wk) {
@@ -1180,7 +1182,6 @@ async function cloudLoadState() {
     } else {
       cells = {};
     }
-    if (wkUpdated) updateSavedTimestamp(wkUpdated);
   } catch(e) {
     console.log('cloudLoadState error:', e);
   }
@@ -1189,6 +1190,7 @@ async function cloudLoadState() {
   render();
   const gr = document.getElementById('global-rate');
   if (gr && G.globalRate) gr.value = G.globalRate;
+  await loadLastEditTime();
   startPolling();
   startSavedTimer();
 }
@@ -1244,7 +1246,7 @@ async function cloudScheduleSave() {
       await cloudSet(wkKey, val);
       _lastHash = val;
       _isSaving = false;
-      updateSavedTimestamp();
+      await saveLastEditTime();
     } else {
       try {
         localStorage.setItem('jt2_global', JSON.stringify(G));
@@ -1278,6 +1280,22 @@ if (IS_READ_ONLY) {
 
 // ── Last saved timestamp ──
 let _lastSavedTime = null;
+// ── Last edit timestamp (persisted in sheet) ──
+const LAST_EDIT_KEY = 'jt2_last_edit';
+
+async function saveLastEditTime() {
+  const now = new Date().toISOString();
+  await cloudSet(LAST_EDIT_KEY, now);
+  updateSavedTimestamp(now);
+}
+
+async function loadLastEditTime() {
+  try {
+    const t = await cloudGet(LAST_EDIT_KEY);
+    if (t) updateSavedTimestamp(t);
+  } catch(e) {}
+}
+
 function updateSavedTimestamp(isoString) {
   const t = isoString ? new Date(isoString) : new Date();
   _lastSavedTime = t;
