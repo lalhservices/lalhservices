@@ -307,10 +307,11 @@
   /* ── Last saved timestamp ── */
   #last-saved {
     font-size: 9px; color: var(--text3); letter-spacing: 0.06em;
-    font-family: var(--font); margin-top: 2px;
+    font-family: var(--font); white-space: nowrap;
   }
-  #last-saved.saving { color: var(--accent); }
-  #last-saved.saved  { color: var(--green); }
+  #last-saved.saving { color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+  #last-saved.saved  { color: var(--text3); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
   /* ── Read Only Mode ── */
   body.read-only input, body.read-only button:not(#read-only-badge) { pointer-events: none !important; opacity: 0.8; }
@@ -429,11 +430,11 @@
     <div style="display:flex;align-items:center;gap:8px;">
       <button onclick="changeWeek(-1)" title="Previous week" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);width:24px;height:24px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;">&#8592;</button>
       <div id="week-label"></div>
-      <div id="last-saved"></div>
       <button onclick="changeWeek(1)" title="Next week" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);width:24px;height:24px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;">&#8594;</button>
       <button id="new-week-btn" onclick="confirmNextWeek()">&#8594; Next Week</button>
     </div>
   </div>
+  <div id="last-saved" style="flex:1;text-align:center;align-self:center;"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     <button class="tool-btn no-print" onclick="printJobs()">&#10515; PDF</button>
     <button class="tool-btn no-print" id="share-btn" onclick="openShare()">&#9654; Copy Summary</button>
@@ -1252,17 +1253,17 @@ let _lastSavedTime = null;
 function updateSavedTimestamp() {
   _lastSavedTime = new Date();
   const el = document.getElementById('last-saved');
-  if (el) { el.textContent = 'Saved ' + _lastSavedTime.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}); el.className = 'saved'; }
+  if (!el) return;
+  const t = _lastSavedTime;
+  const hh = String(t.getHours()).padStart(2,'0');
+  const mm = String(t.getMinutes()).padStart(2,'0');
+  const day = t.getDate();
+  const mon = t.toLocaleDateString('en-AU',{month:'short'});
+  el.textContent = 'Last update: ' + hh + ':' + mm + ' – ' + day + ' ' + mon;
+  el.className = 'saved';
 }
 function startSavedTimer() {
-  setInterval(() => {
-    if (!_lastSavedTime) return;
-    const el = document.getElementById('last-saved');
-    if (!el) return;
-    const mins = Math.floor((new Date() - _lastSavedTime) / 60000);
-    if (mins < 1) { el.textContent = 'Saved just now'; el.className = 'saved'; }
-    else { el.textContent = 'Saved ' + mins + ' min' + (mins>1?'s':'') + ' ago'; el.className = ''; }
-  }, 30000);
+  // No interval needed — timestamp stays fixed until next save
 }
 
 // ── Worker name autocomplete ──
