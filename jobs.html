@@ -1191,8 +1191,15 @@ async function pollForChanges() {
   try {
     const wk = await cloudGet('jt2_wk_' + weekKey(G.currentOffset));
     if (!wk || wk === _lastHash) return;
-    _lastHash = wk;
     const newCells = JSON.parse(wk);
+    // Never overwrite with empty data
+    const newKeys = Object.keys(newCells).length;
+    const localKeys = Object.keys(cells).length;
+    if (newKeys === 0 && localKeys > 0) {
+      console.log('Poll skipped — remote is empty, local has data');
+      return;
+    }
+    _lastHash = wk;
     const localStr = JSON.stringify(cells);
     const remoteStr = JSON.stringify(newCells);
     if (remoteStr !== localStr) {
@@ -1215,14 +1222,22 @@ async function cloudScheduleSave() {
       await cloudSet('jt2_global', JSON.stringify(G));
       const wkKey = 'jt2_wk_' + weekKey(G.currentOffset);
       const val = JSON.stringify(cells);
+      // Never save empty data over existing data
+      if (Object.keys(cells).length === 0 && _lastHash && _lastHash !== '{}' && _lastHash !== '') {
+        console.log('Save skipped — cells empty but sheet has data');
+        _isSaving = false;
+        return;
+      }
       await cloudSet(wkKey, val);
       _lastHash = val;
       _isSaving = false;
+      updateSavedTimestamp();
     } else {
       try {
         localStorage.setItem('jt2_global', JSON.stringify(G));
         localStorage.setItem('jt2_wk_' + weekKey(G.currentOffset), JSON.stringify(cells));
       } catch(e) {}
+      updateSavedTimestamp();
     }
     const b = document.getElementById('save-badge');
     b.classList.add('show');
