@@ -1289,7 +1289,7 @@ async function cloudScheduleSave() {
       const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
       const val = JSON.stringify(schedule);
       // Never save empty schedule
-      if (Object.keys(S.schedule||{}).length === 0 && _lastHash && _lastHash !== '{}') {
+      if (Object.keys(schedule||{}).length === 0 && _lastHash && _lastHash !== '{}') {
         console.log('WAGES save skipped - schedule empty');
         _isSaving = false;
         return;
