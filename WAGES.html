@@ -958,21 +958,16 @@ function copySummary() {
 
 
 function printSummary() {
-  // Temporarily hide roster, show summary for print
-  const roster = document.getElementById('tab-roster');
-  const summary = document.getElementById('tab-summary');
-  roster.classList.add('print-hidden');
-  summary.classList.add('print-show');
+  renderSummary();
+  document.body.classList.add('print-summary');
   window.print();
-  roster.classList.remove('print-hidden');
-  summary.classList.remove('print-show');
+  document.body.classList.remove('print-summary');
 }
-
 function printRoster() {
+  document.body.classList.add('print-roster');
   window.print();
+  document.body.classList.remove('print-roster');
 }
-
-// ── Week navigation ──
 function getWeekDates(offset) {
   const now = new Date();
   const day = now.getDay();

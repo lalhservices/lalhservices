@@ -400,16 +400,33 @@
 
   /* ── Print ── */
   @media print {
-    body { background: #fff !important; }
-    #header { position: static !important; box-shadow: none !important; }
-    #jobs-footer, #tab-summary, .tab-btn, #share-btn, #save-badge,
-    #share-modal, #confirm-modal, #new-week-btn, .no-print,
-    .add-worker-btn, .del-worker-btn { display: none !important; }
-    #tab-jobs { display: block !important; }
-    #jobs-wrap { padding: 0 !important; overflow: visible !important; }
-    #jobs-table { box-shadow: none !important; border-radius: 0 !important; min-width: unset !important; width: 100% !important; }
-    .day-inner { min-height: unset !important; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff !important; }
+    #header, #jobs-footer, .tab-btn, #share-btn, #save-badge,
+    #share-modal, #confirm-modal, #new-week-btn, .no-print,
+    .add-worker-btn, .del-worker-btn, .off-btn, .copy-cell-btn { display: none !important; }
+
+    /* Print jobs only */
+    body.print-jobs #tab-jobs { display: block !important; }
+    body.print-jobs #tab-summary { display: none !important; }
+    body.print-jobs #tab-invoice { display: none !important; }
+    body.print-jobs #jobs-wrap { padding: 0 !important; overflow: visible !important; }
+    body.print-jobs #jobs-table { box-shadow: none !important; border-radius: 0 !important; min-width: unset !important; width: 100% !important; }
+    body.print-jobs .day-inner { min-height: unset !important; }
+
+    /* Print summary only */
+    body.print-summary #tab-summary { display: block !important; }
+    body.print-summary #tab-jobs { display: none !important; }
+    body.print-summary #tab-invoice { display: none !important; }
+    body.print-summary #summary-wrap { padding: 16px !important; }
+
+    /* Print invoice only */
+    body.print-invoice #tab-invoice { display: block !important; }
+    body.print-invoice #tab-jobs { display: none !important; }
+    body.print-invoice #tab-summary { display: none !important; }
+    body.print-invoice #invoice-wrap { padding: 0 !important; }
+    body.print-invoice .inv-print-btn { display: none !important; }
+    body.print-invoice #paid-stamp-btn { display: none !important; }
   }
 </style>
 </head>
@@ -876,8 +893,17 @@ function buildText(){
 function openShare(){document.getElementById('share-textarea').value=buildText();document.getElementById('share-modal').classList.add('open');document.getElementById('copy-btn').textContent='Copy to Clipboard';document.getElementById('copy-btn').className='share-btn-style primary';}
 function closeShare(){document.getElementById('share-modal').classList.remove('open');}
 function copySummary(){const ta=document.getElementById('share-textarea');ta.select();navigator.clipboard.writeText(ta.value).then(()=>{const b=document.getElementById('copy-btn');b.textContent='✓ Copied!';b.className='share-btn-style success';setTimeout(()=>{b.textContent='Copy to Clipboard';b.className='share-btn-style primary';},2000);}).catch(()=>document.execCommand('copy'));}
-function printJobs(){window.print();}
-function printSummary(){const r=document.getElementById('tab-jobs'),s=document.getElementById('tab-summary');r.style.display='none';s.style.display='block';window.print();r.style.display='';s.style.display='';}
+function printJobs(){
+  document.body.classList.add('print-jobs');
+  window.print();
+  document.body.classList.remove('print-jobs');
+}
+function printSummary(){
+  renderSummary();
+  document.body.classList.add('print-summary');
+  window.print();
+  document.body.classList.remove('print-summary');
+}
 
 function renderSummary(){
   const dates=dayDates(G.currentOffset);
@@ -1097,18 +1123,10 @@ function togglePaidStamp() {
 }
 
 function printInvoice() {
-  const tabs = document.querySelectorAll('.tab-content');
-  const header = document.getElementById('header');
-  const footer = document.getElementById('jobs-footer');
-  // Hide everything except invoice
-  tabs.forEach(t => { if(t.id !== 'tab-invoice') t.style.display='none'; });
-  header.style.display = 'none';
+  renderInvoice();
+  document.body.classList.add('print-invoice');
   window.print();
-  // Restore
-  tabs.forEach(t => { t.style.display=''; });
-  header.style.display = '';
-  // Re-apply active tab
-  document.getElementById('tab-invoice').style.display = 'block';
+  document.body.classList.remove('print-invoice');
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
