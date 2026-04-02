@@ -838,10 +838,21 @@ function toggleOff(pid, day) {
   render(); cloudScheduleSave();
 }
 
+async function cloudSaveGlobal() {
+  if (!USE_CLOUD) return;
+  // Safety check — never save if people list is empty or has fewer than expected
+  if (!G.people || G.people.length === 0) {
+    console.log('cloudSaveGlobal skipped — empty people list');
+    return;
+  }
+  await cloudSet('roster_global', JSON.stringify(G));
+}
+
 function setPerson(pid, field, value) {
   const p = S.people.find(x=>x.id===pid);
   if (p) p[field] = value;
   renderHead(); renderFooter();
+  cloudSaveGlobal();
   cloudScheduleSave();
 }
 
@@ -850,13 +861,13 @@ function addPerson() {
   S.people.push({ id, name:`Person ${id}`, rate:25, color:COLORS[id%COLORS.length] });
   S.schedule[id]={};
   DAYS.forEach(d=>{ S.schedule[id][d]=EMPTY(); });
-  render(); cloudScheduleSave();
+  render(); cloudSaveGlobal(); cloudScheduleSave();
 }
 
 function removePerson(pid) {
   S.people = S.people.filter(p=>p.id!==pid);
   delete S.schedule[pid];
-  render(); cloudScheduleSave();
+  render(); cloudSaveGlobal(); cloudScheduleSave();
 }
 
 function switchTab(name, btn) {
@@ -985,7 +996,6 @@ function updateWeekLabel() {
 
 async function changeWeek(dir) {
   clearTimeout(saveTimer);
-  if (USE_CLOUD) await cloudSet('roster_global', JSON.stringify(G));
   G.currentOffset += dir;
   // Show loading indicator
   const wl = document.getElementById('week-label');
@@ -1285,7 +1295,7 @@ async function cloudScheduleSave() {
     const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
     if (USE_CLOUD) {
       _isSaving = true;
-      await cloudSet('roster_global', JSON.stringify(G));
+      // Only save week schedule — not global people (prevents overwrite with defaults)
       const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
       const val = JSON.stringify(schedule);
       // Never save empty schedule
