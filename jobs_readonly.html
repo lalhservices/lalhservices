@@ -439,6 +439,7 @@
   #add-job-btn, #delete-week-btn, .remove-btn, .add-worker-btn, .del-worker-btn { display: none !important; }
   #read-only-bar { background: #2e6da4; color: #fff; text-align: center; font-size: 11px; padding: 7px; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div id="read-only-bar">👁 VIEW ONLY</div>
@@ -1134,16 +1135,214 @@ function togglePaidStamp() {
 }
 
 function printInvoice() {
-  renderInvoice();
-  // Set page title to control PDF filename
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const rate = G.globalRate || 40;
   const invNo = getInvoiceNumber();
-  const dateStr = getWeekEndDate().replace(/\//g,'-');
-  const oldTitle = document.title;
-  document.title = 'Invoice_' + invNo + '_' + dateStr;
-  document.body.classList.add('print-invoice');
-  window.print();
-  document.body.classList.remove('print-invoice');
-  document.title = oldTitle;
+  const dateStr = getWeekEndDate();
+  const payDue = getPaymentDueDate();
+  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  // Colours
+  const NAVY = [26, 58, 106];
+  const LIGHT = [232, 238, 248];
+  const GREY = [100, 100, 100];
+  const BLACK = [20, 20, 20];
+  const RED = [192, 54, 42];
+
+  let y = 15;
+  const L = 15, R = 195, W = R - L;
+
+  // ── Header ──
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(...NAVY);
+  doc.text('NAVJOT SERVICES', L, y);
+  y += 6;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...GREY);
+  doc.text('Tax Invoice', L, y); y += 5;
+  doc.text('ABN: 53 965 989 534', L, y); y += 5;
+  doc.text('Email: manni_banga89@yahoo.com.au', L, y); y += 8;
+
+  doc.setTextColor(...BLACK);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Invoice No: ' + invNo, L, y); y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.text('Invoice Issued To: Master Cleaners Aust Pty Ltd', L, y); y += 5;
+  doc.text('Date: ' + dateStr, L, y); y += 5;
+  doc.text('Payment Due: ' + payDue, L, y); y += 10;
+
+  // ── Table header ──
+  const cols = [85, 20, 35, 25, 25];
+  const headers = ['Project', 'Hours', 'Amount', 'Parking', 'Materials'];
+  doc.setFillColor(...NAVY);
+  doc.rect(L, y, W, 7, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  let x = L + 2;
+  headers.forEach((h, i) => {
+    doc.text(h, i === 0 ? x : x + cols[i] - 2, y + 5, { align: i === 0 ? 'left' : 'right' });
+    x += cols[i];
+  });
+  y += 7;
+
+  // ── Table rows ──
+  let grandHrs = 0, grandLabour = 0, grandPark = 0, grandMats = 0;
+  let rowIdx = 0;
+
+  DAYS.forEach((day, di) => {
+    const now2 = new Date(), dw = now2.getDay();
+    const mon = new Date(now2); mon.setDate(now2.getDate()-dw+(dw===0?-6:1)+(G.currentOffset||0)*7);
+    const dt = new Date(mon); dt.setDate(mon.getDate()+di);
+    const fullDate = dt.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'numeric',year:'2-digit'});
+
+    const dayJobs = G.rows.filter(rid => {
+      const c = cells[ck(rid,day)];
+      return c && (c.jobName || c.workers?.length > 0);
+    });
+
+    // Day header row
+    doc.setFillColor(...LIGHT);
+    doc.rect(L, y, W, 6, 'F');
+    doc.setTextColor(...NAVY);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(fullDate, L + 2, y + 4);
+    y += 6;
+
+    if (dayJobs.length === 0) {
+      doc.setTextColor(...GREY);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.text('NIL', L + 2, y + 4);
+      doc.setDrawColor(230,230,230);
+      doc.line(L, y + 6, R, y + 6);
+      y += 7;
+    } else {
+      dayJobs.forEach(rid => {
+        const c = cells[ck(rid,day)];
+        const dh = cellHrs(rid,day);
+        const labour = dh * rate;
+        const park = parseFloat(c.parking||0);
+        const mats = parseFloat(c.materials||0);
+        grandHrs += dh; grandLabour += labour; grandPark += park; grandMats += mats;
+
+        const bg = rowIdx % 2 === 0 ? [255,255,255] : [248,250,252];
+        doc.setFillColor(...bg);
+        doc.rect(L, y, W, 7, 'F');
+        doc.setTextColor(...BLACK);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+
+        let rx = L + 2;
+        doc.text(c.jobName || '–', rx, y + 5);
+        rx += cols[0];
+        doc.text(dh > 0 ? dh.toFixed(1) : 'TBC', rx - 2, y + 5, {align:'right'});
+        rx += cols[1];
+        doc.text(dh > 0 ? '$'+labour.toFixed(2) : 'TBC', rx - 2, y + 5, {align:'right'});
+        rx += cols[2];
+        doc.text(park > 0 ? '$'+park.toFixed(2) : '–', rx - 2, y + 5, {align:'right'});
+        rx += cols[3];
+        doc.text(mats > 0 ? '$'+mats.toFixed(2) : '–', rx - 2, y + 5, {align:'right'});
+
+        doc.setDrawColor(230,230,230);
+        doc.line(L, y + 7, R, y + 7);
+        y += 7;
+        rowIdx++;
+
+        // New page if needed
+        if (y > 260) { doc.addPage(); y = 15; }
+      });
+    }
+  });
+
+  // ── Grand total row ──
+  doc.setFillColor(...NAVY);
+  doc.rect(L, y, W, 8, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  let gx = L + 2;
+  doc.text('GRAND TOTAL', gx, y + 5);
+  gx += cols[0];
+  doc.text(grandHrs.toFixed(1), gx - 2, y + 5, {align:'right'});
+  gx += cols[1];
+  doc.text('$'+grandLabour.toFixed(2), gx - 2, y + 5, {align:'right'});
+  gx += cols[2];
+  doc.text('$'+grandPark.toFixed(2), gx - 2, y + 5, {align:'right'});
+  gx += cols[3];
+  doc.text('$'+grandMats.toFixed(2), gx - 2, y + 5, {align:'right'});
+  y += 14;
+
+  // ── Totals summary table ──
+  const totalExcl = grandLabour + grandPark + grandMats;
+  const gst = grandLabour * 0.10;
+  const totalPayable = totalExcl + gst;
+
+  doc.setFillColor(...LIGHT);
+  doc.rect(L, y, W, 7, 'F');
+  doc.setTextColor(...NAVY);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  const totCols = [W/5, W/5, W/5, W/5, W/5];
+  const totHeaders = ['Total Hours', 'Total Amount', 'Total Parking', 'Total Materials', 'TOTAL (excl. GST)'];
+  let tx = L + 2;
+  totHeaders.forEach((h, i) => { doc.text(h, tx + totCols[i]/2, y + 5, {align:'center'}); tx += totCols[i]; });
+  y += 7;
+
+  doc.setFillColor(255,255,255);
+  doc.rect(L, y, W, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...BLACK);
+  tx = L + 2;
+  [grandHrs.toFixed(1), '$'+grandLabour.toFixed(2), grandPark>0?'$'+grandPark.toFixed(2):'–', grandMats>0?'$'+grandMats.toFixed(2):'–', '$'+totalExcl.toFixed(2)].forEach((v, i) => {
+    doc.text(v, tx + totCols[i]/2, y + 5, {align:'center'});
+    tx += totCols[i];
+  });
+  y += 14;
+
+  // ── GST box ──
+  const boxX = R - 75;
+  doc.setFillColor(255,255,255);
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.3);
+  doc.rect(boxX, y, 75, 8);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...GREY);
+  doc.text('GST (10% on labour only)', boxX + 3, y + 5);
+  doc.text('$'+gst.toFixed(2), R - 3, y + 5, {align:'right'});
+  y += 8;
+
+  doc.setFillColor(255, 240, 240);
+  doc.rect(boxX, y, 75, 10, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...RED);
+  doc.text('TOTAL PAYABLE', boxX + 3, y + 7);
+  doc.text('$'+totalPayable.toFixed(2), R - 3, y + 7, {align:'right'});
+  y += 16;
+
+  // ── Footer ──
+  doc.setDrawColor(...GREY);
+  doc.setLineWidth(0.2);
+  doc.line(L, y, R, y);
+  y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...GREY);
+  doc.text('Bank Details: Mentioned in email', L, y); y += 5;
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...NAVY);
+  doc.text('Thank you for your business!', L, y);
+
+  // Save
+  doc.save('Invoice_' + invNo + '_' + dateStr.replace(/\//g, '-') + '.pdf');
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
