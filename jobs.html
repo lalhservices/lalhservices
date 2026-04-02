@@ -420,13 +420,19 @@
     body.print-summary #tab-invoice { display: none !important; }
     body.print-summary #summary-wrap { padding: 16px !important; }
 
-    /* Print invoice only */
+    /* Print invoice only - clean professional output */
+    body.print-invoice * { margin: 0; }
     body.print-invoice #tab-invoice { display: block !important; }
     body.print-invoice #tab-jobs { display: none !important; }
     body.print-invoice #tab-summary { display: none !important; }
-    body.print-invoice #invoice-wrap { padding: 0 !important; }
+    body.print-invoice #invoice-wrap { padding: 8px !important; max-width: 100% !important; }
     body.print-invoice .inv-print-btn { display: none !important; }
     body.print-invoice #paid-stamp-btn { display: none !important; }
+    body.print-invoice #read-only-bar { display: none !important; }
+    body.print-invoice #header { display: none !important; }
+    body.print-invoice #last-saved { display: none !important; }
+    /* Hide browser print header/footer (URL, date, time) */
+    @page { margin: 10mm; }
   }
 </style>
 </head>
@@ -1124,9 +1130,15 @@ function togglePaidStamp() {
 
 function printInvoice() {
   renderInvoice();
+  // Set page title to control PDF filename
+  const invNo = getInvoiceNumber();
+  const dateStr = getWeekEndDate().replace(/\//g,'-');
+  const oldTitle = document.title;
+  document.title = 'Invoice_' + invNo + '_' + dateStr;
   document.body.classList.add('print-invoice');
   window.print();
   document.body.classList.remove('print-invoice');
+  document.title = oldTitle;
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
