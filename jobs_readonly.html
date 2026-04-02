@@ -1373,22 +1373,7 @@ document.addEventListener('click', () => {
 
 // ── Init ──
 // Pre-load existing data into cloud on first run
-async function initWithData() {
-  // Check if sheet already has data
-  const existing = await cloudGet('jt2_global');
-  if (!existing) {
-    // Sheet is empty — push local data up
-    console.log('Sheet empty, pushing local data to cloud...');
-    await cloudSet('jt2_global', '{"rows":[1,2],"nextRow":3,"globalRate":40,"currentOffset":0}');
-    const wkKey = 'jt2_wk_' + weekKey(0);
-    await cloudSet(wkKey, '{"1|Mon":{"jobName":"69 ann st pmg - M","workers":[{"name":"Kartik","from":"06:30","to":"08:00"},{"name":"Nissan","from":"06:30","to":"08:00"},{"name":"Janak","from":"06:30","to":"08:00"}],"parking":"49","materials":""},"2|Mon":{"jobName":"Nike dfo foh- M","workers":[{"name":"Giri","from":"07:00","to":"15:30"},{"name":"Meet","from":"07:00","to":"15:30"},{"name":"Nissan","from":"08:00","to":"15:30"},{"name":"kartik","from":"08:00","to":"15:30"},{"name":"Janak","from":"08:00","to":"15:30"}],"parking":"","materials":"9.20"},"1|Tue":{"jobName":"Nerang fara - t","workers":[{"name":"Karik","from":"06:30","to":"15:00"},{"name":"Janak","from":"06:30","to":"15:00"},{"name":"Meet","from":"06:30","to":"15:00"},{"name":"Nihar","from":"06:30","to":"15:00"},{"name":"Jamin","from":"06:30","to":"15:00"}],"parking":"","materials":"35"},"2|Tue":{"jobName":"nerang fara chairs - T","workers":[{"name":"Giri","from":"06:30","to":"13:30"}],"parking":"","materials":""},"1|Wed":{"jobName":"Nerang fara - W","workers":[{"name":"Kartik","from":"06:00","to":"15:00"},{"name":"Janak","from":"06:00","to":"15:00"},{"name":"Jamin","from":"06:00","to":"15:00"}],"parking":"","materials":"35"},"1|Thu":{"jobName":"Capalba marco job-t","workers":[{"name":"kartik","from":"07:00","to":"09:30"},{"name":"Nihar","from":"07:00","to":"09:30"}],"parking":"","materials":""},"2|Thu":{"jobName":"Perfumo Northlakes- t","workers":[{"name":"Nissan","from":"07:00","to":"15:30"},{"name":"Giri","from":"07:00","to":"15:30"},{"name":"Meer","from":"07:00","to":"15:30"}],"parking":"36.30","materials":""}}');
-    console.log('Data pushed to cloud successfully');
-  } else {
-    console.log('Sheet already has data, loading from cloud...');
-  }
-  cloudLoadState();
-}
-initWithData();
+cloudLoadState();
 </script>
 </body>
 </html>
