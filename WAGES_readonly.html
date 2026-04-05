@@ -479,6 +479,13 @@ let G = {
 // Current week's schedule (loaded/saved per week key)
 let schedule = {};
 
+function scheduleHasData() {
+  // Returns true if any person has any timeFrom entry
+  return G.people.some(p =>
+    DAYS.some(d => S.schedule[p.id]?.[d]?.timeFrom)
+  );
+}
+
 function initSchedule() {
   const s = {};
   G.people.forEach(p => {
@@ -1300,8 +1307,8 @@ async function cloudScheduleSave() {
       const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
       const val = JSON.stringify(schedule);
       // Never save empty schedule
-      if (Object.keys(schedule||{}).length === 0 && _lastHash && _lastHash !== '{}') {
-        console.log('WAGES save skipped - schedule empty');
+      if (!scheduleHasData() && _lastHash && _lastHash !== '{}') {
+        console.log('WAGES save skipped - schedule has no real data');
         _isSaving = false;
         return;
       }
