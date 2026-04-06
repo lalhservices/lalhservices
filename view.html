@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LALH Services — View</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0f1e35; --blue: #1a3a6a; --accent: #2e6da4;
+    --gold: #c8a84b; --white: #ffffff;
+    --mono: 'JetBrains Mono', monospace; --head: 'Space Grotesk', sans-serif;
+  }
+  body {
+    background: var(--navy); color: var(--white); font-family: var(--mono);
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; overflow: hidden; position: relative;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(46,109,164,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(46,109,164,0.08) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none;
+  }
+  body::after {
+    content: ''; position: fixed; top: -20%; left: -10%; width: 70%; height: 70%;
+    background: radial-gradient(circle, rgba(46,109,164,0.15) 0%, transparent 70%); pointer-events: none;
+  }
+  .container { position: relative; z-index: 1; text-align: center; padding: 40px 20px; width: 100%; max-width: 440px; }
+  .logo-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 64px; height: 64px; background: linear-gradient(135deg, var(--accent), var(--blue));
+    border-radius: 16px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(46,109,164,0.4);
+  }
+  .logo-mark svg { width: 32px; height: 32px; fill: none; stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .company { font-family: var(--head); font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .tagline { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 12px; }
+  .divider { width: 40px; height: 2px; background: var(--gold); margin: 0 auto 16px; border-radius: 2px; }
+  .view-note {
+    font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--gold); background: rgba(200,168,75,0.1); border: 1px solid rgba(200,168,75,0.2);
+    padding: 6px 14px; border-radius: 20px; display: inline-block; margin-bottom: 40px;
+  }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 40px; }
+  .card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 36px 20px; background: rgba(255,255,255,0.04); border: 1px solid rgba(200,168,75,0.2);
+    border-radius: 16px; text-decoration: none; color: var(--white); transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(200,168,75,0.1), transparent); opacity: 0; transition: opacity 0.2s;
+  }
+  .card:hover::before { opacity: 1; }
+  .card:hover { border-color: rgba(200,168,75,0.5); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(200,168,75,0.1); }
+  .card-icon { font-size: 32px; margin-bottom: 14px; }
+  .card-title { font-family: var(--head); font-size: 18px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.3px; }
+  .card-sub { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 0.15em; text-transform: uppercase; }
+  .footer { font-size: 9px; color: rgba(255,255,255,0.2); letter-spacing: 0.1em; text-transform: uppercase; }
+  @media (max-width: 400px) { .company { font-size: 22px; } .cards { gap: 12px; } .card { padding: 28px 14px; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo-mark">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+  </div>
+  <div class="company">LALH Services</div>
+  <div class="tagline">Business Management</div>
+  <div class="divider"></div>
+  <div class="view-note">👁 View Only Access</div>
+  <div class="cards">
+    <a class="card" href="WAGES_readonly.html">
+      <div class="card-icon">💰</div>
+      <div class="card-title">WAGES</div>
+      <div class="card-sub">Staff & Roster</div>
+    </a>
+    <a class="card" href="jobs_readonly.html">
+      <div class="card-icon">🔨</div>
+      <div class="card-title">JOBS</div>
+      <div class="card-sub">Jobs & Invoice</div>
+    </a>
+  </div>
+  <div class="footer">View only · Contact Aman to make changes</div>
+</div>
+</body>
+</html>

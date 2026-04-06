@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LALH Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:   #0f1e35;
+    --blue:   #1a3a6a;
+    --accent: #2e6da4;
+    --gold:   #c8a84b;
+    --white:  #ffffff;
+    --light:  #e8eef8;
+    --text:   #0f1a20;
+    --mono:   'JetBrains Mono', monospace;
+    --head:   'Space Grotesk', sans-serif;
+  }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(46,109,164,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(46,109,164,0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* Glow orb */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -20%;
+    left: -10%;
+    width: 70%;
+    height: 70%;
+    background: radial-gradient(circle, rgba(46,109,164,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 40px 20px;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .logo-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, var(--accent), var(--blue));
+    border-radius: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 32px rgba(46,109,164,0.4);
+  }
+
+  .logo-mark svg {
+    width: 32px;
+    height: 32px;
+    fill: white;
+  }
+
+  .company {
+    font-family: var(--head);
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--white);
+    margin-bottom: 6px;
+  }
+
+  .tagline {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  .divider {
+    width: 40px;
+    height: 2px;
+    background: var(--gold);
+    margin: 0 auto 48px;
+    border-radius: 2px;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--white);
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(46,109,164,0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .card:hover::before { opacity: 1; }
+  .card:hover {
+    border-color: rgba(46,109,164,0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(46,109,164,0.2);
+  }
+
+  .card-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .card-title {
+    font-family: var(--head);
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+
+  .card-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .card-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+
+  .badge-edit {
+    background: rgba(46,109,164,0.3);
+    color: rgba(255,255,255,0.6);
+    border: 1px solid rgba(46,109,164,0.4);
+  }
+
+  .badge-view {
+    background: rgba(200,168,75,0.2);
+    color: var(--gold);
+    border: 1px solid rgba(200,168,75,0.3);
+  }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 16px;
+  }
+
+  .readonly-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .readonly-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 16px;
+    background: rgba(200,168,75,0.05);
+    border: 1px solid rgba(200,168,75,0.15);
+    border-radius: 10px;
+    text-decoration: none;
+    color: rgba(255,255,255,0.6);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+
+  .readonly-card:hover {
+    background: rgba(200,168,75,0.1);
+    border-color: rgba(200,168,75,0.3);
+    color: var(--gold);
+  }
+
+  .readonly-card span { font-size: 14px; }
+
+  .footer {
+    font-size: 9px;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 400px) {
+    .company { font-size: 24px; }
+    .cards { gap: 12px; }
+    .card { padding: 24px 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="logo-mark">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+    </svg>
+  </div>
+
+  <div class="company">LALH Services</div>
+  <div class="tagline">Business Management</div>
+  <div class="divider"></div>
+
+  <div class="section-label">Edit Access</div>
+  <div class="cards">
+    <a class="card" href="WAGES.html">
+      <div class="card-badge badge-edit">Edit</div>
+      <div class="card-icon">💰</div>
+      <div class="card-title">WAGES</div>
+      <div class="card-sub">Staff & Roster</div>
+    </a>
+    <a class="card" href="jobs.html">
+      <div class="card-badge badge-edit">Edit</div>
+      <div class="card-icon">🔨</div>
+      <div class="card-title">JOBS</div>
+      <div class="card-sub">Jobs & Invoice</div>
+    </a>
+  </div>
+
+  <div class="section-label">View Only</div>
+  <div class="readonly-cards">
+    <a class="readonly-card" href="WAGES_readonly.html">
+      <span>👁</span> Wages View
+    </a>
+    <a class="readonly-card" href="jobs_readonly.html">
+      <span>👁</span> Jobs View
+    </a>
+  </div>
+
+  <div class="footer">lalhservices.github.io</div>
+
+</div>
+</body>
+</html>
