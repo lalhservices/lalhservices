@@ -338,6 +338,17 @@
   #last-saved.saved  { color: var(--text3); }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+
+  /* ── Backup button ── */
+  #backup-btn {
+    background: none; border: 1px solid rgba(46,109,164,0.3); color: var(--text3);
+    font-size: 9px; padding: 6px 12px; border-radius: 5px; cursor: pointer;
+    font-family: var(--font); letter-spacing: 0.08em; text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  #backup-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #backup-btn.saving { border-color: var(--green); color: var(--green); }
+
   /* ── Payment Status Badge ── */
   .pay-badge {
     display: inline-flex; align-items: center; justify-content: center;
@@ -395,6 +406,7 @@
       <button id="add-person-btn" onclick="addPerson()">+ Add Person</button>
       <button id="delete-week-btn" onclick="confirmDeleteWeek()" style="background:none;border:1px solid #e0c0c0;color:#c0362a;font-size:10px;padding:9px 16px;border-radius:5px;letter-spacing:0.1em;text-transform:uppercase;font-family:var(--font);">✕ Delete Week</button>
     </div>
+    <button id="backup-btn" onclick="manualBackup()" title="Save a backup snapshot now">💾 Backup Now</button>
     <button id="print-btn" onclick="printRoster()">&#10515; Save as PDF</button>
     <button id="share-btn" onclick="openShare()">&#9654; Copy Summary</button>
     <div id="grand-total-box">
@@ -630,7 +642,7 @@ function renderBody() {
               <span class="rate-sym">/hr</span>
             </div>
           </div>
-          <button class="remove-btn" onclick="removePerson(${pid})">×</button>
+          <button class="remove-btn" onclick="confirmRemovePerson(${pid},'${esc(p.name)}')">×</button>
         </div>
       </td>`;
 
@@ -848,6 +860,37 @@ function toggleOff(pid, day) {
   render(); cloudScheduleSave();
 }
 
+// ── Manual Backup ──
+async function manualBackup() {
+  const btn = document.getElementById('backup-btn');
+  if (!btn) return;
+  btn.textContent = '💾 Saving...';
+  btn.classList.add('saving');
+  btn.disabled = true;
+  try {
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2,'0');
+    const mm = String(now.getMonth()+1).padStart(2,'0');
+    const yy = now.getFullYear();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const min = String(now.getMinutes()).padStart(2,'0');
+    const backupName = `Backup_${dd}_${mm}_${yy}_${hh}${min}`;
+    await cloudSet('manual_backup_trigger', backupName);
+    setTimeout(() => {
+      btn.textContent = '✓ Backed Up';
+      setTimeout(() => {
+        btn.textContent = '💾 Backup Now';
+        btn.classList.remove('saving');
+        btn.disabled = false;
+      }, 2000);
+    }, 1000);
+  } catch(e) {
+    btn.textContent = '💾 Backup Now';
+    btn.classList.remove('saving');
+    btn.disabled = false;
+  }
+}
+
 async function cloudSaveGlobal() {
   if (!USE_CLOUD) return;
   // Safety check — never save if people list is empty or has fewer than expected
@@ -872,6 +915,15 @@ function addPerson() {
   S.schedule[id]={};
   DAYS.forEach(d=>{ S.schedule[id][d]=EMPTY(); });
   render(); cloudSaveGlobal(); cloudScheduleSave();
+}
+
+function confirmRemovePerson(pid, name) {
+  document.getElementById('confirm-title').textContent = 'Remove ' + name + '?';
+  document.getElementById('confirm-msg').textContent = 'This removes ' + name + ' from the staff list. Old week data stays in the sheet but won\'t display until you add them back. Click Backup Now first if unsure.';
+  document.getElementById('confirm-ok-btn').textContent = 'Remove';
+  document.getElementById('confirm-ok-btn').className = 'confirm-btn confirm-ok confirm-danger';
+  _confirmAction = 'remove_person_' + pid;
+  document.getElementById('confirm-modal').classList.add('open');
 }
 
 function removePerson(pid) {
@@ -1053,6 +1105,9 @@ function doConfirmAction() {
   } else if (_confirmAction === 'delete') {
     deleteCurrentWeek();
     updateWeekLabel();
+  } else if (_confirmAction && _confirmAction.startsWith('remove_person_')) {
+    const pid = parseInt(_confirmAction.replace('remove_person_', ''));
+    removePerson(pid);
   }
 }
 

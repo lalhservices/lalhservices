@@ -316,6 +316,17 @@
   #last-saved.saved  { color: var(--text3); }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+
+  /* ── Backup button ── */
+  #backup-btn {
+    background: none; border: 1px solid rgba(46,109,164,0.3); color: var(--text3);
+    font-size: 9px; padding: 6px 12px; border-radius: 5px; cursor: pointer;
+    font-family: var(--font); letter-spacing: 0.08em; text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  #backup-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #backup-btn.saving { border-color: var(--green); color: var(--green); }
+
   /* ── Read Only Mode ── */
   body.read-only input, body.read-only button:not(#read-only-badge) { pointer-events: none !important; opacity: 0.8; }
   body.read-only .add-worker-btn, body.read-only .del-worker-btn,
@@ -463,6 +474,7 @@
   </div>
   <div id="last-saved" style="flex:1;text-align:center;align-self:center;"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button id="backup-btn" class="no-print" onclick="manualBackup()" title="Save a backup snapshot now">💾 Backup Now</button>
     <button class="tool-btn no-print" onclick="printJobs()">&#10515; PDF</button>
     <button class="tool-btn no-print" id="share-btn" onclick="openShare()">&#9654; Copy Summary</button>
     <button class="tab-btn active" onclick="switchTab('jobs',this)">Jobs</button>
@@ -1512,6 +1524,37 @@ if (IS_READ_ONLY) {
 
 // ── Last saved timestamp ──
 let _lastSavedTime = null;
+// ── Manual Backup ──
+async function manualBackup() {
+  const btn = document.getElementById('backup-btn');
+  if (!btn) return;
+  btn.textContent = '💾 Saving...';
+  btn.classList.add('saving');
+  btn.disabled = true;
+  try {
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2,'0');
+    const mm = String(now.getMonth()+1).padStart(2,'0');
+    const yy = now.getFullYear();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const min = String(now.getMinutes()).padStart(2,'0');
+    const backupName = `Backup_${dd}_${mm}_${yy}_${hh}${min}`;
+    await cloudSet('manual_backup_trigger', backupName);
+    setTimeout(() => {
+      btn.textContent = '✓ Backed Up';
+      setTimeout(() => {
+        btn.textContent = '💾 Backup Now';
+        btn.classList.remove('saving');
+        btn.disabled = false;
+      }, 2000);
+    }, 1000);
+  } catch(e) {
+    btn.textContent = '💾 Backup Now';
+    btn.classList.remove('saving');
+    btn.disabled = false;
+  }
+}
+
 // ── Last edit timestamp (persisted in sheet) ──
 const LAST_EDIT_KEY = 'jt2_last_edit';
 
