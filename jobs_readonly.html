@@ -667,7 +667,8 @@ function updateWeekLabel(){
 }
 async function changeWeek(dir){
   clearTimeout(saveTimer);
-  G.currentOffset+=dir;
+  G.currentOffset += dir;
+  // Never save currentOffset to sheet — it's always calculated from today
   // Show loading indicator
   const wl = document.getElementById('week-label');
   if(wl) wl.textContent = 'Loading...';
@@ -1432,6 +1433,8 @@ async function cloudLoadState() {
     } else {
       cells = {};
     }
+    // Always reset offset to 0 — never trust stored offset
+    G.currentOffset = 0;
   } catch(e) {
     console.log('cloudLoadState error:', e);
   }
@@ -1484,7 +1487,9 @@ async function cloudScheduleSave() {
     const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
     if (USE_CLOUD) {
       _isSaving = true;
-      await cloudSet('jt2_global', JSON.stringify(G));
+      // Never save currentOffset — always calculate from today's date
+      const gToSave = { rows: G.rows, nextRow: G.nextRow, globalRate: G.globalRate, currentOffset: 0 };
+      await cloudSet('jt2_global', JSON.stringify(gToSave));
       const wkKey = 'jt2_wk_' + weekKey(G.currentOffset);
       const val = JSON.stringify(cells);
       // Never save empty data over existing data

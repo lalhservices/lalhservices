@@ -1263,6 +1263,8 @@ async function cloudLoadState() {
     const wkUpdated = wkResult ? wkResult.updated : null;
     if (wk) { try { schedule = JSON.parse(wk); } catch(e){ schedule = initSchedule(); } }
     else { schedule = initSchedule(); }
+    // Always reset offset to 0 on load
+    G.currentOffset = 0;
   } catch(e) { console.log('cloudLoadState error:', e); }
   updateWeekLabel();
   render();
@@ -1355,7 +1357,10 @@ async function cloudScheduleSave() {
     if (USE_CLOUD) {
       _isSaving = true;
       // Only save week schedule — not global people (prevents overwrite with defaults)
-      const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
+      // Never save currentOffset — always use 0
+      const gSafe = {...G, currentOffset: 0};
+      // wkKey uses actual current week always
+      const wkKey = 'roster_wk_' + getISOWeekKey(0);
       const val = JSON.stringify(schedule);
       // Never save empty schedule
       if (!scheduleHasData() && _lastHash && _lastHash !== '{}') {
