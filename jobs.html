@@ -1270,7 +1270,7 @@ function printInvoice() {
         rowIdx++;
 
         // New page if needed
-        if (y > 260) { doc.addPage(); y = 15; }
+        if (y > 220) { doc.addPage(); y = 15; }
       });
     }
   });
@@ -1343,7 +1343,12 @@ function printInvoice() {
   doc.text('$'+totalPayable.toFixed(2), R - 3, y + 7, {align:'right'});
   y += 16;
 
-  // ── Footer ──
+  // ── Footer — always on last page with enough space ──
+  const footerHeight = 35;
+  if (y + footerHeight > 277) {
+    doc.addPage();
+    y = 15;
+  }
   doc.setDrawColor(...GREY);
   doc.setLineWidth(0.2);
   doc.line(L, y, R, y);
