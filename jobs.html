@@ -1124,7 +1124,10 @@ function renderInvoice() {
     </div>
 
     <div class="inv-footer-note">
-      Bank Details: Mentioned in email<br>
+      Bank Details: Commonwealth Bank<br>
+      Name: Navjot Singh Lalh<br>
+      BSB: 064496<br>
+      ACC NO: 11192427<br>
       <strong>Thank you for your business!</strong>
     </div>
   `;
@@ -1348,7 +1351,9 @@ function printInvoice() {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...GREY);
-  doc.text('Bank Details: Mentioned in email', L, y); y += 5;
+  doc.text('Bank Details: Commonwealth Bank', L, y); y += 5;
+  doc.text('Name: Navjot Singh Lalh', L, y); y += 5;
+  doc.text('BSB: 064496     ACC NO: 11192427', L, y); y += 5;
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...NAVY);
   doc.text('Thank you for your business!', L, y);
