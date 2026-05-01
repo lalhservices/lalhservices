@@ -447,7 +447,7 @@
     body.print-invoice #header { display: none !important; }
     body.print-invoice #last-saved { display: none !important; }
     /* Hide browser print header/footer (URL, date, time) */
-    @page { margin: 10mm; }
+    @page { margin: 8mm; }
   }
 
   input { pointer-events: none !important; user-select: none !important; -webkit-user-select: none !important; }
@@ -1171,7 +1171,7 @@ function printInvoice() {
   const RED = [192, 54, 42];
 
   let y = 15;
-  const L = 15, R = 195, W = R - L;
+  const L = 10, R = 200, W = R - L; // wider margins for more table space
 
   // ── Header ──
   doc.setFont('helvetica', 'bold');
@@ -1196,7 +1196,7 @@ function printInvoice() {
   doc.text('Payment Due: ' + payDue, L, y); y += 10;
 
   // ── Table header ──
-  const cols = [75, 20, 30, 25, 30]; // total = 180mm fits A4
+  const cols = [80, 18, 32, 28, 32]; // total = 190mm
   const headers = ['Project', 'Hours', 'Amount', 'Parking', 'Materials'];
   doc.setFillColor(...NAVY);
   doc.rect(L, y, W, 7, 'F');
@@ -1353,6 +1353,7 @@ function printInvoice() {
   if (y + footerHeight > 277) {
     doc.addPage();
     y = 15;
+    // No page number
   }
   doc.setDrawColor(...GREY);
   doc.setLineWidth(0.2);
