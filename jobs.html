@@ -1191,7 +1191,7 @@ function printInvoice() {
   doc.text('Payment Due: ' + payDue, L, y); y += 10;
 
   // ── Table header ──
-  const cols = [85, 20, 35, 25, 25];
+  const cols = [75, 20, 30, 25, 30]; // total = 180mm fits A4
   const headers = ['Project', 'Hours', 'Amount', 'Parking', 'Materials'];
   doc.setFillColor(...NAVY);
   doc.rect(L, y, W, 7, 'F');
