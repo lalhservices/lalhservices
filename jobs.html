@@ -512,7 +512,9 @@
     <div id="summary-cards"></div>
     <div id="summary-footer">
       <div><div class="sf-label">Total Hours</div><div class="sf-hours" id="sf-hours">0h</div></div>
-      <div><div class="sf-label">Total Value</div><div class="sf-pay" id="sf-pay">$0.00</div></div>
+      <div><div class="sf-label">Labour</div><div class="sf-pay" id="sf-labour">$0.00</div></div>
+      <div><div class="sf-label">Extras</div><div class="sf-pay" id="sf-extras" style="color:var(--green)">$0.00</div></div>
+      <div><div class="sf-label">Grand Total</div><div class="sf-pay" id="sf-pay">$0.00</div></div>
     </div>
   </div>
 </div>
@@ -968,8 +970,21 @@ function renderSummary(){
 
   if(!h)h='<div style="color:var(--text3);font-size:11px;padding:20px;">No job data yet.</div>';
   document.getElementById('summary-cards').innerHTML=h;
+  // Calculate labour and extras separately
+  let totalLabour = 0, totalExtras = 0;
+  DAYS.forEach(day => {
+    G.rows.forEach(rid => {
+      const c = cells[ck(rid,day)];
+      if (!c) return;
+      const dh = cellHrs(rid,day);
+      totalLabour += dh * (G.globalRate||40);
+      totalExtras += (parseFloat(c.parking||0)) + (parseFloat(c.materials||0));
+    });
+  });
   document.getElementById('sf-hours').textContent=fmt(allHrs())||'0h';
-  document.getElementById('sf-pay').textContent='$'+allPay().toFixed(2);
+  document.getElementById('sf-labour').textContent='$'+totalLabour.toFixed(2);
+  document.getElementById('sf-extras').textContent='$'+totalExtras.toFixed(2);
+  document.getElementById('sf-pay').textContent='$'+(totalLabour+totalExtras).toFixed(2);
 }
 
 function switchTab(name,btn){
