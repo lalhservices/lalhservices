@@ -1213,10 +1213,17 @@ function printInvoice() {
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  let x = L + 2;
+  // Calculate column start positions
+  const colStarts = [];
+  let cx = L;
+  cols.forEach(c => { colStarts.push(cx); cx += c; });
+  
   headers.forEach((h, i) => {
-    doc.text(h, i === 0 ? x : x + cols[i] - 2, y + 5, { align: i === 0 ? 'left' : 'right' });
-    x += cols[i];
+    if (i === 0) {
+      doc.text(h, colStarts[i] + 2, y + 5, { align: 'left' });
+    } else {
+      doc.text(h, colStarts[i] + cols[i] - 2, y + 5, { align: 'right' });
+    }
   });
   y += 7;
 
@@ -1268,16 +1275,11 @@ function printInvoice() {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
 
-        let rx = L + 2;
-        doc.text(c.jobName || '–', rx, y + 5);
-        rx += cols[0];
-        doc.text(dh > 0 ? dh.toFixed(1) : 'TBC', rx - 2, y + 5, {align:'right'});
-        rx += cols[1];
-        doc.text(dh > 0 ? '$'+labour.toFixed(2) : 'TBC', rx - 2, y + 5, {align:'right'});
-        rx += cols[2];
-        doc.text(park > 0 ? '$'+park.toFixed(2) : '–', rx - 2, y + 5, {align:'right'});
-        rx += cols[3];
-        doc.text(mats > 0 ? '$'+mats.toFixed(2) : '–', rx - 2, y + 5, {align:'right'});
+        doc.text(c.jobName || '–', colStarts[0] + 2, y + 5, {align:'left'});
+        doc.text(dh > 0 ? dh.toFixed(1) : 'TBC', colStarts[1] + cols[1] - 2, y + 5, {align:'right'});
+        doc.text(dh > 0 ? '$'+labour.toFixed(2) : 'TBC', colStarts[2] + cols[2] - 2, y + 5, {align:'right'});
+        doc.text(park > 0 ? '$'+park.toFixed(2) : '–', colStarts[3] + cols[3] - 2, y + 5, {align:'right'});
+        doc.text(mats > 0 ? '$'+mats.toFixed(2) : '–', colStarts[4] + cols[4] - 2, y + 5, {align:'right'});
 
         doc.setDrawColor(230,230,230);
         doc.line(L, y + 7, R, y + 7);
@@ -1296,16 +1298,11 @@ function printInvoice() {
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  let gx = L + 2;
-  doc.text('GRAND TOTAL', gx, y + 5);
-  gx += cols[0];
-  doc.text(grandHrs.toFixed(1), gx - 2, y + 5, {align:'right'});
-  gx += cols[1];
-  doc.text('$'+grandLabour.toFixed(2), gx - 2, y + 5, {align:'right'});
-  gx += cols[2];
-  doc.text('$'+grandPark.toFixed(2), gx - 2, y + 5, {align:'right'});
-  gx += cols[3];
-  doc.text('$'+grandMats.toFixed(2), gx - 2, y + 5, {align:'right'});
+  doc.text('GRAND TOTAL', colStarts[0] + 2, y + 5, {align:'left'});
+  doc.text(grandHrs.toFixed(1), colStarts[1] + cols[1] - 2, y + 5, {align:'right'});
+  doc.text('$'+grandLabour.toFixed(2), colStarts[2] + cols[2] - 2, y + 5, {align:'right'});
+  doc.text('$'+grandPark.toFixed(2), colStarts[3] + cols[3] - 2, y + 5, {align:'right'});
+  doc.text('$'+grandMats.toFixed(2), colStarts[4] + cols[4] - 2, y + 5, {align:'right'});
   y += 14;
 
   // ── Totals summary table ──
