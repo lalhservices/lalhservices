@@ -663,7 +663,7 @@ function updateWeekLabel(){
   const{mon,sun}=weekDates(G.currentOffset);
   const f=d=>d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
   const dot=localStorage.getItem('jt2_wk_'+weekKey(G.currentOffset))?'  ●':'';
-  document.getElementById('week-label').textContent='Week of '+f(mon)+' – '+f(sun)+dot;
+  const wn=weekKey(G.currentOffset).split('-W')[1];document.getElementById('week-label').textContent='WK '+wn+' · Week of '+f(mon)+' – '+f(sun);
 }
 async function changeWeek(dir){
   clearTimeout(saveTimer);
@@ -1435,7 +1435,15 @@ async function cloudLoadState() {
 
     if (wk) {
       try {
-        cells = JSON.parse(wk);
+        const loaded = JSON.parse(wk);
+        // Guard: check if this week's data is identical to previous week (copy bug)
+        const prevWk = await cloudGet('jt2_wk_' + weekKey(-1));
+        if (prevWk && JSON.stringify(loaded) === JSON.stringify(JSON.parse(prevWk))) {
+          console.log('W19 guard: current week identical to previous — treating as empty');
+          cells = {};
+        } else {
+          cells = loaded;
+        }
         console.log('Cells loaded, keys:', Object.keys(cells).length);
       } catch(e) {
         console.log('cells parse error', e);

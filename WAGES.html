@@ -424,7 +424,9 @@
     <div style="display:flex;justify-content:flex-end;padding:0 0 14px;"><button id="print-summary-btn" class="no-print" onclick="printSummary()">⇓ Save as PDF</button></div>
     <div id="summary-footer">
       <div><div class="sf-label">Total Hours</div><div class="sf-hours" id="sf-hours">0h</div></div>
-      <div><div class="sf-label">Total Payout</div><div class="sf-pay" id="sf-pay">$0.00</div></div>
+      <div><div class="sf-label">Labour</div><div class="sf-pay" id="sf-labour">$0.00</div></div>
+      <div><div class="sf-label">Extras</div><div class="sf-pay" id="sf-extras" style="color:var(--green)">$0.00</div></div>
+      <div><div class="sf-label">Grand Total</div><div class="sf-pay" id="sf-pay">$0.00</div></div>
     </div>
   </div>
 </div>
@@ -764,8 +766,12 @@ function renderSummary() {
     </div>`;
   });
   document.getElementById('summary-cards').innerHTML = h;
+  const totalLabour = S.people.reduce((s,p) => s + totalWages(p.id), 0);
+  const totalEx = S.people.reduce((s,p) => s + totalExtras(p.id), 0);
   document.getElementById('sf-hours').textContent = fmt(allHrs())||'0h';
-  document.getElementById('sf-pay').textContent = `$${allPay().toFixed(2)}`;
+  document.getElementById('sf-labour').textContent = '$'+totalLabour.toFixed(2);
+  document.getElementById('sf-extras').textContent = '$'+totalEx.toFixed(2);
+  document.getElementById('sf-pay').textContent = '$'+allPay().toFixed(2);
 }
 
 // ── Actions ──
@@ -1047,7 +1053,7 @@ function weekLabelForOffset(offset) {
 }
 
 function updateWeekLabel() {
-  document.getElementById('week-label').textContent = weekLabelForOffset(G.currentOffset);
+  const wn = getISOWeekKey(G.currentOffset).split('-W')[1]; document.getElementById('week-label').textContent = 'WK ' + wn + ' · ' + weekLabelForOffset(G.currentOffset);
 }
 
 async function changeWeek(dir) {
@@ -1261,8 +1267,19 @@ async function cloudLoadState() {
     const wkResult = await cloudGet(wkKey, true);
     const wk = wkResult ? wkResult.value : null;
     const wkUpdated = wkResult ? wkResult.updated : null;
-    if (wk) { try { schedule = JSON.parse(wk); } catch(e){ schedule = initSchedule(); } }
-    else { schedule = initSchedule(); }
+    if (wk) {
+      try {
+        const loaded = JSON.parse(wk);
+        // Guard: check if identical to previous week
+        const prevWk = await cloudGet('roster_wk_' + getISOWeekKey(-1));
+        if (prevWk && JSON.stringify(loaded) === JSON.stringify(JSON.parse(prevWk))) {
+          console.log('Copy guard: current week identical to previous — treating as empty');
+          schedule = initSchedule();
+        } else {
+          schedule = loaded;
+        }
+      } catch(e){ schedule = initSchedule(); }
+    } else { schedule = initSchedule(); }
     // Always reset offset to 0 on load
     G.currentOffset = 0;
   } catch(e) { console.log('cloudLoadState error:', e); }
