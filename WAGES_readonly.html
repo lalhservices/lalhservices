@@ -1344,7 +1344,9 @@ function getPayLabel(status) {
 
 async function pollForChanges() {
   if (!USE_CLOUD || _isSaving) return;
-  if (Date.now() - _lastTyped < 5000) return; // user is typing, skip
+  if (Date.now() - _lastTyped < 5000) return;
+  // Only poll when on current week (offset 0) — never overwrite past weeks
+  if (G.currentOffset !== 0) return;
   try {
     // Poll pay status
     const ps = await cloudGet(payStatusKey());
@@ -1355,10 +1357,17 @@ async function pollForChanges() {
         renderSummary();
       }
     }
-    const wk = await cloudGet('roster_wk_' + getISOWeekKey(G.currentOffset));
+    const wk = await cloudGet('roster_wk_' + getISOWeekKey(0));
     if (!wk || wk === _lastHash) return;
+    // Never overwrite with empty or with previous week data
+    if (wk === '{}' || wk === '') return;
     _lastHash = wk;
     const newSchedule = JSON.parse(wk);
+    // Guard: never overwrite if remote has no real data
+    const hasRealData = Object.values(newSchedule).some(pid =>
+      Object.values(pid).some(d => d.timeFrom)
+    );
+    if (!hasRealData) return;
     const localStr = JSON.stringify(schedule);
     const remoteStr = JSON.stringify(newSchedule);
     if (remoteStr !== localStr) {
