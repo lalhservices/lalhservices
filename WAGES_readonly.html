@@ -1388,11 +1388,8 @@ async function cloudScheduleSave() {
     const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
     if (USE_CLOUD) {
       _isSaving = true;
-      // Only save week schedule — not global people (prevents overwrite with defaults)
-      // Never save currentOffset — always use 0
-      const gSafe = {...G, currentOffset: 0};
-      // wkKey uses actual current week always
-      const wkKey = 'roster_wk_' + getISOWeekKey(0);
+      // Save to the week currently being viewed
+      const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
       const val = JSON.stringify(schedule);
       // Never save empty schedule
       if (!scheduleHasData() && _lastHash && _lastHash !== '{}') {
