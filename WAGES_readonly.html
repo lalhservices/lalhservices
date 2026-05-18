@@ -829,6 +829,30 @@ function setEntry(pid, day, field, value) {
   cloudScheduleSave();
 }
 
+// ── Per-week staff rates ──
+async function loadWeekRates() {
+  if (!USE_CLOUD) return;
+  const wk = getISOWeekKey(G.currentOffset);
+  const savedRates = await cloudGet('roster_rates_' + wk);
+  if (savedRates) {
+    try {
+      const rates = JSON.parse(savedRates);
+      G.people.forEach(p => {
+        if (rates[p.id] !== undefined) p.rate = rates[p.id];
+      });
+      render();
+    } catch(e) {}
+  }
+}
+
+async function saveWeekRates() {
+  if (!USE_CLOUD) return;
+  const wk = getISOWeekKey(G.currentOffset);
+  const rates = {};
+  G.people.forEach(p => { rates[p.id] = p.rate; });
+  await cloudSet('roster_rates_' + wk, JSON.stringify(rates));
+}
+
 function updateExtra(inp, pid, day, field, color) {
   const val = inp.value.trim();
   inp.style.color = val ? '#0f1a20' : 'var(--border)';
@@ -918,6 +942,7 @@ function setPerson(pid, field, value) {
   const p = S.people.find(x=>x.id===pid);
   if (p) p[field] = value;
   renderHead(); renderFooter();
+  if (field === 'rate') saveWeekRates();
   cloudSaveGlobal();
   cloudScheduleSave();
 }
@@ -1079,6 +1104,7 @@ async function changeWeek(dir) {
   } else {
     loadWeekSchedule();
   }
+  await loadWeekRates();
   await loadPayStatus();
   await loadLastEditTime();
   updateWeekLabel();
@@ -1288,6 +1314,7 @@ async function cloudLoadState() {
     } else { schedule = initSchedule(); }
     // Always reset offset to 0 on load
     G.currentOffset = 0;
+    await loadWeekRates();
   } catch(e) { console.log('cloudLoadState error:', e); }
   updateWeekLabel();
   render();
