@@ -466,7 +466,7 @@
     <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
       <span style="font-size:10px;color:var(--text3);">Rate:</span>
       <span style="font-size:10px;color:var(--text3);">$</span>
-      <input id="global-rate" type="number" min="0" step="1" value="40"
+      <input id="global-rate" type="number" min="0" step="1" value="45"
         oninput="setGlobalRate(this.value)"
         style="font-size:13px;font-weight:700;color:var(--accent);width:44px;border-bottom:1px solid var(--border2);outline:none;background:transparent;font-family:var(--font);">
       <span style="font-size:10px;color:var(--text3);">/hr — all jobs</span>
@@ -569,7 +569,7 @@ const COLORS = ['#2e6da4','#c0622a','#27875a','#a03070','#6b3ab5','#b56020','#1a
 // ── State ──
 // Each cell "rowId|day" is fully independent: own jobName, own workers, own parking/materials
 // G.rows = list of row IDs (just for ordering)
-let G = { rows:[1,2], nextRow:3, globalRate:40, currentOffset:0 };
+let G = { rows:[1,2], nextRow:3, globalRate:45, currentOffset:0 };
 let cells = {};
 // cells["1|Mon"] = { jobName:'', workers:[{name,from,to},...], parking:'', materials:'' }
 
@@ -643,7 +643,7 @@ function fmt(h){if(!h||h<=0)return null;const hh=Math.floor(h),mm=Math.round((h-
 function cellHrs(rid,day){return(cells[ck(rid,day)]?.workers||[]).reduce((s,w)=>s+calcH(w.from,w.to),0);}
 function cellExtras(rid,day){const c=cells[ck(rid,day)];if(!c)return 0;return(parseFloat(c.parking)||0)+(parseFloat(c.materials)||0);}
 function rowHrs(rid){return DAYS.reduce((s,d)=>s+cellHrs(rid,d),0);}
-function rowWages(rid){return rowHrs(rid)*(G.globalRate||40);}
+function rowWages(rid){return rowHrs(rid)*(G.globalRate||45);}
 function rowExtras(rid){return DAYS.reduce((s,d)=>s+cellExtras(rid,d),0);}
 function rowGrand(rid){return rowWages(rid)+rowExtras(rid);}
 function dayTotalHrs(day){return G.rows.reduce((s,rid)=>s+cellHrs(rid,day),0);}
@@ -956,7 +956,7 @@ function renderSummary(){
       const c=cells[ck(rid,day)];
       const color=COLORS[(rid-1)%COLORS.length]||COLORS[0];
       const dh=cellHrs(rid,day);
-      const dw=dh*(G.globalRate||40);
+      const dw=dh*(G.globalRate||45);
       const de=cellExtras(rid,day);
       const dg=dw+de;
       h+=`<div class="summary-card" style="border-top-color:${color}">
@@ -982,7 +982,7 @@ function renderSummary(){
       const c = cells[ck(rid,day)];
       if (!c) return;
       const dh = cellHrs(rid,day);
-      totalLabour += dh * (G.globalRate||40);
+      totalLabour += dh * (G.globalRate||45);
       totalExtras += (parseFloat(c.parking||0)) + (parseFloat(c.materials||0));
     });
   });
