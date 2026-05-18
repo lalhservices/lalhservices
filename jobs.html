@@ -676,6 +676,7 @@ async function changeWeek(dir){
   } else {
     loadWeek();
   }
+  await loadWeekRate();
   await loadLastEditTime();
   updateWeekLabel();
   render();
@@ -1461,6 +1462,7 @@ async function cloudLoadState() {
     }
     // Always reset offset to 0 — never trust stored offset
     G.currentOffset = 0;
+    await loadWeekRate();
   } catch(e) {
     console.log('cloudLoadState error:', e);
   }
@@ -1526,6 +1528,7 @@ async function cloudScheduleSave() {
       await cloudSet(wkKey, val);
       _lastHash = val;
       _isSaving = false;
+      await saveWeekRate();
       await saveLastEditTime();
     } else {
       try {
@@ -1589,6 +1592,24 @@ async function manualBackup() {
     btn.classList.remove('saving');
     btn.disabled = false;
   }
+}
+
+// ── Per-week rate ──
+async function loadWeekRate() {
+  if (!USE_CLOUD) return;
+  const wk = weekKey(G.currentOffset);
+  const savedRate = await cloudGet('jt2_rate_' + wk);
+  if (savedRate) {
+    G.globalRate = parseFloat(savedRate);
+    const gr = document.getElementById('global-rate');
+    if (gr) gr.value = G.globalRate;
+  }
+}
+
+async function saveWeekRate() {
+  if (!USE_CLOUD) return;
+  const wk = weekKey(G.currentOffset);
+  await cloudSet('jt2_rate_' + wk, String(G.globalRate));
 }
 
 // ── Last edit timestamp (persisted in sheet) ──
