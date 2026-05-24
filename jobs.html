@@ -1598,7 +1598,16 @@ async function manualBackup() {
 async function loadWeekRate() {
   if (!USE_CLOUD) return;
   const wk = weekKey(G.currentOffset);
-  const savedRate = await cloudGet('jt2_rate_' + wk);
+  let savedRate = await cloudGet('jt2_rate_' + wk);
+  // If no rate for this week, inherit from previous week
+  if (!savedRate) {
+    const prevWk = weekKey(G.currentOffset - 1);
+    savedRate = await cloudGet('jt2_rate_' + prevWk);
+    if (savedRate) {
+      // Lock in inherited rate for this week
+      await cloudSet('jt2_rate_' + wk, savedRate);
+    }
+  }
   if (savedRate) {
     G.globalRate = parseFloat(savedRate);
     const gr = document.getElementById('global-rate');

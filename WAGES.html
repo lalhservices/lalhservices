@@ -827,14 +827,24 @@ function setEntry(pid, day, field, value) {
 async function loadWeekRates() {
   if (!USE_CLOUD) return;
   const wk = getISOWeekKey(G.currentOffset);
-  const savedRates = await cloudGet('roster_rates_' + wk);
+  let savedRates = await cloudGet('roster_rates_' + wk);
+  // If no rates for this week, inherit from previous week
+  if (!savedRates) {
+    const prevWk = getISOWeekKey(G.currentOffset - 1);
+    savedRates = await cloudGet('roster_rates_' + prevWk);
+    if (savedRates) {
+      // Save inherited rates for this week so it's locked in
+      await cloudSet('roster_rates_' + wk, savedRates);
+    }
+  }
   if (savedRates) {
     try {
       const rates = JSON.parse(savedRates);
       G.people.forEach(p => {
-        if (rates[p.id] !== undefined) p.rate = rates[p.id];
+        if (rates[p.id] !== undefined) p.rate = String(rates[p.id]);
       });
-      render();
+      renderHead();
+      renderFooter();
     } catch(e) {}
   }
 }
