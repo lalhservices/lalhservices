@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LALH — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1e35;
+    --panel: #16263f;
+    --panel2: #1c2e4a;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f4f8;
+    --text2: rgba(255,255,255,0.55);
+    --text3: rgba(255,255,255,0.32);
+    --accent: #4d8fd1;
+    --green: #3dd68c;
+    --red: #ff6b5e;
+    --gold: #c8a84b;
+    --mono: 'JetBrains Mono', monospace;
+    --head: 'Space Grotesk', sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; padding-bottom: 60px; }
+
+  /* Header */
+  #header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(15,30,53,0.95); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  #header h1 { font-family: var(--head); font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+  #header h1 span { color: var(--gold); }
+  #week-nav { display: flex; align-items: center; gap: 10px; }
+  .wk-btn {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; font-family: var(--mono);
+  }
+  .wk-btn:hover { border-color: var(--accent); }
+  #week-label { font-size: 11px; color: var(--text2); letter-spacing: 0.05em; min-width: 180px; text-align: center; }
+
+  #content { max-width: 760px; margin: 0 auto; padding: 18px 14px; }
+
+  /* Week hero */
+  #week-hero {
+    background: linear-gradient(135deg, var(--panel2), var(--panel));
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 22px 20px; margin-bottom: 22px;
+  }
+  #hero-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text3); margin-bottom: 14px; }
+  #hero-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .hero-stat .hs-label { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
+  .hero-stat .hs-val { font-family: var(--head); font-size: 21px; font-weight: 800; letter-spacing: -0.5px; }
+  .hs-charged { color: var(--accent); }
+  .hs-paid { color: var(--text); }
+  .hs-profit-pos { color: var(--green); }
+  .hs-profit-neg { color: var(--red); }
+  .hs-margin { color: var(--gold); }
+  @media (max-width: 540px) {
+    #hero-grid { grid-template-columns: repeat(2, 1fr); gap: 16px 10px; }
+    .hero-stat .hs-val { font-size: 19px; }
+  }
+
+  /* Day blocks */
+  .day-block { margin-bottom: 18px; }
+  .day-head {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 10px 10px 0 0; padding: 9px 14px;
+  }
+  .day-name { font-family: var(--head); font-size: 13px; font-weight: 800; color: var(--gold); }
+  .day-quick { font-size: 10px; color: var(--text2); }
+  .day-quick b { color: var(--text); }
+  .day-body { background: var(--panel); border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; overflow: hidden; }
+
+  /* Person rows */
+  .person-row { padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  .person-row:last-of-type { border-bottom: none; }
+  .pr-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .pr-name { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
+  .pr-diff { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+  .pr-diff.pos { background: rgba(61,214,140,0.12); color: var(--green); }
+  .pr-diff.neg { background: rgba(255,107,94,0.12); color: var(--red); }
+  .pr-diff.zero { background: rgba(255,255,255,0.06); color: var(--text2); }
+  .pr-lines { display: grid; gap: 3px; }
+  .pr-line { display: flex; justify-content: space-between; font-size: 10px; color: var(--text2); gap: 10px; }
+  .pr-line .lbl { color: var(--text3); flex-shrink: 0; width: 48px; }
+  .pr-line .detail { flex: 1; text-align: left; word-break: break-word; }
+  .pr-line .amt { color: var(--text); font-weight: 600; flex-shrink: 0; }
+  .pr-line.jobs-line .amt { color: var(--accent); }
+
+  /* Day footer */
+  .day-foot {
+    display: flex; justify-content: space-between; gap: 8px;
+    background: rgba(255,255,255,0.025); padding: 9px 14px;
+    font-size: 10px; border-top: 1px solid var(--border);
+  }
+  .df-item { color: var(--text3); }
+  .df-item b { color: var(--text); font-weight: 700; }
+  .df-item.profit-pos b { color: var(--green); }
+  .df-item.profit-neg b { color: var(--red); }
+
+  /* Unmatched note */
+  .unmatched-note {
+    padding: 9px 14px; font-size: 9.5px; color: var(--gold);
+    background: rgba(200,168,75,0.06); border-top: 1px solid rgba(200,168,75,0.15);
+    line-height: 1.6;
+  }
+
+  /* Empty / loading */
+  #loading, #empty {
+    text-align: center; padding: 60px 20px; color: var(--text3); font-size: 11px; letter-spacing: 0.1em;
+  }
+  .spinner {
+    width: 26px; height: 26px; border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; margin: 0 auto 16px; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #refresh-note { text-align: center; font-size: 9px; color: var(--text3); margin-top: 24px; letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>LALH <span>/ DASHBOARD</span></h1>
+  <div id="week-nav">
+    <button class="wk-btn" onclick="changeWeek(-1)">←</button>
+    <div id="week-label">Loading…</div>
+    <button class="wk-btn" onclick="changeWeek(1)">→</button>
+  </div>
+</div>
+
+<div id="content">
+  <div id="loading"><div class="spinner"></div>LOADING WEEK DATA…</div>
+  <div id="dash" style="display:none">
+    <div id="week-hero">
+      <div id="hero-title">WEEK PERFORMANCE</div>
+      <div id="hero-grid">
+        <div class="hero-stat"><div class="hs-label">Charged</div><div class="hs-val hs-charged" id="h-charged">$0</div></div>
+        <div class="hero-stat"><div class="hs-label">Wages Paid</div><div class="hs-val hs-paid" id="h-paid">$0</div></div>
+        <div class="hero-stat"><div class="hs-label">Profit</div><div class="hs-val" id="h-profit">$0</div></div>
+        <div class="hero-stat"><div class="hs-label">Margin</div><div class="hs-val hs-margin" id="h-margin">0%</div></div>
+      </div>
+    </div>
+    <div id="days"></div>
+  </div>
+  <div id="empty" style="display:none">NO DATA FOR THIS WEEK</div>
+  <div id="refresh-note">READ-ONLY · PULLS LIVE FROM SHEET · REFRESH PAGE FOR LATEST</div>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbyV8B4gewTmHsRUyi8J-gxpaMpcB_VlLX_16BpAQX5xmr2IlAGE1LfgN2uYX02OSaio/exec';
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_FULL = {Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday',Sat:'Saturday',Sun:'Sunday'};
+let offset = 0;
+
+// ── Week helpers (identical logic to jobs/wages files) ──
+function weekDates(off) {
+  const now = new Date(), d = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - d + (d === 0 ? -6 : 1) + off * 7);
+  mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  return { mon, sun };
+}
+function weekKey(off) {
+  const { mon } = weekDates(off);
+  const yr = mon.getFullYear();
+  const start = new Date(yr, 0, 1);
+  const wn = Math.ceil(((mon - start) / 86400000 + start.getDay() + 1) / 7);
+  return yr + '-W' + String(wn).padStart(2, '0');
+}
+function calcH(from, to) {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(':').map(Number);
+  const [th, tm] = to.split(':').map(Number);
+  let m = (th * 60 + tm) - (fh * 60 + fm);
+  if (m < 0) m += 1440;
+  return m / 60;
+}
+function norm(name) {
+  return (name || '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+// Fuzzy match a typed worker name to a staff member
+function matchStaff(typed, people) {
+  const t = norm(typed);
+  if (!t) return null;
+  // Exact match on full name or first name
+  for (const p of people) {
+    const full = norm(p.name);
+    const first = full.split(' ')[0];
+    if (t === full || t === first) return p;
+  }
+  // Starts-with / contains match (handles kartik vs karik etc.)
+  for (const p of people) {
+    const first = norm(p.name).split(' ')[0];
+    if (first.length >= 3 && (t.startsWith(first.slice(0, 4)) || first.startsWith(t.slice(0, 4)))) return p;
+  }
+  // Levenshtein-lite: same first 3 chars
+  for (const p of people) {
+    const first = norm(p.name).split(' ')[0];
+    if (t.slice(0, 3) === first.slice(0, 3)) return p;
+  }
+  return null;
+}
+
+async function cloudGet(key) {
+  try {
+    const r = await fetch(API_URL + '?action=get&key=' + encodeURIComponent(key), { redirect: 'follow' });
+    const d = await r.json();
+    return d.value || null;
+  } catch (e) { return null; }
+}
+
+function money(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function moneyShort(n) {
+  const v = Math.round(n);
+  return '$' + String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+async function load() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('dash').style.display = 'none';
+  document.getElementById('empty').style.display = 'none';
+
+  const wk = weekKey(offset);
+  const { mon, sun } = weekDates(offset);
+  const f = d => d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  const wn = wk.split('-W')[1];
+  document.getElementById('week-label').textContent = 'WK ' + wn + ' · ' + f(mon) + ' – ' + f(sun);
+
+  // Fetch everything in parallel
+  const [gRaw, jobsRaw, jobsRateRaw, rosterRaw, ratesRaw, globalRaw] = await Promise.all([
+    cloudGet('jt2_global'),
+    cloudGet('jt2_wk_' + wk),
+    cloudGet('jt2_rate_' + wk),
+    cloudGet('roster_wk_' + wk),
+    cloudGet('roster_rates_' + wk),
+    cloudGet('roster_global'),
+  ]);
+
+  const jobsGlobal = gRaw ? JSON.parse(gRaw) : { rows: [] };
+  const cells = jobsRaw ? JSON.parse(jobsRaw) : {};
+  const jobRate = jobsRateRaw ? parseFloat(jobsRateRaw) : 45;
+  const schedule = rosterRaw ? JSON.parse(rosterRaw) : {};
+  const global = globalRaw ? JSON.parse(globalRaw) : { people: [] };
+  const people = global.people || [];
+
+  // Apply per-week rates
+  if (ratesRaw) {
+    try {
+      const rates = JSON.parse(ratesRaw);
+      people.forEach(p => { if (rates[p.id] !== undefined) p.rate = rates[p.id]; });
+    } catch (e) {}
+  }
+
+  document.getElementById('loading').style.display = 'none';
+
+  const hasJobs = Object.keys(cells).length > 0;
+  const hasWages = Object.values(schedule).some(pd => Object.values(pd || {}).some(e => e && e.timeFrom));
+  if (!hasJobs && !hasWages) {
+    document.getElementById('empty').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('dash').style.display = 'block';
+
+  let wkCharged = 0, wkPaid = 0, wkExtras = 0;
+  const daysEl = document.getElementById('days');
+  daysEl.innerHTML = '';
+
+  DAYS.forEach((day, di) => {
+    // ── Gather jobs side: per matched person → list of {job, hrs} ──
+    const personJobs = {};   // pid → [{job, hrs}]
+    const unmatched = [];    // [{name, job, hrs}]
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        const staff = matchStaff(w.name, people);
+        if (staff) {
+          if (!personJobs[staff.id]) personJobs[staff.id] = [];
+          personJobs[staff.id].push({ job: c.jobName || '–', hrs });
+        } else {
+          unmatched.push({ name: w.name || '?', job: c.jobName || '–', hrs });
+        }
+      });
+    });
+
+    // ── Gather wages side: pid → hrs ──
+    const personWage = {};
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (e && e.timeFrom && e.timeTo && !e.off) {
+        personWage[p.id] = calcH(e.timeFrom, e.timeTo);
+      }
+    });
+
+    // Day extras from jobs (parking + materials charged on)
+    let dayExtras = 0;
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      dayExtras += (parseFloat(c.parking || 0)) + (parseFloat(c.materials || 0));
+    });
+
+    const pids = [...new Set([...Object.keys(personJobs), ...Object.keys(personWage)])];
+    if (pids.length === 0 && unmatched.length === 0) return; // skip empty day
+
+    // ── Build day block ──
+    const dt = new Date(weekDates(offset).mon);
+    dt.setDate(dt.getDate() + di);
+    const dateStr = dt.toLocaleDateString('en-AU', { day: 'numeric', month: 'numeric' });
+
+    let dayCharged = 0, dayPaid = 0;
+    let rowsHtml = '';
+
+    pids.sort((a, b) => {
+      const pa = people.find(p => String(p.id) === String(a));
+      const pb = people.find(p => String(p.id) === String(b));
+      return (pa?.name || '').localeCompare(pb?.name || '');
+    });
+
+    pids.forEach(pid => {
+      const staff = people.find(p => String(p.id) === String(pid));
+      if (!staff) return;
+      const jobs = personJobs[pid] || [];
+      const jobHrs = jobs.reduce((s, j) => s + j.hrs, 0);
+      const charged = jobHrs * jobRate;
+      const wageHrs = personWage[pid] || 0;
+      const paid = wageHrs * parseFloat(staff.rate || 30);
+      const diff = charged - paid;
+      dayCharged += charged;
+      dayPaid += paid;
+
+      const jobsDetail = jobs.length
+        ? jobs.map(j => `${j.job} ${j.hrs.toFixed(1)}h`).join(' + ') + ` = ${jobHrs.toFixed(1)}h`
+        : '—';
+      const wageDetail = wageHrs > 0 ? `${wageHrs.toFixed(1)}h × $${staff.rate}` : '—';
+
+      const diffCls = Math.abs(diff) < 0.01 ? 'zero' : (diff > 0 ? 'pos' : 'neg');
+      const diffTxt = Math.abs(diff) < 0.01 ? '±$0' : (diff > 0 ? '+' : '−') + money(Math.abs(diff)).slice(1).replace(/^/, '$');
+
+      rowsHtml += `
+        <div class="person-row">
+          <div class="pr-top">
+            <div class="pr-name">${staff.name}</div>
+            <div class="pr-diff ${diffCls}">${diff > 0 ? '+' : diff < 0 ? '−' : ''}${money(Math.abs(diff))}</div>
+          </div>
+          <div class="pr-lines">
+            <div class="pr-line jobs-line"><span class="lbl">JOBS</span><span class="detail">${jobsDetail}</span><span class="amt">${charged > 0 ? money(charged) : '—'}</span></div>
+            <div class="pr-line"><span class="lbl">WAGE</span><span class="detail">${wageDetail}</span><span class="amt">${paid > 0 ? money(paid) : '—'}</span></div>
+          </div>
+        </div>`;
+    });
+
+    // Unmatched workers (typed names that don't match staff)
+    let unmatchedHtml = '';
+    if (unmatched.length) {
+      const items = unmatched.map(u => {
+        const charged = u.hrs * jobRate;
+        dayCharged += charged;
+        return `${u.name} (${u.job}) ${u.hrs.toFixed(1)}h = ${money(charged)}`;
+      }).join(' · ');
+      unmatchedHtml = `<div class="unmatched-note">⚠ Not on staff list: ${items} — charged but no wage matched</div>`;
+    }
+
+    const dayProfit = dayCharged - dayPaid;
+    wkCharged += dayCharged;
+    wkPaid += dayPaid;
+    wkExtras += dayExtras;
+
+    const profitCls = dayProfit >= 0 ? 'profit-pos' : 'profit-neg';
+
+    daysEl.innerHTML += `
+      <div class="day-block">
+        <div class="day-head">
+          <div class="day-name">${DAY_FULL[day]} ${dateStr}</div>
+          <div class="day-quick">charged <b>${moneyShort(dayCharged)}</b> · paid <b>${moneyShort(dayPaid)}</b></div>
+        </div>
+        <div class="day-body">
+          ${rowsHtml}
+          ${unmatchedHtml}
+          <div class="day-foot">
+            <span class="df-item">Charged <b>${money(dayCharged)}</b></span>
+            <span class="df-item">Paid <b>${money(dayPaid)}</b></span>
+            <span class="df-item ${profitCls}">Profit <b>${dayProfit >= 0 ? '+' : '−'}${money(Math.abs(dayProfit))}</b></span>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  // ── Week hero ──
+  const wkProfit = wkCharged - wkPaid;
+  const margin = wkCharged > 0 ? Math.round((wkProfit / wkCharged) * 100) : 0;
+  document.getElementById('h-charged').textContent = moneyShort(wkCharged);
+  document.getElementById('h-paid').textContent = moneyShort(wkPaid);
+  const hp = document.getElementById('h-profit');
+  hp.textContent = (wkProfit >= 0 ? '+' : '−') + moneyShort(Math.abs(wkProfit)).slice(1).replace(/^/, '$');
+  hp.className = 'hs-val ' + (wkProfit >= 0 ? 'hs-profit-pos' : 'hs-profit-neg');
+  document.getElementById('h-margin').textContent = margin + '%';
+}
+
+function changeWeek(dir) {
+  offset += dir;
+  load();
+}
+
+load();
+</script>
+</body>
+</html>
