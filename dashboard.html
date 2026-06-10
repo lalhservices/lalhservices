@@ -104,6 +104,24 @@
     padding: 3px 9px; border-radius: 6px;
   }
   .pr-saved.negative { background: rgba(255,107,94,0.08); color: var(--red); border-color: rgba(255,107,94,0.15); }
+  .pr-labour {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 6px; margin-left: 6px; font-size: 10px; font-weight: 700;
+    background: rgba(176,92,60,0.14); color: #d98a64;
+    border: 1px solid rgba(176,92,60,0.3);
+    padding: 3px 9px; border-radius: 6px;
+  }
+  .pr-labour.negative { background: rgba(255,107,94,0.08); color: var(--red); border-color: rgba(255,107,94,0.15); }
+  .pr-total-line {
+    display: flex; justify-content: flex-end; margin-top: 7px;
+    padding-top: 7px; border-top: 1px dashed rgba(255,255,255,0.08);
+  }
+  .pr-total-line .pt-badge {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 20px;
+  }
+  .pr-total-line .pt-badge.pos { background: rgba(61,214,140,0.12); color: var(--green); }
+  .pr-total-line .pt-badge.neg { background: rgba(255,107,94,0.12); color: var(--red); }
+  .pr-total-line .pt-badge.zero { background: rgba(255,255,255,0.06); color: var(--text2); }
 
   /* Day footer */
   .day-foot {
@@ -352,6 +370,8 @@ async function load() {
       const diff = charged - paid;
       const savedHrs = jobHrs - wageHrs;
       const savedAmt = savedHrs * jobRate;
+      const staffRate = parseFloat(staff.rate || 30);
+      const labourProAmt = wageHrs * (jobRate - staffRate);
       dayCharged += charged;
       dayPaid += paid;
       daySavedHrs += savedHrs;
@@ -364,23 +384,31 @@ async function load() {
       const diffCls = Math.abs(diff) < 0.01 ? 'zero' : (diff > 0 ? 'pos' : 'neg');
       const diffTxt = Math.abs(diff) < 0.01 ? '±$0' : (diff > 0 ? '+' : '−') + money(Math.abs(diff)).slice(1).replace(/^/, '$');
 
-      // Saved hours badge (only show when both jobs and wage exist, and hours differ)
+      // Saved hours badge (gold) — time difference profit
       let savedHtml = '';
       if (jobHrs > 0 && wageHrs > 0 && Math.abs(savedHrs) >= 0.05) {
         const isNeg = savedHrs < 0;
         savedHtml = `<div class="pr-saved${isNeg ? ' negative' : ''}">⏱ ${isNeg ? 'OVER' : 'SAVED'} ${Math.abs(savedHrs).toFixed(1)}h → ${isNeg ? '−' : '+'}${money(Math.abs(savedAmt))}</div>`;
       }
+      // Labour profit badge (maroon) — rate margin on paid hours
+      let labourHtml = '';
+      if (wageHrs > 0 && Math.abs(labourProAmt) >= 0.01) {
+        const isNegL = labourProAmt < 0;
+        labourHtml = `<div class="pr-labour${isNegL ? ' negative' : ''}">⚒ LABOUR ${wageHrs.toFixed(1)}h × $${(jobRate - staffRate).toFixed(0)} → ${isNegL ? '−' : '+'}${money(Math.abs(labourProAmt))}</div>`;
+      }
+      // Total badge (green) — moved below the wage line
+      const totalHtml = `<div class="pr-total-line"><span class="pt-badge ${diffCls}">Total ${diff > 0 ? '+' : diff < 0 ? '−' : ''}${money(Math.abs(diff))}</span></div>`;
       rowsHtml += `
         <div class="person-row">
           <div class="pr-top">
             <div class="pr-name">${staff.name}</div>
-            <div class="pr-diff ${diffCls}">${diff > 0 ? '+' : diff < 0 ? '−' : ''}${money(Math.abs(diff))}</div>
           </div>
           <div class="pr-lines">
             <div class="pr-line jobs-line"><span class="lbl">JOBS</span><span class="detail">${jobsDetail}</span><span class="amt">${charged > 0 ? money(charged) : '—'}</span></div>
             <div class="pr-line"><span class="lbl">WAGE</span><span class="detail">${wageDetail}</span><span class="amt">${paid > 0 ? money(paid) : '—'}</span></div>
           </div>
-          ${savedHtml}
+          ${savedHtml}${labourHtml}
+          ${totalHtml}
         </div>`;
     });
 
