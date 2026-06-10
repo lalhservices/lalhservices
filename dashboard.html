@@ -55,7 +55,7 @@
     padding: 22px 20px; margin-bottom: 22px;
   }
   #hero-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text3); margin-bottom: 14px; }
-  #hero-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  #hero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 10px; }
   .hero-stat .hs-label { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
   .hero-stat .hs-val { font-family: var(--head); font-size: 21px; font-weight: 800; letter-spacing: -0.5px; }
   .hs-charged { color: var(--accent); }
@@ -123,6 +123,21 @@
   .pr-total-line .pt-badge.neg { background: rgba(255,107,94,0.12); color: var(--red); }
   .pr-total-line .pt-badge.zero { background: rgba(255,255,255,0.06); color: var(--text2); }
 
+  /* Extras box */
+  .extras-box {
+    margin: 4px 14px 10px; padding: 10px 12px;
+    background: rgba(77,143,209,0.05); border: 1px dashed rgba(77,143,209,0.25);
+    border-radius: 8px;
+  }
+  .ex-title { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 7px; }
+  .ex-line { display: flex; justify-content: space-between; font-size: 10px; color: var(--text2); margin-bottom: 3px; gap: 10px; }
+  .ex-line .ex-detail { flex: 1; }
+  .ex-line .ex-amt { color: var(--text); font-weight: 600; flex-shrink: 0; }
+  .ex-gap { display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.08); }
+  .ex-gap.pos { color: var(--green); }
+  .ex-gap.neg { color: var(--red); }
+  .ex-gap.zero { color: var(--text2); }
+
   /* Day footer */
   .day-foot {
     display: flex; justify-content: space-between; gap: 8px;
@@ -174,6 +189,7 @@
         <div class="hero-stat"><div class="hs-label">Charged</div><div class="hs-val hs-charged" id="h-charged">$0</div></div>
         <div class="hero-stat"><div class="hs-label">Wages Paid</div><div class="hs-val hs-paid" id="h-paid">$0</div></div>
         <div class="hero-stat"><div class="hs-label">Hrs Saved</div><div class="hs-val hs-saved" id="h-saved">0h</div><div style="font-size:9px;color:var(--text3);margin-top:2px;" id="h-saved-amt"></div></div>
+        <div class="hero-stat"><div class="hs-label">Extras Gap</div><div class="hs-val" id="h-exgap">$0</div></div>
         <div class="hero-stat"><div class="hs-label">Profit</div><div class="hs-val" id="h-profit">$0</div></div>
         <div class="hero-stat"><div class="hs-label">Margin</div><div class="hs-val hs-margin" id="h-margin">0%</div></div>
       </div>
@@ -301,7 +317,7 @@ async function load() {
 
   document.getElementById('dash').style.display = 'block';
 
-  let wkCharged = 0, wkPaid = 0, wkExtras = 0, wkSavedHrs = 0;
+  let wkCharged = 0, wkPaid = 0, wkExtrasGap = 0, wkSavedHrs = 0;
   const daysEl = document.getElementById('days');
   daysEl.innerHTML = '';
 
@@ -334,13 +350,28 @@ async function load() {
       }
     });
 
-    // Day extras from jobs (parking + materials charged on)
-    let dayExtras = 0;
+    // ── Extras: both sides ──
+    // Charged to client (from jobs)
+    let exChargedPark = 0, exChargedMats = 0;
     (jobsGlobal.rows || []).forEach(rid => {
       const c = cells[rid + '|' + day];
       if (!c) return;
-      dayExtras += (parseFloat(c.parking || 0)) + (parseFloat(c.materials || 0));
+      exChargedPark += parseFloat(c.parking || 0);
+      exChargedMats += parseFloat(c.materials || 0);
     });
+    // Reimbursed to staff (from wages)
+    let exPaidPark = 0, exPaidMats = 0, exPaidFuel = 0;
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (!e) return;
+      exPaidPark += parseFloat(e.parking || 0);
+      exPaidMats += parseFloat(e.materials || 0);
+      exPaidFuel += parseFloat(e.fuel || 0);
+    });
+    const exCharged = exChargedPark + exChargedMats;
+    const exPaid = exPaidPark + exPaidMats + exPaidFuel;
+    const exGap = exCharged - exPaid;
+    const dayExtras = exCharged;
 
     const pids = [...new Set([...Object.keys(personJobs), ...Object.keys(personWage)])];
     if (pids.length === 0 && unmatched.length === 0) return; // skip empty day
@@ -423,12 +454,33 @@ async function load() {
       unmatchedHtml = `<div class="unmatched-note">⚠ Not on staff list: ${items} — charged but no wage matched</div>`;
     }
 
-    const dayProfit = dayCharged - dayPaid;
+    // True profit includes extras gap
+    const dayProfit = (dayCharged - dayPaid) + exGap;
     const daySavedAmt = daySavedHrs * jobRate;
-    wkCharged += dayCharged;
-    wkPaid += dayPaid;
-    wkExtras += dayExtras;
+    wkCharged += dayCharged + exCharged;
+    wkPaid += dayPaid + exPaid;
+    wkExtrasGap += exGap;
     wkSavedHrs += daySavedHrs;
+
+    // Extras box (only when there are extras on either side)
+    let extrasHtml = '';
+    if (exCharged > 0.001 || exPaid > 0.001) {
+      const chargedParts = [];
+      if (exChargedPark > 0) chargedParts.push('P ' + money(exChargedPark));
+      if (exChargedMats > 0) chargedParts.push('M ' + money(exChargedMats));
+      const paidParts = [];
+      if (exPaidPark > 0) paidParts.push('P ' + money(exPaidPark));
+      if (exPaidMats > 0) paidParts.push('M ' + money(exPaidMats));
+      if (exPaidFuel > 0) paidParts.push('F ' + money(exPaidFuel));
+      const gapCls = Math.abs(exGap) < 0.01 ? 'zero' : (exGap > 0 ? 'pos' : 'neg');
+      extrasHtml = `
+        <div class="extras-box">
+          <div class="ex-title">🅿 Extras</div>
+          <div class="ex-line"><span class="ex-detail">Charged to client${chargedParts.length ? ': ' + chargedParts.join(' + ') : ''}</span><span class="ex-amt">${exCharged > 0 ? money(exCharged) : '—'}</span></div>
+          <div class="ex-line"><span class="ex-detail">Reimbursed staff${paidParts.length ? ': ' + paidParts.join(' + ') : ''}</span><span class="ex-amt">${exPaid > 0 ? money(exPaid) : '—'}</span></div>
+          <div class="ex-gap ${gapCls}"><span>Gap</span><span>${exGap > 0 ? '+' : exGap < 0 ? '−' : ''}${money(Math.abs(exGap))}</span></div>
+        </div>`;
+    }
 
     const profitCls = dayProfit >= 0 ? 'profit-pos' : 'profit-neg';
     const savedFootHtml = Math.abs(daySavedHrs) >= 0.05
@@ -439,14 +491,15 @@ async function load() {
       <div class="day-block">
         <div class="day-head">
           <div class="day-name">${DAY_FULL[day]} ${dateStr}</div>
-          <div class="day-quick">charged <b>${moneyShort(dayCharged)}</b> · paid <b>${moneyShort(dayPaid)}</b></div>
+          <div class="day-quick">charged <b>${moneyShort(dayCharged + exCharged)}</b> · paid <b>${moneyShort(dayPaid + exPaid)}</b></div>
         </div>
         <div class="day-body">
           ${rowsHtml}
           ${unmatchedHtml}
+          ${extrasHtml}
           <div class="day-foot">
-            <span class="df-item">Charged <b>${money(dayCharged)}</b></span>
-            <span class="df-item">Paid <b>${money(dayPaid)}</b></span>
+            <span class="df-item">Charged <b>${money(dayCharged + exCharged)}</b></span>
+            <span class="df-item">Paid <b>${money(dayPaid + exPaid)}</b></span>
             ${savedFootHtml}
             <span class="df-item ${profitCls}">Profit <b>${dayProfit >= 0 ? '+' : '−'}${money(Math.abs(dayProfit))}</b></span>
           </div>
@@ -455,8 +508,11 @@ async function load() {
   });
 
   // ── Week hero ──
-  const wkProfit = wkCharged - wkPaid;
+  const wkProfit = wkCharged - wkPaid; // already includes extras both sides
   const margin = wkCharged > 0 ? Math.round((wkProfit / wkCharged) * 100) : 0;
+  const exGapEl = document.getElementById('h-exgap');
+  exGapEl.textContent = (wkExtrasGap >= 0 ? '+' : '−') + moneyShort(Math.abs(wkExtrasGap)).slice(1).replace(/^/, '$');
+  exGapEl.className = 'hs-val ' + (wkExtrasGap > 0.01 ? 'hs-profit-pos' : wkExtrasGap < -0.01 ? 'hs-profit-neg' : 'hs-paid');
   document.getElementById('h-charged').textContent = moneyShort(wkCharged);
   document.getElementById('h-paid').textContent = moneyShort(wkPaid);
   const savedAmtWk = wkSavedHrs * jobRate;
