@@ -69,6 +69,47 @@
   }
   .hs-saved { color: var(--gold); }
 
+  /* Staff week totals */
+  #staff-totals {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 22px; overflow: hidden;
+  }
+  #st-head {
+    padding: 11px 16px; background: var(--panel2); border-bottom: 1px solid var(--border);
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text3); font-weight: 700;
+  }
+  #st-head span { color: var(--gold); }
+  .st-row { padding: 10px 16px; border-bottom: 1px solid var(--border); position: relative; }
+  .st-row:last-of-type { border-bottom: none; }
+  .st-bar {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(61,214,140,0.07), transparent);
+    pointer-events: none;
+  }
+  .st-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: relative; }
+  .st-name { font-size: 12px; font-weight: 700; flex: 1; }
+  .st-hrs { font-size: 10px; color: var(--text2); width: 52px; text-align: right; }
+  .st-total { font-size: 12px; font-weight: 700; width: 90px; text-align: right; }
+  .st-total.pos { color: var(--green); }
+  .st-total.neg { color: var(--red); }
+  .st-badges { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; position: relative; }
+  .st-mini {
+    font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 5px;
+  }
+  .st-mini.saved { background: rgba(200,168,75,0.1); color: var(--gold); }
+  .st-mini.labour { background: rgba(176,92,60,0.14); color: #d98a64; }
+  .st-mini.negative { background: rgba(255,107,94,0.08); color: var(--red); }
+  .st-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 11px 16px; background: rgba(255,255,255,0.025); border-top: 1px solid var(--border);
+    font-size: 10px;
+  }
+  .st-foot .stf-label { color: var(--text3); font-weight: 700; letter-spacing: 0.1em; }
+  .st-foot .stf-badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .st-foot .stf-total { font-size: 12px; font-weight: 800; }
+  .st-foot .stf-total.pos { color: var(--green); }
+  .st-foot .stf-total.neg { color: var(--red); }
+
   /* Day blocks */
   .day-block { margin-bottom: 18px; }
   .day-head {
@@ -192,6 +233,14 @@
         <div class="hero-stat"><div class="hs-label">Extras Gap</div><div class="hs-val" id="h-exgap">$0</div></div>
         <div class="hero-stat"><div class="hs-label">Profit</div><div class="hs-val" id="h-profit">$0</div></div>
         <div class="hero-stat"><div class="hs-label">Margin</div><div class="hs-val hs-margin" id="h-margin">0%</div></div>
+      </div>
+    </div>
+    <div id="staff-totals" style="display:none">
+      <div id="st-head">STAFF TOTALS · <span id="st-week"></span></div>
+      <div id="st-rows"></div>
+      <div class="st-foot">
+        <span class="stf-label">ALL STAFF</span>
+        <span class="stf-badges" id="st-foot-badges"></span>
       </div>
     </div>
     <div id="days"></div>
@@ -318,6 +367,7 @@ async function load() {
   document.getElementById('dash').style.display = 'block';
 
   let wkCharged = 0, wkPaid = 0, wkExtrasGap = 0, wkSavedHrs = 0;
+  const staffWeek = {}; // pid → {name, wageHrs, savedAmt, labourAmt, total}
   const daysEl = document.getElementById('days');
   daysEl.innerHTML = '';
 
@@ -406,6 +456,12 @@ async function load() {
       dayCharged += charged;
       dayPaid += paid;
       daySavedHrs += savedHrs;
+      // Accumulate weekly per-staff totals
+      if (!staffWeek[pid]) staffWeek[pid] = { name: staff.name, wageHrs: 0, savedAmt: 0, labourAmt: 0, total: 0 };
+      staffWeek[pid].wageHrs += wageHrs;
+      staffWeek[pid].savedAmt += savedAmt;
+      staffWeek[pid].labourAmt += labourProAmt;
+      staffWeek[pid].total += diff;
 
       const jobsDetail = jobs.length
         ? jobs.map(j => `${j.job} ${j.hrs.toFixed(1)}h`).join(' + ') + ` = ${jobHrs.toFixed(1)}h`
@@ -506,6 +562,45 @@ async function load() {
         </div>
       </div>`;
   });
+
+  // ── Staff week totals ──
+  const stList = Object.values(staffWeek).filter(s => s.wageHrs > 0 || Math.abs(s.total) > 0.01);
+  if (stList.length) {
+    stList.sort((a, b) => b.total - a.total);
+    const maxTotal = Math.max(...stList.map(s => Math.abs(s.total)), 1);
+    document.getElementById('staff-totals').style.display = 'block';
+    document.getElementById('st-week').textContent = 'WK ' + wn;
+    let stHtml = '';
+    let sumSaved = 0, sumLabour = 0, sumTotal = 0, sumHrs = 0;
+    stList.forEach(s => {
+      sumSaved += s.savedAmt; sumLabour += s.labourAmt; sumTotal += s.total; sumHrs += s.wageHrs;
+      const barW = Math.max(2, Math.round((Math.abs(s.total) / maxTotal) * 100));
+      const totCls = s.total >= 0 ? 'pos' : 'neg';
+      const savedBadge = Math.abs(s.savedAmt) >= 0.01
+        ? `<span class="st-mini saved${s.savedAmt < 0 ? ' negative' : ''}">⏱ ${s.savedAmt >= 0 ? '+' : '−'}${money(Math.abs(s.savedAmt))}</span>` : '';
+      const labourBadge = Math.abs(s.labourAmt) >= 0.01
+        ? `<span class="st-mini labour${s.labourAmt < 0 ? ' negative' : ''}">⚒ ${s.labourAmt >= 0 ? '+' : '−'}${money(Math.abs(s.labourAmt))}</span>` : '';
+      stHtml += `
+        <div class="st-row">
+          <div class="st-bar" style="width:${barW}%"></div>
+          <div class="st-main">
+            <span class="st-name">${s.name}</span>
+            <span class="st-hrs">${s.wageHrs.toFixed(1)}h</span>
+            <span class="st-total ${totCls}">${s.total >= 0 ? '+' : '−'}${money(Math.abs(s.total))}</span>
+          </div>
+          <div class="st-badges">${savedBadge}${labourBadge}</div>
+        </div>`;
+    });
+    document.getElementById('st-rows').innerHTML = stHtml;
+    const ftCls = sumTotal >= 0 ? 'pos' : 'neg';
+    document.getElementById('st-foot-badges').innerHTML = `
+      <span style="color:var(--text3)">${sumHrs.toFixed(1)}h</span>
+      <span class="st-mini saved">⏱ ${sumSaved >= 0 ? '+' : '−'}${money(Math.abs(sumSaved))}</span>
+      <span class="st-mini labour">⚒ ${sumLabour >= 0 ? '+' : '−'}${money(Math.abs(sumLabour))}</span>
+      <span class="stf-total ${ftCls}">${sumTotal >= 0 ? '+' : '−'}${money(Math.abs(sumTotal))}</span>`;
+  } else {
+    document.getElementById('staff-totals').style.display = 'none';
+  }
 
   // ── Week hero ──
   const wkProfit = wkCharged - wkPaid; // already includes extras both sides
