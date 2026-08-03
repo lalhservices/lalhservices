@@ -209,6 +209,7 @@
 
   #refresh-note { text-align: center; font-size: 9px; color: var(--text3); margin-top: 24px; letter-spacing: 0.08em; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -218,6 +219,7 @@
     <button class="wk-btn" onclick="changeWeek(-1)">←</button>
     <div id="week-label">Loading…</div>
     <button class="wk-btn" onclick="changeWeek(1)">→</button>
+    <button class="wk-btn" onclick="downloadPDF()" title="Save as PDF" style="width:auto;padding:0 12px;font-size:11px;">⇓ PDF</button>
   </div>
 </div>
 
@@ -305,6 +307,25 @@ function matchStaff(typed, people) {
   return null;
 }
 
+
+async function cloudGetMany(keys, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const r = await fetch(API_URL + '?action=getMany&keys=' + keys.map(encodeURIComponent).join(','), { redirect: 'follow' });
+      if (r.ok) {
+        const t = await r.text();
+        // Verify it's JSON not HTML (rate limit page)
+        if (t.startsWith('{')) {
+          const d = JSON.parse(t);
+          return d.data || {};
+        }
+      }
+    } catch (e) {}
+    await new Promise(res => setTimeout(res, 1000));
+  }
+  return {};
+}
+
 async function cloudGet(key, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -337,15 +358,15 @@ async function load() {
   const wn = wk.split('-W')[1];
   document.getElementById('week-label').textContent = 'WK ' + wn + ' · ' + f(mon) + ' – ' + f(sun);
 
-  // Fetch everything in parallel
-  const [gRaw, jobsRaw, jobsRateRaw, rosterRaw, ratesRaw, globalRaw] = await Promise.all([
-    cloudGet('jt2_global'),
-    cloudGet('jt2_wk_' + wk),
-    cloudGet('jt2_rate_' + wk),
-    cloudGet('roster_wk_' + wk),
-    cloudGet('roster_rates_' + wk),
-    cloudGet('roster_global'),
-  ]);
+  // Fetch everything in ONE batch request (avoids rate limits)
+  const batchKeys = ['jt2_global', 'jt2_wk_' + wk, 'jt2_rate_' + wk, 'roster_wk_' + wk, 'roster_rates_' + wk, 'roster_global'];
+  const batch = await cloudGetMany(batchKeys);
+  const gRaw = batch['jt2_global'];
+  const jobsRaw = batch['jt2_wk_' + wk];
+  const jobsRateRaw = batch['jt2_rate_' + wk];
+  const rosterRaw = batch['roster_wk_' + wk];
+  const ratesRaw = batch['roster_rates_' + wk];
+  const globalRaw = batch['roster_global'];
 
   const jobsGlobal = gRaw ? JSON.parse(gRaw) : { rows: [] };
   const cells = jobsRaw ? JSON.parse(jobsRaw) : {};
@@ -632,6 +653,247 @@ function changeWeek(dir) {
 }
 
 load();
+
+// ── Download as PDF ──
+async function downloadPDF() {
+  if (typeof window.jspdf === 'undefined') { alert('PDF library not loaded'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const NAVY = [26, 58, 106];
+  const LIGHT = [232, 238, 248];
+  const GREY = [100, 100, 100];
+  const GREEN = [39, 135, 90];
+  const RED = [192, 54, 42];
+  const GOLD = [200, 168, 75];
+  const BLACK = [20, 20, 20];
+
+  const wk = weekKey(offset);
+  const { mon, sun } = weekDates(offset);
+  const f = d => d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  const wn = wk.split('-W')[1];
+  const label = 'WK ' + wn + ' · ' + f(mon) + ' – ' + f(sun);
+
+  // Refetch data (same as load)
+  const batchKeys = ['jt2_global', 'jt2_wk_' + wk, 'jt2_rate_' + wk, 'roster_wk_' + wk, 'roster_rates_' + wk, 'roster_global'];
+  const batch = await cloudGetMany(batchKeys);
+  const jobsGlobal = batch['jt2_global'] ? JSON.parse(batch['jt2_global']) : { rows: [] };
+  const cells = batch['jt2_wk_' + wk] ? JSON.parse(batch['jt2_wk_' + wk]) : {};
+  const jobRate = batch['jt2_rate_' + wk] ? parseFloat(batch['jt2_rate_' + wk]) : 45;
+  const schedule = batch['roster_wk_' + wk] ? JSON.parse(batch['roster_wk_' + wk]) : {};
+  const global = batch['roster_global'] ? JSON.parse(batch['roster_global']) : { people: [] };
+  const people = global.people || [];
+  if (batch['roster_rates_' + wk]) {
+    try {
+      const rates = JSON.parse(batch['roster_rates_' + wk]);
+      people.forEach(p => { if (rates[p.id] !== undefined) p.rate = rates[p.id]; });
+    } catch (e) {}
+  }
+
+  let y = 15;
+  const L = 15, R = 195, W = R - L;
+
+  // Header
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...NAVY);
+  doc.text('LALH SERVICES — DASHBOARD', L, y); y += 7;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...GREY);
+  doc.text(label, L, y); y += 10;
+
+  // Compute totals
+  let wkCharged = 0, wkPaid = 0, wkExGap = 0, wkSavedHrs = 0, wkSavedAmt = 0, wkLabourAmt = 0;
+  const staffWeek = {};
+  const dayBreakdown = [];
+
+  DAYS.forEach((day, di) => {
+    const personJobs = {};
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        const s = matchStaff(w.name, people);
+        if (s) {
+          if (!personJobs[s.id]) personJobs[s.id] = { hrs: 0, jobs: [] };
+          personJobs[s.id].hrs += hrs;
+          personJobs[s.id].jobs.push(c.jobName || '-');
+        }
+      });
+    });
+    const personWage = {};
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (e && e.timeFrom && e.timeTo && !e.off) personWage[p.id] = calcH(e.timeFrom, e.timeTo);
+    });
+    const pids = new Set([...Object.keys(personJobs), ...Object.keys(personWage)]);
+    let dayCharged = 0, dayPaid = 0;
+    const dayRows = [];
+    pids.forEach(pid => {
+      const s = people.find(p => String(p.id) === String(pid));
+      if (!s) return;
+      const jobHrs = (personJobs[pid] || {}).hrs || 0;
+      const wageHrs = personWage[pid] || 0;
+      const charged = jobHrs * jobRate;
+      const paid = wageHrs * parseFloat(s.rate || 30);
+      const savedHrs = jobHrs - wageHrs;
+      const savedAmt = savedHrs * jobRate;
+      const labourAmt = wageHrs * (jobRate - parseFloat(s.rate || 30));
+      const total = charged - paid;
+      dayCharged += charged;
+      dayPaid += paid;
+      if (!staffWeek[pid]) staffWeek[pid] = { name: s.name, wageHrs: 0, savedAmt: 0, labourAmt: 0, total: 0 };
+      staffWeek[pid].wageHrs += wageHrs;
+      staffWeek[pid].savedAmt += savedAmt;
+      staffWeek[pid].labourAmt += labourAmt;
+      staffWeek[pid].total += total;
+      wkSavedHrs += savedHrs;
+      wkSavedAmt += savedAmt;
+      wkLabourAmt += labourAmt;
+      if (jobHrs > 0 || wageHrs > 0) dayRows.push({ name: s.name, jobHrs, wageHrs, charged, paid, savedAmt, labourAmt, total });
+    });
+    let exChP = 0, exChM = 0, exPdP = 0, exPdM = 0, exPdF = 0;
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      exChP += parseFloat(c.parking || 0);
+      exChM += parseFloat(c.materials || 0);
+    });
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (!e) return;
+      exPdP += parseFloat(e.parking || 0);
+      exPdM += parseFloat(e.materials || 0);
+      exPdF += parseFloat(e.fuel || 0);
+    });
+    const exCh = exChP + exChM, exPd = exPdP + exPdM + exPdF;
+    wkCharged += dayCharged + exCh;
+    wkPaid += dayPaid + exPd;
+    wkExGap += (exCh - exPd);
+    const dt = new Date(mon); dt.setDate(mon.getDate() + di);
+    if (dayRows.length) dayBreakdown.push({ day, date: dt.toLocaleDateString('en-AU',{day:'numeric',month:'numeric'}), rows: dayRows, dayCharged, dayPaid, exCh, exPd, exGap: exCh - exPd });
+  });
+
+  const wkProfit = wkCharged - wkPaid;
+  const wkMargin = wkCharged > 0 ? Math.round((wkProfit / wkCharged) * 100) : 0;
+  const money = n => '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const signed = n => (n >= 0 ? '+' : '-') + money(n);
+
+  // Week hero
+  doc.setFillColor(...NAVY);
+  doc.rect(L, y, W, 8, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  const heroLabels = ['Charged', 'Paid', 'Hrs Saved', 'Extras Gap', 'Profit', 'Margin'];
+  const cw = W / 6;
+  heroLabels.forEach((h, i) => doc.text(h, L + cw*i + cw/2, y + 5.5, {align:'center'}));
+  y += 8;
+  doc.setFillColor(255,255,255);
+  doc.rect(L, y, W, 10, 'F');
+  doc.setDrawColor(...NAVY);
+  doc.rect(L, y, W, 10);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  const heroVals = [money(wkCharged), money(wkPaid), wkSavedHrs.toFixed(1)+'h', signed(wkExGap), signed(wkProfit), wkMargin+'%'];
+  const heroColors = [NAVY, BLACK, GOLD, wkExGap>=0?GREEN:RED, wkProfit>=0?GREEN:RED, GOLD];
+  heroVals.forEach((v, i) => {
+    doc.setTextColor(...heroColors[i]);
+    doc.text(v, L + cw*i + cw/2, y + 6.5, {align:'center'});
+  });
+  y += 14;
+
+  // Staff totals
+  const stList = Object.values(staffWeek).filter(s => s.wageHrs > 0 || Math.abs(s.total) > 0.01).sort((a,b) => b.total - a.total);
+  if (stList.length) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...NAVY);
+    doc.text('STAFF TOTALS', L, y); y += 6;
+    doc.setFillColor(...NAVY);
+    doc.rect(L, y, W, 7, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(8);
+    const stCols = [70, 25, 30, 30, 25];
+    const stHeaders = ['Staff', 'Hours', 'Hrs Saved $', 'Labour $', 'Total'];
+    let x = L;
+    stHeaders.forEach((h, i) => {
+      doc.text(h, i === 0 ? x + 2 : x + stCols[i] - 2, y + 5, { align: i === 0 ? 'left' : 'right' });
+      x += stCols[i];
+    });
+    y += 7;
+    stList.forEach((s, i) => {
+      const bg = i%2===0 ? [255,255,255] : [248,250,252];
+      doc.setFillColor(...bg);
+      doc.rect(L, y, W, 6.5, 'F');
+      doc.setTextColor(...BLACK);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      x = L;
+      doc.text(s.name, x + 2, y + 4.5);
+      x += stCols[0];
+      doc.text(s.wageHrs.toFixed(1) + 'h', x + stCols[1] - 2, y + 4.5, {align:'right'});
+      x += stCols[1];
+      doc.setTextColor(...GOLD);
+      doc.text(signed(s.savedAmt), x + stCols[2] - 2, y + 4.5, {align:'right'});
+      x += stCols[2];
+      doc.setTextColor(181, 96, 32);
+      doc.text(signed(s.labourAmt), x + stCols[3] - 2, y + 4.5, {align:'right'});
+      x += stCols[3];
+      doc.setTextColor(...(s.total >= 0 ? GREEN : RED));
+      doc.setFont('helvetica', 'bold');
+      doc.text(signed(s.total), x + stCols[4] - 2, y + 4.5, {align:'right'});
+      y += 6.5;
+      if (y > 260) { doc.addPage(); y = 15; }
+    });
+    y += 6;
+  }
+
+  // Daily breakdown
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...NAVY);
+  if (y > 250) { doc.addPage(); y = 15; }
+  doc.text('DAILY BREAKDOWN', L, y); y += 6;
+
+  const DAY_FULL = {Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday',Sat:'Saturday',Sun:'Sunday'};
+  dayBreakdown.forEach(d => {
+    if (y > 255) { doc.addPage(); y = 15; }
+    doc.setFillColor(...LIGHT);
+    doc.rect(L, y, W, 7, 'F');
+    doc.setTextColor(...NAVY);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(DAY_FULL[d.day] + ' ' + d.date, L + 2, y + 5);
+    doc.setFontSize(8);
+    doc.text('Charged ' + money(d.dayCharged + d.exCh) + '  ·  Paid ' + money(d.dayPaid + d.exPd), R - 2, y + 5, {align:'right'});
+    y += 7;
+    d.rows.forEach((r, i) => {
+      if (y > 268) { doc.addPage(); y = 15; }
+      const bg = i%2===0 ? [255,255,255] : [248,250,252];
+      doc.setFillColor(...bg);
+      doc.rect(L, y, W, 6, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...BLACK);
+      doc.text(r.name, L + 2, y + 4);
+      doc.text('Jobs ' + r.jobHrs.toFixed(1) + 'h = ' + money(r.charged) + '   Wage ' + r.wageHrs.toFixed(1) + 'h = ' + money(r.paid), L + 30, y + 4);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...(r.total >= 0 ? GREEN : RED));
+      doc.text(signed(r.total), R - 2, y + 4, {align:'right'});
+      y += 6;
+    });
+  });
+
+  const oldTitle = document.title;
+  document.title = 'LALH_Dashboard_WK' + wn;
+  doc.save('LALH_Dashboard_WK' + wn + '_' + f(mon).replace(/ /g,'') + '.pdf');
+  document.title = oldTitle;
+}
+
 </script>
 </body>
 </html>
