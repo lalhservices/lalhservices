@@ -450,14 +450,45 @@
     @page { margin: 8mm; }
   }
 
+  /* Edit Lock — past weeks are read-only unless unlocked */
+  body.past-week-locked #tab-roster input,
+  body.past-week-locked #tab-roster select,
+  body.past-week-locked #tab-jobs input,
+  body.past-week-locked #tab-jobs select,
+  body.past-week-locked #tab-jobs button.add-worker-btn,
+  body.past-week-locked #tab-jobs button.del-worker-btn,
+  body.past-week-locked #add-person-btn,
+  body.past-week-locked #add-job-btn,
+  body.past-week-locked #delete-week-btn,
+  body.past-week-locked .remove-btn,
+  body.past-week-locked .off-btn { pointer-events: none !important; opacity: 0.55; }
+  #edit-lock-bar {
+    display: none; background: linear-gradient(90deg, #c8a84b, #b8983b);
+    color: #fff; text-align: center; padding: 8px 14px;
+    font-size: 11px; letter-spacing: 0.05em; font-family: var(--font);
+    position: sticky; top: 0; z-index: 60;
+  }
+  body.past-week-locked #edit-lock-bar { display: block; }
+  #edit-lock-bar button {
+    background: rgba(0,0,0,0.25); color: #fff; border: 1px solid rgba(255,255,255,0.4);
+    padding: 4px 10px; margin-left: 10px; border-radius: 5px; font-family: var(--font);
+    font-size: 10px; cursor: pointer; letter-spacing: 0.05em;
+  }
+  #edit-lock-bar button:hover { background: rgba(0,0,0,0.4); }
+
+
   input { pointer-events: none !important; user-select: none !important; -webkit-user-select: none !important; }
-  #add-job-btn, #delete-week-btn, .remove-btn, .add-worker-btn, .del-worker-btn, #backup-btn { display: none !important; }
+  #add-job-btn, #delete-week-btn, .remove-btn, .add-worker-btn, .del-worker-btn, #backup-btn, #edit-lock-bar { display: none !important; }
   #read-only-bar { background: #2e6da4; color: #fff; text-align: center; font-size: 11px; padding: 7px; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div id="read-only-bar">👁 VIEW ONLY</div>
+<div id="edit-lock-bar">
+🔒 VIEWING PAST WEEK — READ ONLY
+<button onclick="unlockPastWeek()">🔓 UNLOCK TO EDIT</button>
+</div>
 <div id="read-only-badge">👁 View Only — Contact Aman to make changes</div>
 
 <div id="header">
@@ -685,6 +716,7 @@ async function changeWeek(dir){
   await loadLastEditTime();
   updateWeekLabel();
   render();
+  _resetLockOnWeekChange();
 }
 
 let _ca=null;
@@ -1467,6 +1499,7 @@ async function cloudLoadState() {
     }
     // Always reset offset to 0 — never trust stored offset
     G.currentOffset = 0;
+    updateEditLock();
     await loadWeekRate();
   } catch(e) {
     console.log('cloudLoadState error:', e);
@@ -1523,6 +1556,13 @@ async function cloudScheduleSave() {
       const gToSave = { rows: G.rows, nextRow: G.nextRow, globalRate: G.globalRate, currentOffset: 0 };
       await cloudSet('jt2_global', JSON.stringify(gToSave));
       const wkKey = 'jt2_wk_' + weekKey(G.currentOffset);
+      // SAFEGUARD: verify we're saving to the right week
+      const expectedThisWeek = 'jt2_wk_' + weekKey(0);
+      if (G.currentOffset === 0 && wkKey !== expectedThisWeek) {
+        console.error('BLOCKED: save week mismatch. Expected', expectedThisWeek, 'got', wkKey);
+        _isSaving = false;
+        return;
+      }
       const val = JSON.stringify(cells);
       // Never save empty data over existing data
       if (Object.keys(cells).length === 0 && _lastHash && _lastHash !== '{}' && _lastHash !== '') {
@@ -1598,6 +1638,52 @@ async function manualBackup() {
     btn.disabled = false;
   }
 }
+
+// ── Edit Lock (Past Week Protection) ──
+let _pastWeekUnlocked = false;
+let _unlockTimer = null;
+
+function updateEditLock() {
+  const delBtn = document.getElementById('delete-week-btn');
+  if (delBtn) delBtn.style.display = (G.currentOffset === 0) ? '' : 'none';
+
+  const offset = G.currentOffset || 0;
+  if (offset < 0 && !_pastWeekUnlocked) {
+    document.body.classList.add('past-week-locked');
+  } else if (offset > 0 && !_pastWeekUnlocked) {
+    document.body.classList.add('past-week-locked');
+  } else {
+    document.body.classList.remove('past-week-locked');
+  }
+}
+
+function unlockPastWeek() {
+  if (!confirm('⚠ Unlock this past week for editing?\n\nChanges will save to THIS week only.\nAuto-locks again in 5 minutes.')) return;
+  _pastWeekUnlocked = true;
+  document.body.classList.remove('past-week-locked');
+  clearTimeout(_unlockTimer);
+  _unlockTimer = setTimeout(() => {
+    _pastWeekUnlocked = false;
+    updateEditLock();
+  }, 5 * 60 * 1000);
+}
+
+// Reset unlock when navigating to a different week
+function _resetLockOnWeekChange() {
+  _pastWeekUnlocked = false;
+  clearTimeout(_unlockTimer);
+  updateEditLock();
+}
+
+// Save guard — refuse to save past weeks unless unlocked
+function _canSaveThisWeek() {
+  const offset = G.currentOffset || 0;
+  if (offset === 0) return true;
+  if (_pastWeekUnlocked) return true;
+  console.log('Save blocked — past week is locked');
+  return false;
+}
+
 
 // ── Per-week rate ──
 async function loadWeekRate() {
