@@ -305,12 +305,19 @@ function matchStaff(typed, people) {
   return null;
 }
 
-async function cloudGet(key) {
-  try {
-    const r = await fetch(API_URL + '?action=get&key=' + encodeURIComponent(key), { redirect: 'follow' });
-    const d = await r.json();
-    return d.value || null;
-  } catch (e) { return null; }
+async function cloudGet(key, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const r = await fetch(API_URL + '?action=get&key=' + encodeURIComponent(key), { redirect: 'follow' });
+      if (r.ok) {
+        const d = await r.json();
+        return d.value || null;
+      }
+    } catch (e) {}
+    // Wait 500ms before retrying
+    await new Promise(res => setTimeout(res, 500));
+  }
+  return null;
 }
 
 function money(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
