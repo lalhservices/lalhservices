@@ -805,26 +805,46 @@ async function load() {
   }
 
   // ── Job Profitability ──
+  // Revenue = billed hours × jobRate. Cost = actual wages paid to workers on those jobs,
+  // pro-rated by their share of the job hours vs their total daily wage hours.
+  // If a worker was on jobs 4h + 4h and paid 6h that day → each job gets 3h of paid wages.
   const jobStats = {};
+
   DAYS.forEach(day => {
+    // Build a map of what each worker did on jobs today: worker → [{job, jobHrs}]
+    const workerJobsToday = {};
     (jobsGlobal.rows || []).forEach(rid => {
       const c = cells[rid + '|' + day];
       if (!c || !c.jobName) return;
-      const jn = c.jobName.trim();
-      if (!jn) return;
-      let jobHrs = 0, estCost = 0;
       (c.workers || []).forEach(w => {
         const hrs = calcH(w.from, w.to);
         if (hrs <= 0) return;
-        jobHrs += hrs;
         const s = matchStaff(w.name, people);
-        const staffRate = s ? parseFloat(s.rate || 30) : 30;
-        estCost += hrs * staffRate;
+        if (!s) return;
+        if (!workerJobsToday[s.id]) workerJobsToday[s.id] = { staff: s, entries: [], totalJobHrs: 0 };
+        workerJobsToday[s.id].entries.push({ jobName: c.jobName.trim(), hrs });
+        workerJobsToday[s.id].totalJobHrs += hrs;
       });
-      if (!jobStats[jn]) jobStats[jn] = { name: jn, hrs: 0, revenue: 0, cost: 0 };
-      jobStats[jn].hrs += jobHrs;
-      jobStats[jn].revenue += jobHrs * jobRate;
-      jobStats[jn].cost += estCost;
+    });
+
+    // For each worker, compare job hours to wage hours & distribute wage cost across their jobs
+    Object.values(workerJobsToday).forEach(({ staff, entries, totalJobHrs }) => {
+      const e = (schedule[staff.id] || {})[day];
+      const wageHrs = (e && e.timeFrom && e.timeTo && !e.off) ? calcH(e.timeFrom, e.timeTo) : 0;
+      const staffRate = parseFloat(staff.rate || 30);
+      const totalWagePaid = wageHrs * staffRate;
+
+      // Distribute this worker's wage across their jobs by hour share
+      entries.forEach(en => {
+        const jn = en.jobName;
+        if (!jn) return;
+        if (!jobStats[jn]) jobStats[jn] = { name: jn, hrs: 0, revenue: 0, cost: 0 };
+        jobStats[jn].hrs += en.hrs;
+        jobStats[jn].revenue += en.hrs * jobRate;
+        // Share of wage cost = (this job's hours ÷ total job hours today) × total paid
+        const share = totalJobHrs > 0 ? (en.hrs / totalJobHrs) : 0;
+        jobStats[jn].cost += totalWagePaid * share;
+      });
     });
   });
   const jpList = Object.values(jobStats).filter(j => j.hrs > 0)
