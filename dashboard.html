@@ -256,6 +256,21 @@
   .jp-cell .jp-val.cost { color: var(--text2); }
   .jp-cell .jp-val.saved { color: var(--gold); }
   .jp-cell .jp-val.margin { font-size: 12px; }
+  .jp-day-head {
+    padding: 9px 14px; background: rgba(200,168,75,0.08);
+    color: var(--gold); font-family: var(--head); font-size: 12px; font-weight: 800;
+    letter-spacing: 0.02em; border-top: 1px solid var(--border);
+  }
+  .jp-day-total {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 10px 12px; background: rgba(15,30,53,0.4);
+    border-top: 1px dashed rgba(255,255,255,0.08);
+    border-bottom: 1px solid var(--border);
+  }
+  .jp-day-total .jp-name { color: var(--text2); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .jp-day-total .jp-cell .jp-val { color: var(--text); }
+  .jp-day-total .jp-cell .jp-val.rev { color: var(--accent); }
+  .jp-day-total .jp-cell .jp-val.cost { color: var(--red); }
   .jp-margin.high { color: var(--green); }
   .jp-margin.mid { color: var(--gold); }
   .jp-margin.low { color: var(--red); }
@@ -808,14 +823,10 @@ async function load() {
     document.getElementById('leaks-list').innerHTML = '<div id="leaks-clean">✅ NO LEAKS THIS WEEK</div>';
   }
 
-  // ── Job Profitability ──
-  // Revenue = billed hours × jobRate. Cost = actual wages paid to workers on those jobs,
-  // pro-rated by their share of the job hours vs their total daily wage hours.
-  // If a worker was on jobs 4h + 4h and paid 6h that day → each job gets 3h of paid wages.
-  const jobStats = {};
+  // ── Job Profitability (per day) ──
+  const jobsByDay = []; // [{day, dateStr, jobs:[{name,hrs,revenue,cost,profit,margin}], dayTotals}]
 
-  DAYS.forEach(day => {
-    // Build a map of what each worker did on jobs today: worker → [{job, jobHrs}]
+  DAYS.forEach((day, di) => {
     const workerJobsToday = {};
     (jobsGlobal.rows || []).forEach(rid => {
       const c = cells[rid + '|' + day];
@@ -831,47 +842,73 @@ async function load() {
       });
     });
 
-    // For each worker, compare job hours to wage hours & distribute wage cost across their jobs
+    // Per-day job map (fresh for each day)
+    const dayJobs = {};
+
     Object.values(workerJobsToday).forEach(({ staff, entries, totalJobHrs }) => {
       const e = (schedule[staff.id] || {})[day];
       const wageHrs = (e && e.timeFrom && e.timeTo && !e.off) ? calcH(e.timeFrom, e.timeTo) : 0;
       const staffRate = parseFloat(staff.rate || 30);
       const totalWagePaid = wageHrs * staffRate;
 
-      // Distribute this worker's wage & wage hours across their jobs by hour share
       entries.forEach(en => {
         const jn = en.jobName;
         if (!jn) return;
-        if (!jobStats[jn]) jobStats[jn] = { name: jn, hrs: 0, wageHrs: 0, revenue: 0, cost: 0 };
-        jobStats[jn].hrs += en.hrs;
-        jobStats[jn].revenue += en.hrs * jobRate;
+        if (!dayJobs[jn]) dayJobs[jn] = { name: jn, hrs: 0, revenue: 0, cost: 0 };
+        dayJobs[jn].hrs += en.hrs;
+        dayJobs[jn].revenue += en.hrs * jobRate;
         const share = totalJobHrs > 0 ? (en.hrs / totalJobHrs) : 0;
-        jobStats[jn].cost += totalWagePaid * share;
-        jobStats[jn].wageHrs += wageHrs * share;
+        dayJobs[jn].cost += totalWagePaid * share;
       });
     });
-  });
-  const jpList = Object.values(jobStats).filter(j => j.hrs > 0)
-    .map(j => {
+
+    const jobList = Object.values(dayJobs).filter(j => j.hrs > 0).map(j => {
       const profit = j.revenue - j.cost;
       const margin = j.revenue > 0 ? Math.round((profit / j.revenue) * 100) : 0;
       return { ...j, profit, margin };
-    })
-    .sort((a,b) => a.margin - b.margin);
+    }).sort((a, b) => a.margin - b.margin);
 
-  if (jpList.length) {
+    if (jobList.length) {
+      const dt = new Date(mon); dt.setDate(mon.getDate() + di);
+      const dateStr = dt.toLocaleDateString('en-AU', { day: 'numeric', month: 'numeric' });
+      const dayHrs = jobList.reduce((s, j) => s + j.hrs, 0);
+      const dayRev = jobList.reduce((s, j) => s + j.revenue, 0);
+      const dayCost = jobList.reduce((s, j) => s + j.cost, 0);
+      const dayProfit = dayRev - dayCost;
+      const dayMargin = dayRev > 0 ? Math.round((dayProfit / dayRev) * 100) : 0;
+      jobsByDay.push({ day, dateStr, jobs: jobList, dayHrs, dayRev, dayCost, dayProfit, dayMargin });
+    }
+  });
+
+  if (jobsByDay.length) {
     document.getElementById('job-profit').style.display = 'block';
     document.getElementById('jp-week').textContent = 'WK ' + wn;
-    document.getElementById('jp-rows').innerHTML = jpList.map(j => {
-      const cls = j.margin < 10 ? 'low' : j.margin < 25 ? 'mid' : 'high';
+    document.getElementById('jp-rows').innerHTML = jobsByDay.map(d => {
+      const jobRows = d.jobs.map(j => {
+        const cls = j.margin < 10 ? 'low' : j.margin < 25 ? 'mid' : 'high';
+        const pcls = j.profit >= 0 ? 'high' : 'low';
+        return `
+          <div class="jp-row">
+            <span class="jp-name">${j.name}</span>
+            <span class="jp-cell"><span class="jp-lbl">Charged</span><span class="jp-val">${j.hrs.toFixed(1)}h</span></span>
+            <span class="jp-cell"><span class="jp-lbl">Revenue</span><span class="jp-val rev">${money(j.revenue)}</span></span>
+            <span class="jp-cell"><span class="jp-lbl">Wages</span><span class="jp-val cost">−${money(j.cost)}</span></span>
+            <span class="jp-cell"><span class="jp-lbl">Profit</span><span class="jp-val margin ${pcls}">${money(j.profit)}</span></span>
+            <span class="jp-cell"><span class="jp-lbl">Margin</span><span class="jp-val margin ${cls}">${j.margin}%</span></span>
+          </div>`;
+      }).join('');
+      const dcls = d.dayMargin < 10 ? 'low' : d.dayMargin < 25 ? 'mid' : 'high';
+      const dpcls = d.dayProfit >= 0 ? 'high' : 'low';
       return `
-        <div class="jp-row">
-          <span class="jp-name">${j.name}</span>
-          <span class="jp-cell"><span class="jp-lbl">Charged</span><span class="jp-val">${j.hrs.toFixed(1)}h</span></span>
-          <span class="jp-cell"><span class="jp-lbl">Revenue</span><span class="jp-val rev">${money(j.revenue)}</span></span>
-          <span class="jp-cell"><span class="jp-lbl">Wages</span><span class="jp-val cost">−${money(j.cost)}</span></span>
-          <span class="jp-cell"><span class="jp-lbl">Profit</span><span class="jp-val" style="color:var(--green)">${money(j.profit)}</span></span>
-          <span class="jp-cell"><span class="jp-lbl">Margin</span><span class="jp-val margin ${cls}">${j.margin}%</span></span>
+        <div class="jp-day-head">${DAY_FULL[d.day]} ${d.dateStr}</div>
+        ${jobRows}
+        <div class="jp-day-total">
+          <span class="jp-name">Day Total</span>
+          <span class="jp-cell"><span class="jp-lbl">Charged</span><span class="jp-val">${d.dayHrs.toFixed(1)}h</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Revenue</span><span class="jp-val rev">${money(d.dayRev)}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Wages</span><span class="jp-val cost">−${money(d.dayCost)}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Profit</span><span class="jp-val margin ${dpcls}">${money(d.dayProfit)}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Margin</span><span class="jp-val margin ${dcls}">${d.dayMargin}%</span></span>
         </div>`;
     }).join('');
   } else {
