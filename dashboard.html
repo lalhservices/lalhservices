@@ -855,11 +855,7 @@ async function load() {
     .map(j => {
       const profit = j.revenue - j.cost;
       const margin = j.revenue > 0 ? Math.round((profit / j.revenue) * 100) : 0;
-      // Round hours to nearest 0.5 to avoid tiny timing drift showing up
-      const savedHrsRaw = j.hrs - j.wageHrs;
-      const savedHrs = Math.round(savedHrsRaw * 2) / 2;
-      const savedAmt = savedHrs * jobRate;
-      return { ...j, profit, margin, savedHrs, savedAmt };
+      return { ...j, profit, margin };
     })
     .sort((a,b) => a.margin - b.margin);
 
@@ -868,16 +864,13 @@ async function load() {
     document.getElementById('jp-week').textContent = 'WK ' + wn;
     document.getElementById('jp-rows').innerHTML = jpList.map(j => {
       const cls = j.margin < 10 ? 'low' : j.margin < 25 ? 'mid' : 'high';
-      const savedTxt = j.savedHrs >= 0.1
-        ? `${j.savedHrs.toFixed(1)}h · ${signed(j.savedAmt)}`
-        : (j.savedHrs <= -0.1 ? `${j.savedHrs.toFixed(1)}h · ${signed(j.savedAmt)}` : '—');
       return `
         <div class="jp-row">
           <span class="jp-name">${j.name}</span>
           <span class="jp-cell"><span class="jp-lbl">Charged</span><span class="jp-val">${j.hrs.toFixed(1)}h</span></span>
           <span class="jp-cell"><span class="jp-lbl">Revenue</span><span class="jp-val rev">${money(j.revenue)}</span></span>
           <span class="jp-cell"><span class="jp-lbl">Wages</span><span class="jp-val cost">−${money(j.cost)}</span></span>
-          <span class="jp-cell"><span class="jp-lbl">Saved</span><span class="jp-val saved">${savedTxt}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Profit</span><span class="jp-val" style="color:var(--green)">${money(j.profit)}</span></span>
           <span class="jp-cell"><span class="jp-lbl">Margin</span><span class="jp-val margin ${cls}">${j.margin}%</span></span>
         </div>`;
     }).join('');
