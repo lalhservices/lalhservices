@@ -219,6 +219,19 @@
   .leak-detail b { color: var(--text); }
   .leak-impact { font-size: 11px; font-weight: 700; color: var(--red); margin-top: 5px; }
   .leak-impact.medium { color: var(--gold); }
+  .leak-breakdown {
+    margin-top: 8px; padding: 8px 10px 6px;
+    background: rgba(0,0,0,0.25); border-radius: 6px;
+    font-size: 10px; color: var(--text2);
+  }
+  .leak-brow {
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 3px 0; border-bottom: 1px dashed rgba(255,255,255,0.06);
+  }
+  .leak-brow:last-child { border-bottom: none; }
+  .leak-brow .lb-day { color: var(--gold); font-weight: 700; width: 90px; }
+  .leak-brow .lb-detail { flex: 1; text-align: right; }
+  .leak-brow .lb-gap { color: var(--red); font-weight: 700; width: 60px; text-align: right; }
   #leaks-clean {
     text-align: center; padding: 14px; color: var(--green);
     font-size: 11px; letter-spacing: 0.05em; font-weight: 700;
@@ -649,14 +662,17 @@ async function load() {
   // ── Loss Detector ──
   const leaks = [];
 
-  // Per-person jobs vs wage hours mismatch across whole week
+  // Per-person jobs vs wage hours mismatch across whole week — with per-day tracking
   const personWeek = {};
   DAYS.forEach(day => {
     people.forEach(p => {
       const e = (schedule[p.id] || {})[day];
-      if (e && e.timeFrom && e.timeTo && !e.off) {
-        if (!personWeek[p.id]) personWeek[p.id] = { name: p.name, wageHrs: 0, jobHrs: 0 };
-        personWeek[p.id].wageHrs += calcH(e.timeFrom, e.timeTo);
+      const wageHrs = (e && e.timeFrom && e.timeTo && !e.off) ? calcH(e.timeFrom, e.timeTo) : 0;
+      if (wageHrs > 0) {
+        if (!personWeek[p.id]) personWeek[p.id] = { name: p.name, wageHrs: 0, jobHrs: 0, days: {} };
+        if (!personWeek[p.id].days[day]) personWeek[p.id].days[day] = { jobHrs: 0, wageHrs: 0, jobs: [] };
+        personWeek[p.id].wageHrs += wageHrs;
+        personWeek[p.id].days[day].wageHrs = wageHrs;
       }
     });
     (jobsGlobal.rows || []).forEach(rid => {
@@ -667,32 +683,59 @@ async function load() {
         if (hrs <= 0) return;
         const s = matchStaff(w.name, people);
         if (s) {
-          if (!personWeek[s.id]) personWeek[s.id] = { name: s.name, wageHrs: 0, jobHrs: 0 };
+          if (!personWeek[s.id]) personWeek[s.id] = { name: s.name, wageHrs: 0, jobHrs: 0, days: {} };
+          if (!personWeek[s.id].days[day]) personWeek[s.id].days[day] = { jobHrs: 0, wageHrs: 0, jobs: [] };
           personWeek[s.id].jobHrs += hrs;
+          personWeek[s.id].days[day].jobHrs += hrs;
+          if (c.jobName) personWeek[s.id].days[day].jobs.push({ name: c.jobName, hrs });
         }
       });
     });
   });
 
-  // LEAK: Wage hours significantly higher than job hours
+  // Helper: build day-by-day breakdown showing only days with a gap
+  const buildDayBreakdown = (dataDays, direction) => {
+    const rows = [];
+    DAYS.forEach(day => {
+      const d = dataDays[day];
+      if (!d) return;
+      const gap = direction === 'billing' ? (d.wageHrs - d.jobHrs) : (d.jobHrs - d.wageHrs);
+      if (gap < 0.25) return; // skip days with no meaningful gap
+      const dt = new Date(mon); dt.setDate(mon.getDate() + DAYS.indexOf(day));
+      const dateStr = dt.toLocaleDateString('en-AU', {day:'numeric', month:'numeric'});
+      const jobsList = d.jobs.length ? ' <span style="color:var(--text3)">(' + d.jobs.map(j => j.name + ' ' + j.hrs.toFixed(1) + 'h').join(', ') + ')</span>' : '';
+      rows.push(`
+        <div class="leak-brow">
+          <span class="lb-day">${DAY_FULL[day]} ${dateStr}</span>
+          <span class="lb-detail">Jobs <b>${d.jobHrs.toFixed(1)}h</b> · Wage <b>${d.wageHrs.toFixed(1)}h</b>${jobsList}</span>
+          <span class="lb-gap">Gap ${gap.toFixed(1)}h</span>
+        </div>`);
+    });
+    return rows.length ? '<div class="leak-breakdown">' + rows.join('') + '</div>' : '';
+  };
+
+  // LEAK: Wage hours significantly higher than job hours (billing leak)
   Object.entries(personWeek).forEach(([pid, data]) => {
     const gap = data.wageHrs - data.jobHrs;
     if (gap >= 3 && data.wageHrs > 0 && data.jobHrs > 0) {
       const potentialLoss = gap * jobRate;
+      const breakdown = buildDayBreakdown(data.days, 'billing');
       leaks.push({
         severity: gap >= 8 ? 'high' : 'medium',
         title: '💰 BILLING LEAK — ' + data.name,
-        detail: `Wage: <b>${data.wageHrs.toFixed(1)}h</b>  ·  Jobs: <b>${data.jobHrs.toFixed(1)}h</b><br>Paid for ${gap.toFixed(1)}h that weren't billed on jobs — likely unrecorded work`,
+        detail: `Total: Jobs <b>${data.jobHrs.toFixed(1)}h</b> · Wage <b>${data.wageHrs.toFixed(1)}h</b> · Missing <b>${gap.toFixed(1)}h</b> from jobs<br>Paid for work not billed to client${breakdown}`,
         impact: `Potential lost revenue: ${money(potentialLoss)}`
       });
     }
-    // LEAK: Job hours WAY higher than wage (missed timesheet entry)
-    if (data.jobHrs - data.wageHrs >= 5 && data.wageHrs > 0) {
+    // LEAK: Job hours higher than wage (missed timesheet)
+    const timesheetGap = data.jobHrs - data.wageHrs;
+    if (timesheetGap >= 3 && data.wageHrs > 0) {
+      const breakdown = buildDayBreakdown(data.days, 'timesheet');
       leaks.push({
-        severity: 'medium',
+        severity: timesheetGap >= 8 ? 'high' : 'medium',
         title: '📋 TIMESHEET LEAK — ' + data.name,
-        detail: `Jobs: <b>${data.jobHrs.toFixed(1)}h</b>  ·  Wage: <b>${data.wageHrs.toFixed(1)}h</b><br>Worked more than recorded on wages — check timesheet`,
-        impact: `Missing ${(data.jobHrs - data.wageHrs).toFixed(1)}h of wage record`
+        detail: `Total: Jobs <b>${data.jobHrs.toFixed(1)}h</b> · Wage <b>${data.wageHrs.toFixed(1)}h</b> · Missing <b>${timesheetGap.toFixed(1)}h</b> from wages<br>Worked more than recorded on wages${breakdown}`,
+        impact: `Missing ${timesheetGap.toFixed(1)}h of wage record`
       });
     }
   });
