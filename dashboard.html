@@ -855,7 +855,9 @@ async function load() {
     .map(j => {
       const profit = j.revenue - j.cost;
       const margin = j.revenue > 0 ? Math.round((profit / j.revenue) * 100) : 0;
-      const savedHrs = j.hrs - j.wageHrs;
+      // Round hours to nearest 0.5 to avoid tiny timing drift showing up
+      const savedHrsRaw = j.hrs - j.wageHrs;
+      const savedHrs = Math.round(savedHrsRaw * 2) / 2;
       const savedAmt = savedHrs * jobRate;
       return { ...j, profit, margin, savedHrs, savedAmt };
     })
