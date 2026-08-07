@@ -246,13 +246,16 @@
     padding: 11px 16px; background: var(--panel2); border-bottom: 1px solid var(--border);
     font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text3); font-weight: 700;
   }
-  .jp-row { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .jp-row { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .jp-row:last-of-type { border-bottom: none; }
-  .jp-name { flex: 1; font-size: 11px; font-weight: 600; }
-  .jp-hrs { font-size: 10px; color: var(--text3); width: 40px; text-align: right; }
-  .jp-rev { font-size: 10px; color: var(--accent); width: 65px; text-align: right; }
-  .jp-cost { font-size: 10px; color: var(--text2); width: 65px; text-align: right; }
-  .jp-margin { font-size: 11px; font-weight: 700; width: 60px; text-align: right; }
+  .jp-name { flex: 1 1 100%; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+  .jp-cell { display: flex; flex-direction: column; align-items: flex-end; flex: 1; min-width: 60px; }
+  .jp-cell .jp-lbl { font-size: 8px; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 1px; }
+  .jp-cell .jp-val { font-size: 10.5px; font-weight: 700; }
+  .jp-cell .jp-val.rev { color: var(--accent); }
+  .jp-cell .jp-val.cost { color: var(--text2); }
+  .jp-cell .jp-val.saved { color: var(--gold); }
+  .jp-cell .jp-val.margin { font-size: 12px; }
   .jp-margin.high { color: var(--green); }
   .jp-margin.mid { color: var(--gold); }
   .jp-margin.low { color: var(--red); }
@@ -834,16 +837,16 @@ async function load() {
       const staffRate = parseFloat(staff.rate || 30);
       const totalWagePaid = wageHrs * staffRate;
 
-      // Distribute this worker's wage across their jobs by hour share
+      // Distribute this worker's wage & wage hours across their jobs by hour share
       entries.forEach(en => {
         const jn = en.jobName;
         if (!jn) return;
-        if (!jobStats[jn]) jobStats[jn] = { name: jn, hrs: 0, revenue: 0, cost: 0 };
+        if (!jobStats[jn]) jobStats[jn] = { name: jn, hrs: 0, wageHrs: 0, revenue: 0, cost: 0 };
         jobStats[jn].hrs += en.hrs;
         jobStats[jn].revenue += en.hrs * jobRate;
-        // Share of wage cost = (this job's hours ÷ total job hours today) × total paid
         const share = totalJobHrs > 0 ? (en.hrs / totalJobHrs) : 0;
         jobStats[jn].cost += totalWagePaid * share;
+        jobStats[jn].wageHrs += wageHrs * share;
       });
     });
   });
@@ -851,7 +854,9 @@ async function load() {
     .map(j => {
       const profit = j.revenue - j.cost;
       const margin = j.revenue > 0 ? Math.round((profit / j.revenue) * 100) : 0;
-      return { ...j, profit, margin };
+      const savedHrs = j.hrs - j.wageHrs;
+      const savedAmt = savedHrs * jobRate;
+      return { ...j, profit, margin, savedHrs, savedAmt };
     })
     .sort((a,b) => a.margin - b.margin);
 
@@ -860,13 +865,17 @@ async function load() {
     document.getElementById('jp-week').textContent = 'WK ' + wn;
     document.getElementById('jp-rows').innerHTML = jpList.map(j => {
       const cls = j.margin < 10 ? 'low' : j.margin < 25 ? 'mid' : 'high';
+      const savedTxt = j.savedHrs >= 0.1
+        ? `${j.savedHrs.toFixed(1)}h · ${signed(j.savedAmt)}`
+        : (j.savedHrs <= -0.1 ? `${j.savedHrs.toFixed(1)}h · ${signed(j.savedAmt)}` : '—');
       return `
         <div class="jp-row">
           <span class="jp-name">${j.name}</span>
-          <span class="jp-hrs">${j.hrs.toFixed(1)}h</span>
-          <span class="jp-rev">${money(j.revenue)}</span>
-          <span class="jp-cost">−${money(j.cost)}</span>
-          <span class="jp-margin ${cls}">${j.margin}%</span>
+          <span class="jp-cell"><span class="jp-lbl">Charged</span><span class="jp-val">${j.hrs.toFixed(1)}h</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Revenue</span><span class="jp-val rev">${money(j.revenue)}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Wages</span><span class="jp-val cost">−${money(j.cost)}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Saved</span><span class="jp-val saved">${savedTxt}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Margin</span><span class="jp-val margin ${cls}">${j.margin}%</span></span>
         </div>`;
     }).join('');
   } else {
