@@ -197,6 +197,53 @@
     line-height: 1.6;
   }
 
+  /* Loss Detector */
+  #leaks-box {
+    background: linear-gradient(135deg, rgba(255,107,94,0.08), rgba(200,168,75,0.04));
+    border: 1px solid rgba(255,107,94,0.25); border-radius: 14px;
+    padding: 18px 18px; margin-bottom: 22px;
+  }
+  #leaks-title { font-family: var(--head); font-size: 14px; font-weight: 800; color: var(--red); margin-bottom: 12px; }
+  .leak-item {
+    padding: 11px 12px; margin-bottom: 8px;
+    background: rgba(15,30,53,0.4); border-radius: 8px;
+    border-left: 3px solid var(--red);
+  }
+  .leak-item.medium { border-left-color: var(--gold); }
+  .leak-item.low { border-left-color: var(--accent); }
+  .leak-head { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .leak-head.high { color: var(--red); }
+  .leak-head.medium { color: var(--gold); }
+  .leak-head.low { color: var(--accent); }
+  .leak-detail { font-size: 10px; color: var(--text2); line-height: 1.6; }
+  .leak-detail b { color: var(--text); }
+  .leak-impact { font-size: 11px; font-weight: 700; color: var(--red); margin-top: 5px; }
+  .leak-impact.medium { color: var(--gold); }
+  #leaks-clean {
+    text-align: center; padding: 14px; color: var(--green);
+    font-size: 11px; letter-spacing: 0.05em; font-weight: 700;
+  }
+
+  /* Job profitability */
+  #job-profit {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 22px; overflow: hidden;
+  }
+  .jp-title {
+    padding: 11px 16px; background: var(--panel2); border-bottom: 1px solid var(--border);
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text3); font-weight: 700;
+  }
+  .jp-row { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .jp-row:last-of-type { border-bottom: none; }
+  .jp-name { flex: 1; font-size: 11px; font-weight: 600; }
+  .jp-hrs { font-size: 10px; color: var(--text3); width: 40px; text-align: right; }
+  .jp-rev { font-size: 10px; color: var(--accent); width: 65px; text-align: right; }
+  .jp-cost { font-size: 10px; color: var(--text2); width: 65px; text-align: right; }
+  .jp-margin { font-size: 11px; font-weight: 700; width: 60px; text-align: right; }
+  .jp-margin.high { color: var(--green); }
+  .jp-margin.mid { color: var(--gold); }
+  .jp-margin.low { color: var(--red); }
+
   /* Empty / loading */
   #loading, #empty {
     text-align: center; padding: 60px 20px; color: var(--text3); font-size: 11px; letter-spacing: 0.1em;
@@ -236,6 +283,14 @@
         <div class="hero-stat"><div class="hs-label">Profit</div><div class="hs-val" id="h-profit">$0</div></div>
         <div class="hero-stat"><div class="hs-label">Margin</div><div class="hs-val hs-margin" id="h-margin">0%</div></div>
       </div>
+    </div>
+    <div id="leaks-box" style="display:none">
+      <div id="leaks-title">⚠ WEEK LEAKS <span id="leaks-count" style="font-size:11px;color:var(--text3);"></span></div>
+      <div id="leaks-list"></div>
+    </div>
+    <div id="job-profit" style="display:none">
+      <div class="jp-title">JOB PROFITABILITY · <span id="jp-week" style="color:var(--gold)"></span></div>
+      <div id="jp-rows"></div>
     </div>
     <div id="staff-totals" style="display:none">
       <div id="st-head">STAFF TOTALS · <span id="st-week"></span></div>
@@ -590,6 +645,170 @@ async function load() {
         </div>
       </div>`;
   });
+
+  // ── Loss Detector ──
+  const leaks = [];
+
+  // Per-person jobs vs wage hours mismatch across whole week
+  const personWeek = {};
+  DAYS.forEach(day => {
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (e && e.timeFrom && e.timeTo && !e.off) {
+        if (!personWeek[p.id]) personWeek[p.id] = { name: p.name, wageHrs: 0, jobHrs: 0 };
+        personWeek[p.id].wageHrs += calcH(e.timeFrom, e.timeTo);
+      }
+    });
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        const s = matchStaff(w.name, people);
+        if (s) {
+          if (!personWeek[s.id]) personWeek[s.id] = { name: s.name, wageHrs: 0, jobHrs: 0 };
+          personWeek[s.id].jobHrs += hrs;
+        }
+      });
+    });
+  });
+
+  // LEAK: Wage hours significantly higher than job hours
+  Object.entries(personWeek).forEach(([pid, data]) => {
+    const gap = data.wageHrs - data.jobHrs;
+    if (gap >= 3 && data.wageHrs > 0 && data.jobHrs > 0) {
+      const potentialLoss = gap * jobRate;
+      leaks.push({
+        severity: gap >= 8 ? 'high' : 'medium',
+        title: '💰 BILLING LEAK — ' + data.name,
+        detail: `Wage: <b>${data.wageHrs.toFixed(1)}h</b>  ·  Jobs: <b>${data.jobHrs.toFixed(1)}h</b><br>Paid for ${gap.toFixed(1)}h that weren't billed on jobs — likely unrecorded work`,
+        impact: `Potential lost revenue: ${money(potentialLoss)}`
+      });
+    }
+    // LEAK: Job hours WAY higher than wage (missed timesheet entry)
+    if (data.jobHrs - data.wageHrs >= 5 && data.wageHrs > 0) {
+      leaks.push({
+        severity: 'medium',
+        title: '📋 TIMESHEET LEAK — ' + data.name,
+        detail: `Jobs: <b>${data.jobHrs.toFixed(1)}h</b>  ·  Wage: <b>${data.wageHrs.toFixed(1)}h</b><br>Worked more than recorded on wages — check timesheet`,
+        impact: `Missing ${(data.jobHrs - data.wageHrs).toFixed(1)}h of wage record`
+      });
+    }
+  });
+
+  // LEAK: Extras gap negative (fuel leak)
+  if (wkExtrasGap < -20) {
+    leaks.push({
+      severity: Math.abs(wkExtrasGap) > 100 ? 'high' : 'medium',
+      title: '⛽ EXTRAS LEAK',
+      detail: `Reimbursed to staff exceeds what you charged the client for extras (parking, materials, fuel)`,
+      impact: `Uncovered cost: ${money(Math.abs(wkExtrasGap))}`
+    });
+  }
+
+  // LEAK: Any day where labour lost money (paid more per hour than earned)
+  const dayLosses = [];
+  DAYS.forEach(day => {
+    const personJobsD = {};
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        const s = matchStaff(w.name, people);
+        if (s) personJobsD[s.id] = (personJobsD[s.id] || 0) + hrs;
+      });
+    });
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (!e || !e.timeFrom || !e.timeTo || e.off) return;
+      const wageHrs = calcH(e.timeFrom, e.timeTo);
+      const jobHrs = personJobsD[p.id] || 0;
+      const paid = wageHrs * parseFloat(p.rate || 30);
+      const charged = jobHrs * jobRate;
+      const dLoss = charged - paid;
+      if (dLoss < -30) {
+        const dt = new Date(mon); dt.setDate(mon.getDate() + DAYS.indexOf(day));
+        dayLosses.push({ name: p.name, day: DAY_FULL[day] + ' ' + dt.toLocaleDateString('en-AU',{day:'numeric',month:'numeric'}), jobHrs, wageHrs, loss: dLoss });
+      }
+    });
+  });
+  dayLosses.slice(0, 5).forEach(dl => {
+    leaks.push({
+      severity: 'low',
+      title: '⏱ TIME OVER — ' + dl.name + ' · ' + dl.day,
+      detail: `Charged <b>${dl.jobHrs.toFixed(1)}h</b>  ·  Paid <b>${dl.wageHrs.toFixed(1)}h</b>  ·  Over <b>${(dl.wageHrs-dl.jobHrs).toFixed(1)}h</b>`,
+      impact: `Loss: ${signed(dl.loss).replace('+','')}`
+    });
+  });
+
+  // Render leaks
+  if (leaks.length) {
+    leaks.sort((a,b) => ({high:0,medium:1,low:2}[a.severity]) - ({high:0,medium:1,low:2}[b.severity]));
+    document.getElementById('leaks-box').style.display = 'block';
+    document.getElementById('leaks-count').textContent = '· ' + leaks.length + ' issue' + (leaks.length===1?'':'s') + ' found';
+    document.getElementById('leaks-list').innerHTML = leaks.map(l => `
+      <div class="leak-item ${l.severity}">
+        <div class="leak-head ${l.severity}">${l.title}</div>
+        <div class="leak-detail">${l.detail}</div>
+        <div class="leak-impact ${l.severity}">${l.impact}</div>
+      </div>`).join('');
+  } else {
+    document.getElementById('leaks-box').style.display = 'block';
+    document.getElementById('leaks-count').textContent = '';
+    document.getElementById('leaks-list').innerHTML = '<div id="leaks-clean">✅ NO LEAKS THIS WEEK</div>';
+  }
+
+  // ── Job Profitability ──
+  const jobStats = {};
+  DAYS.forEach(day => {
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c || !c.jobName) return;
+      const jn = c.jobName.trim();
+      if (!jn) return;
+      let jobHrs = 0, estCost = 0;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        jobHrs += hrs;
+        const s = matchStaff(w.name, people);
+        const staffRate = s ? parseFloat(s.rate || 30) : 30;
+        estCost += hrs * staffRate;
+      });
+      if (!jobStats[jn]) jobStats[jn] = { name: jn, hrs: 0, revenue: 0, cost: 0 };
+      jobStats[jn].hrs += jobHrs;
+      jobStats[jn].revenue += jobHrs * jobRate;
+      jobStats[jn].cost += estCost;
+    });
+  });
+  const jpList = Object.values(jobStats).filter(j => j.hrs > 0)
+    .map(j => {
+      const profit = j.revenue - j.cost;
+      const margin = j.revenue > 0 ? Math.round((profit / j.revenue) * 100) : 0;
+      return { ...j, profit, margin };
+    })
+    .sort((a,b) => a.margin - b.margin);
+
+  if (jpList.length) {
+    document.getElementById('job-profit').style.display = 'block';
+    document.getElementById('jp-week').textContent = 'WK ' + wn;
+    document.getElementById('jp-rows').innerHTML = jpList.map(j => {
+      const cls = j.margin < 10 ? 'low' : j.margin < 25 ? 'mid' : 'high';
+      return `
+        <div class="jp-row">
+          <span class="jp-name">${j.name}</span>
+          <span class="jp-hrs">${j.hrs.toFixed(1)}h</span>
+          <span class="jp-rev">${money(j.revenue)}</span>
+          <span class="jp-cost">−${money(j.cost)}</span>
+          <span class="jp-margin ${cls}">${j.margin}%</span>
+        </div>`;
+    }).join('');
+  } else {
+    document.getElementById('job-profit').style.display = 'none';
+  }
 
   // ── Staff week totals ──
   const stList = Object.values(staffWeek).filter(s => s.wageHrs > 0 || Math.abs(s.total) > 0.01);
