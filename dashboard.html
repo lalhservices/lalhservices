@@ -271,6 +271,14 @@
   .jp-day-total .jp-cell .jp-val { color: var(--text); }
   .jp-day-total .jp-cell .jp-val.rev { color: var(--accent); }
   .jp-day-total .jp-cell .jp-val.cost { color: var(--red); }
+  .jp-day-hours {
+    flex: 1 1 100%; margin-top: 6px; padding-top: 6px;
+    border-top: 1px dashed rgba(255,255,255,0.06);
+    font-size: 10px; color: var(--text3); letter-spacing: 0.03em;
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  .jp-day-hours b { color: var(--text); font-weight: 700; }
+  .jp-day-hours .saved { color: var(--gold); font-weight: 700; }
   .jp-margin.high { color: var(--green); }
   .jp-margin.mid { color: var(--gold); }
   .jp-margin.low { color: var(--red); }
@@ -876,7 +884,16 @@ async function load() {
       const dayCost = jobList.reduce((s, j) => s + j.cost, 0);
       const dayProfit = dayRev - dayCost;
       const dayMargin = dayRev > 0 ? Math.round((dayProfit / dayRev) * 100) : 0;
-      jobsByDay.push({ day, dateStr, jobs: jobList, dayHrs, dayRev, dayCost, dayProfit, dayMargin });
+      // Total wage hours worked that day by workers who appeared on jobs
+      let dayWageHrs = 0;
+      Object.values(workerJobsToday).forEach(({ staff }) => {
+        const e = (schedule[staff.id] || {})[day];
+        if (e && e.timeFrom && e.timeTo && !e.off) dayWageHrs += calcH(e.timeFrom, e.timeTo);
+      });
+      const daySavedHrsRaw = dayHrs - dayWageHrs;
+      const daySavedHrs = Math.round(daySavedHrsRaw * 2) / 2;
+      const daySavedAmt = daySavedHrs * jobRate;
+      jobsByDay.push({ day, dateStr, jobs: jobList, dayHrs, dayWageHrs, daySavedHrs, daySavedAmt, dayRev, dayCost, dayProfit, dayMargin });
     }
   });
 
@@ -909,6 +926,11 @@ async function load() {
           <span class="jp-cell"><span class="jp-lbl">Wages</span><span class="jp-val cost">−${money(d.dayCost)}</span></span>
           <span class="jp-cell"><span class="jp-lbl">Profit</span><span class="jp-val margin ${dpcls}">${money(d.dayProfit)}</span></span>
           <span class="jp-cell"><span class="jp-lbl">Margin</span><span class="jp-val margin ${dcls}">${d.dayMargin}%</span></span>
+          <div class="jp-day-hours">
+            <span>Charged <b>${d.dayHrs.toFixed(1)}h</b></span>
+            <span>Paid <b>${d.dayWageHrs.toFixed(1)}h</b></span>
+            ${Math.abs(d.daySavedHrs) >= 0.5 ? `<span class="saved">⏱ Saved ${d.daySavedHrs.toFixed(1)}h · ${signed(d.daySavedAmt)}</span>` : ''}
+          </div>
         </div>`;
     }).join('');
   } else {
