@@ -379,11 +379,61 @@ async function cloudGet(key) {
   }
 }
 
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_FULL = {Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday',Sat:'Saturday',Sun:'Sunday'};
+let offset = 0;
+
 function money(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function signed(n) { return (n >= 0 ? '+' : '−') + '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function moneyShort(n) {
   const v = Math.round(n);
   return '$' + String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+
+function weekDates(off) {
+  const now = new Date(), d = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - d + (d === 0 ? -6 : 1) + off * 7);
+  mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  return { mon, sun };
+}
+function weekKey(off) {
+  const { mon } = weekDates(off);
+  const yr = mon.getFullYear();
+  const start = new Date(yr, 0, 1);
+  const wn = Math.ceil(((mon - start) / 86400000 + start.getDay() + 1) / 7);
+  return yr + '-W' + String(wn).padStart(2, '0');
+}
+function calcH(from, to) {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(':').map(Number);
+  const [th, tm] = to.split(':').map(Number);
+  let m = (th * 60 + tm) - (fh * 60 + fm);
+  if (m < 0) m += 1440;
+  return m / 60;
+}
+function norm(name) {
+  return (name || '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+function matchStaff(typed, people) {
+  const t = norm(typed);
+  if (!t) return null;
+  for (const p of people) {
+    const full = norm(p.name);
+    const first = full.split(' ')[0];
+    if (t === full || t === first) return p;
+  }
+  for (const p of people) {
+    const first = norm(p.name).split(' ')[0];
+    if (first.length >= 3 && (t.startsWith(first.slice(0, 4)) || first.startsWith(t.slice(0, 4)))) return p;
+  }
+  for (const p of people) {
+    const first = norm(p.name).split(' ')[0];
+    if (t.slice(0, 3) === first.slice(0, 3)) return p;
+  }
+  return null;
 }
 
 async function load() {
