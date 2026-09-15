@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LALH — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1e35;
+    --panel: #16263f;
+    --panel2: #1c2e4a;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f4f8;
+    --text2: rgba(255,255,255,0.55);
+    --text3: rgba(255,255,255,0.32);
+    --accent: #4d8fd1;
+    --green: #3dd68c;
+    --red: #ff6b5e;
+    --gold: #c8a84b;
+    --mono: 'JetBrains Mono', monospace;
+    --head: 'Space Grotesk', sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; padding-bottom: 60px; }
+
+  /* Header */
+  #header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(15,30,53,0.95); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  #header h1 { font-family: var(--head); font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+  #header h1 span { color: var(--gold); }
+  #week-nav { display: flex; align-items: center; gap: 10px; }
+  .wk-btn {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; font-family: var(--mono);
+  }
+  .wk-btn:hover { border-color: var(--accent); }
+  #week-label { font-size: 11px; color: var(--text2); letter-spacing: 0.05em; min-width: 180px; text-align: center; }
+
+  #content { max-width: 760px; margin: 0 auto; padding: 18px 14px; }
+
+  /* Week hero */
+  #week-hero {
+    background: linear-gradient(135deg, var(--panel2), var(--panel));
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 22px 20px; margin-bottom: 22px;
+  }
+  #hero-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text3); margin-bottom: 14px; }
+  #hero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 10px; }
+  .hero-stat .hs-label { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
+  .hero-stat .hs-val { font-family: var(--head); font-size: 21px; font-weight: 800; letter-spacing: -0.5px; }
+  .hs-charged { color: var(--accent); }
+  .hs-paid { color: var(--text); }
+  .hs-profit-pos { color: var(--green); }
+  .hs-profit-neg { color: var(--red); }
+  .hs-margin { color: var(--gold); }
+  @media (max-width: 540px) {
+    #hero-grid { grid-template-columns: repeat(2, 1fr); gap: 16px 10px; }
+    .hero-stat .hs-val { font-size: 17px; }
+  }
+  .hs-saved { color: var(--gold); }
+
+  /* Staff week totals */
+  #staff-totals {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 22px; overflow: hidden;
+  }
+  #st-head {
+    padding: 11px 16px; background: var(--panel2); border-bottom: 1px solid var(--border);
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text3); font-weight: 700;
+  }
+  #st-head span { color: var(--gold); }
+  .st-row { padding: 10px 16px; border-bottom: 1px solid var(--border); position: relative; }
+  .st-row:last-of-type { border-bottom: none; }
+  .st-bar {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(61,214,140,0.07), transparent);
+    pointer-events: none;
+  }
+  .st-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: relative; }
+  .st-name { font-size: 12px; font-weight: 700; flex: 1; }
+  .st-hrs { font-size: 10px; color: var(--text2); width: 52px; text-align: right; }
+  .st-total { font-size: 12px; font-weight: 700; width: 90px; text-align: right; }
+  .st-total.pos { color: var(--green); }
+  .st-total.neg { color: var(--red); }
+  .st-badges { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; position: relative; }
+  .st-mini {
+    font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 5px;
+  }
+  .st-mini.saved { background: rgba(200,168,75,0.1); color: var(--gold); }
+  .st-mini.labour { background: rgba(176,92,60,0.14); color: #d98a64; }
+  .st-mini.negative { background: rgba(255,107,94,0.08); color: var(--red); }
+  .st-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 11px 16px; background: rgba(255,255,255,0.025); border-top: 1px solid var(--border);
+    font-size: 10px;
+  }
+  .st-foot .stf-label { color: var(--text3); font-weight: 700; letter-spacing: 0.1em; }
+  .st-foot .stf-badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .st-foot .stf-total { font-size: 12px; font-weight: 800; }
+  .st-foot .stf-total.pos { color: var(--green); }
+  .st-foot .stf-total.neg { color: var(--red); }
+
+  /* Day blocks */
+  .day-block { margin-bottom: 18px; }
+  .day-head {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 10px 10px 0 0; padding: 9px 14px;
+  }
+  .day-name { font-family: var(--head); font-size: 13px; font-weight: 800; color: var(--gold); }
+  .day-quick { font-size: 10px; color: var(--text2); }
+  .day-quick b { color: var(--text); }
+  .day-body { background: var(--panel); border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; overflow: hidden; }
+
+  /* Person rows */
+  .person-row { padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  .person-row:last-of-type { border-bottom: none; }
+  .pr-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .pr-name { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
+  .pr-diff { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+  .pr-diff.pos { background: rgba(61,214,140,0.12); color: var(--green); }
+  .pr-diff.neg { background: rgba(255,107,94,0.12); color: var(--red); }
+  .pr-diff.zero { background: rgba(255,255,255,0.06); color: var(--text2); }
+  .pr-lines { display: grid; gap: 3px; }
+  .pr-line { display: flex; justify-content: space-between; font-size: 10px; color: var(--text2); gap: 10px; }
+  .pr-line .lbl { color: var(--text3); flex-shrink: 0; width: 48px; }
+  .pr-line .detail { flex: 1; text-align: left; word-break: break-word; }
+  .pr-line .amt { color: var(--text); font-weight: 600; flex-shrink: 0; }
+  .pr-line.jobs-line .amt { color: var(--accent); }
+  .pr-saved {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 6px; font-size: 10px; font-weight: 700;
+    background: rgba(200,168,75,0.1); color: var(--gold);
+    border: 1px solid rgba(200,168,75,0.2);
+    padding: 3px 9px; border-radius: 6px;
+  }
+  .pr-saved.negative { background: rgba(255,107,94,0.08); color: var(--red); border-color: rgba(255,107,94,0.15); }
+  .pr-labour {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 6px; margin-left: 6px; font-size: 10px; font-weight: 700;
+    background: rgba(176,92,60,0.14); color: #d98a64;
+    border: 1px solid rgba(176,92,60,0.3);
+    padding: 3px 9px; border-radius: 6px;
+  }
+  .pr-labour.negative { background: rgba(255,107,94,0.08); color: var(--red); border-color: rgba(255,107,94,0.15); }
+  .pr-total-line {
+    display: flex; justify-content: flex-end; margin-top: 7px;
+    padding-top: 7px; border-top: 1px dashed rgba(255,255,255,0.08);
+  }
+  .pr-total-line .pt-badge {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 20px;
+  }
+  .pr-total-line .pt-badge.pos { background: rgba(61,214,140,0.12); color: var(--green); }
+  .pr-total-line .pt-badge.neg { background: rgba(255,107,94,0.12); color: var(--red); }
+  .pr-total-line .pt-badge.zero { background: rgba(255,255,255,0.06); color: var(--text2); }
+
+  /* Extras box */
+  .extras-box {
+    margin: 4px 14px 10px; padding: 10px 12px;
+    background: rgba(77,143,209,0.05); border: 1px dashed rgba(77,143,209,0.25);
+    border-radius: 8px;
+  }
+  .ex-title { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 7px; }
+  .ex-line { display: flex; justify-content: space-between; font-size: 10px; color: var(--text2); margin-bottom: 3px; gap: 10px; }
+  .ex-line .ex-detail { flex: 1; }
+  .ex-line .ex-amt { color: var(--text); font-weight: 600; flex-shrink: 0; }
+  .ex-gap { display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.08); }
+  .ex-gap.pos { color: var(--green); }
+  .ex-gap.neg { color: var(--red); }
+  .ex-gap.zero { color: var(--text2); }
+
+  /* Day footer */
+  .day-foot {
+    display: flex; justify-content: space-between; gap: 8px;
+    background: rgba(255,255,255,0.025); padding: 9px 14px;
+    font-size: 10px; border-top: 1px solid var(--border);
+  }
+  .df-item { color: var(--text3); }
+  .df-item b { color: var(--text); font-weight: 700; }
+  .df-item.profit-pos b { color: var(--green); }
+  .df-item.profit-neg b { color: var(--red); }
+
+  /* Unmatched note */
+  .unmatched-note {
+    padding: 9px 14px; font-size: 9.5px; color: var(--gold);
+    background: rgba(200,168,75,0.06); border-top: 1px solid rgba(200,168,75,0.15);
+    line-height: 1.6;
+  }
+
+  /* Loss Detector */
+  #leaks-box {
+    background: linear-gradient(135deg, rgba(255,107,94,0.08), rgba(200,168,75,0.04));
+    border: 1px solid rgba(255,107,94,0.25); border-radius: 14px;
+    padding: 18px 18px; margin-bottom: 22px;
+  }
+  #leaks-title { font-family: var(--head); font-size: 14px; font-weight: 800; color: var(--red); margin-bottom: 12px; }
+  .leak-item {
+    padding: 11px 12px; margin-bottom: 8px;
+    background: rgba(15,30,53,0.4); border-radius: 8px;
+    border-left: 3px solid var(--red);
+  }
+  .leak-item.medium { border-left-color: var(--gold); }
+  .leak-item.low { border-left-color: var(--accent); }
+  .leak-head { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .leak-head.high { color: var(--red); }
+  .leak-head.medium { color: var(--gold); }
+  .leak-head.low { color: var(--accent); }
+  .leak-detail { font-size: 10px; color: var(--text2); line-height: 1.6; }
+  .leak-detail b { color: var(--text); }
+  .leak-impact { font-size: 11px; font-weight: 700; color: var(--red); margin-top: 5px; }
+  .leak-impact.medium { color: var(--gold); }
+  .leak-breakdown {
+    margin-top: 8px; padding: 8px 10px 6px;
+    background: rgba(0,0,0,0.25); border-radius: 6px;
+    font-size: 10px; color: var(--text2);
+  }
+  .leak-brow {
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 3px 0; border-bottom: 1px dashed rgba(255,255,255,0.06);
+  }
+  .leak-brow:last-child { border-bottom: none; }
+  .leak-brow .lb-day { color: var(--gold); font-weight: 700; width: 90px; }
+  .leak-brow .lb-detail { flex: 1; text-align: right; }
+  .leak-brow .lb-gap { color: var(--red); font-weight: 700; width: 60px; text-align: right; }
+  #leaks-clean {
+    text-align: center; padding: 14px; color: var(--green);
+    font-size: 11px; letter-spacing: 0.05em; font-weight: 700;
+  }
+
+  /* Job profitability */
+  #job-profit {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 22px; overflow: hidden;
+  }
+  .jp-title {
+    padding: 11px 16px; background: var(--panel2); border-bottom: 1px solid var(--border);
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text3); font-weight: 700;
+  }
+  .jp-row { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .jp-row:last-of-type { border-bottom: none; }
+  .jp-name { flex: 1 1 100%; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+  .jp-cell { display: flex; flex-direction: column; align-items: flex-end; flex: 1; min-width: 60px; }
+  .jp-cell .jp-lbl { font-size: 8px; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 1px; }
+  .jp-cell .jp-val { font-size: 10.5px; font-weight: 700; }
+  .jp-cell .jp-val.rev { color: var(--accent); }
+  .jp-cell .jp-val.cost { color: var(--text2); }
+  .jp-cell .jp-val.saved { color: var(--gold); }
+  .jp-cell .jp-val.margin { font-size: 12px; }
+  .jp-day-head {
+    padding: 9px 14px; background: rgba(200,168,75,0.08);
+    color: var(--gold); font-family: var(--head); font-size: 12px; font-weight: 800;
+    letter-spacing: 0.02em; border-top: 1px solid var(--border);
+  }
+  .jp-day-total {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 10px 12px; background: rgba(15,30,53,0.4);
+    border-top: 1px dashed rgba(255,255,255,0.08);
+    border-bottom: 1px solid var(--border);
+  }
+  .jp-day-total .jp-name { color: var(--text2); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .jp-day-total .jp-cell .jp-val { color: var(--text); }
+  .jp-day-total .jp-cell .jp-val.rev { color: var(--accent); }
+  .jp-day-total .jp-cell .jp-val.cost { color: var(--red); }
+  .jp-day-hours {
+    flex: 1 1 100%; margin-top: 6px; padding-top: 6px;
+    border-top: 1px dashed rgba(255,255,255,0.06);
+    font-size: 10px; color: var(--text3); letter-spacing: 0.03em;
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  .jp-day-hours b { color: var(--text); font-weight: 700; }
+  .jp-day-hours .saved { color: var(--gold); font-weight: 700; }
+  .jp-margin.high { color: var(--green); }
+  .jp-margin.mid { color: var(--gold); }
+  .jp-margin.low { color: var(--red); }
+
+  /* Empty / loading */
+  #loading, #empty {
+    text-align: center; padding: 60px 20px; color: var(--text3); font-size: 11px; letter-spacing: 0.1em;
+  }
+  .spinner {
+    width: 26px; height: 26px; border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; margin: 0 auto 16px; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #refresh-note { text-align: center; font-size: 9px; color: var(--text3); margin-top: 24px; letter-spacing: 0.08em; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div id="header">
+  <h1>LALH <span>/ DASHBOARD</span></h1>
+  <div id="week-nav">
+    <button class="wk-btn" onclick="changeWeek(-1)">←</button>
+    <div id="week-label">Loading…</div>
+    <button class="wk-btn" onclick="changeWeek(1)">→</button>
+    <button class="wk-btn" onclick="downloadPDF()" title="Save as PDF" style="width:auto;padding:0 12px;font-size:11px;">⇓ PDF</button>
+  </div>
+</div>
+
+<div id="content">
+  <div id="loading"><div class="spinner"></div>LOADING WEEK DATA…</div>
+  <div id="dash" style="display:none">
+    <div id="week-hero">
+      <div id="hero-title">WEEK PERFORMANCE</div>
+      <div id="hero-grid">
+        <div class="hero-stat"><div class="hs-label">Charged</div><div class="hs-val hs-charged" id="h-charged">$0</div></div>
+        <div class="hero-stat"><div class="hs-label">Wages Paid</div><div class="hs-val hs-paid" id="h-paid">$0</div></div>
+        <div class="hero-stat"><div class="hs-label">Hrs Saved</div><div class="hs-val hs-saved" id="h-saved">0h</div><div style="font-size:9px;color:var(--text3);margin-top:2px;" id="h-saved-amt"></div></div>
+        <div class="hero-stat"><div class="hs-label">Extras Gap</div><div class="hs-val" id="h-exgap">$0</div></div>
+        <div class="hero-stat"><div class="hs-label">Profit</div><div class="hs-val" id="h-profit">$0</div></div>
+        <div class="hero-stat"><div class="hs-label">Margin</div><div class="hs-val hs-margin" id="h-margin">0%</div></div>
+      </div>
+    </div>
+    <div id="leaks-box" style="display:none">
+      <div id="leaks-title">⚠ WEEK LEAKS <span id="leaks-count" style="font-size:11px;color:var(--text3);"></span></div>
+      <div id="leaks-list"></div>
+    </div>
+    <div id="job-profit" style="display:none">
+      <div class="jp-title">JOB PROFITABILITY · <span id="jp-week" style="color:var(--gold)"></span></div>
+      <div id="jp-rows"></div>
+    </div>
+    <div id="staff-totals" style="display:none">
+      <div id="st-head">STAFF TOTALS · <span id="st-week"></span></div>
+      <div id="st-rows"></div>
+      <div class="st-foot">
+        <span class="stf-label">ALL STAFF</span>
+        <span class="stf-badges" id="st-foot-badges"></span>
+      </div>
+    </div>
+    <div id="days"></div>
+  </div>
+  <div id="empty" style="display:none">NO DATA FOR THIS WEEK</div>
+  <div id="refresh-note">READ-ONLY · PULLS LIVE FROM SHEET · REFRESH PAGE FOR LATEST</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// SUPABASE CONNECTION
+// ══════════════════════════════════════════
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function cloudGetMany(keys) {
+  try {
+    const { data, error } = await sb.from('roster_data').select('key, value').in('key', keys);
+    if (error) throw error;
+    const result = {};
+    keys.forEach(k => { result[k] = null; });
+    (data || []).forEach(r => { result[r.key] = r.value; });
+    return result;
+  } catch (e) {
+    console.log('cloudGetMany error:', e);
+    return {};
+  }
+}
+
+async function cloudGet(key) {
+  try {
+    const { data, error } = await sb.from('roster_data').select('value').eq('key', key).maybeSingle();
+    if (error) throw error;
+    return data ? data.value : null;
+  } catch (e) {
+    console.log('cloudGet error:', key, e);
+    return null;
+  }
+}
+
+function money(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function signed(n) { return (n >= 0 ? '+' : '−') + '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function moneyShort(n) {
+  const v = Math.round(n);
+  return '$' + String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+async function load() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('dash').style.display = 'none';
+  document.getElementById('empty').style.display = 'none';
+
+  const wk = weekKey(offset);
+  const { mon, sun } = weekDates(offset);
+  const f = d => d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  const wn = wk.split('-W')[1];
+  document.getElementById('week-label').textContent = 'WK ' + wn + ' · ' + f(mon) + ' – ' + f(sun);
+
+  // Fetch everything in ONE batch request (avoids rate limits)
+  const batchKeys = ['jt2_global', 'jt2_wk_' + wk, 'jt2_rate_' + wk, 'roster_wk_' + wk, 'roster_rates_' + wk, 'roster_global'];
+  const batch = await cloudGetMany(batchKeys);
+  const gRaw = batch['jt2_global'];
+  const jobsRaw = batch['jt2_wk_' + wk];
+  const jobsRateRaw = batch['jt2_rate_' + wk];
+  const rosterRaw = batch['roster_wk_' + wk];
+  const ratesRaw = batch['roster_rates_' + wk];
+  const globalRaw = batch['roster_global'];
+
+  const jobsGlobal = gRaw ? JSON.parse(gRaw) : { rows: [] };
+  const cells = jobsRaw ? JSON.parse(jobsRaw) : {};
+  const jobRate = jobsRateRaw ? parseFloat(jobsRateRaw) : 45;
+  const schedule = rosterRaw ? JSON.parse(rosterRaw) : {};
+  const global = globalRaw ? JSON.parse(globalRaw) : { people: [] };
+  const people = global.people || [];
+
+  // Apply per-week rates
+  if (ratesRaw) {
+    try {
+      const rates = JSON.parse(ratesRaw);
+      people.forEach(p => { if (rates[p.id] !== undefined) p.rate = rates[p.id]; });
+    } catch (e) {}
+  }
+
+  document.getElementById('loading').style.display = 'none';
+
+  const hasJobs = Object.keys(cells).length > 0;
+  const hasWages = Object.values(schedule).some(pd => Object.values(pd || {}).some(e => e && e.timeFrom));
+  if (!hasJobs && !hasWages) {
+    document.getElementById('empty').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('dash').style.display = 'block';
+
+  let wkCharged = 0, wkPaid = 0, wkExtrasGap = 0, wkSavedHrs = 0;
+  const staffWeek = {}; // pid → {name, wageHrs, savedAmt, labourAmt, total}
+  const daysEl = document.getElementById('days');
+  daysEl.innerHTML = '';
+
+  DAYS.forEach((day, di) => {
+    // ── Gather jobs side: per matched person → list of {job, hrs} ──
+    const personJobs = {};   // pid → [{job, hrs}]
+    const unmatched = [];    // [{name, job, hrs}]
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        const staff = matchStaff(w.name, people);
+        if (staff) {
+          if (!personJobs[staff.id]) personJobs[staff.id] = [];
+          personJobs[staff.id].push({ job: c.jobName || '–', hrs });
+        } else {
+          unmatched.push({ name: w.name || '?', job: c.jobName || '–', hrs });
+        }
+      });
+    });
+
+    // ── Gather wages side: pid → hrs ──
+    const personWage = {};
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (e && e.timeFrom && e.timeTo && !e.off) {
+        personWage[p.id] = calcH(e.timeFrom, e.timeTo);
+      }
+    });
+
+    // ── Extras: both sides ──
+    // Charged to client (from jobs)
+    let exChargedPark = 0, exChargedMats = 0;
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      exChargedPark += parseFloat(c.parking || 0);
+      exChargedMats += parseFloat(c.materials || 0);
+    });
+    // Reimbursed to staff (from wages)
+    let exPaidPark = 0, exPaidMats = 0, exPaidFuel = 0;
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (!e) return;
+      exPaidPark += parseFloat(e.parking || 0);
+      exPaidMats += parseFloat(e.materials || 0);
+      exPaidFuel += parseFloat(e.fuel || 0);
+    });
+    const exCharged = exChargedPark + exChargedMats;
+    const exPaid = exPaidPark + exPaidMats + exPaidFuel;
+    const exGap = exCharged - exPaid;
+    const dayExtras = exCharged;
+
+    const pids = [...new Set([...Object.keys(personJobs), ...Object.keys(personWage)])];
+    if (pids.length === 0 && unmatched.length === 0) return; // skip empty day
+
+    // ── Build day block ──
+    const dt = new Date(weekDates(offset).mon);
+    dt.setDate(dt.getDate() + di);
+    const dateStr = dt.toLocaleDateString('en-AU', { day: 'numeric', month: 'numeric' });
+
+    let dayCharged = 0, dayPaid = 0, daySavedHrs = 0;
+    let rowsHtml = '';
+
+    pids.sort((a, b) => {
+      const pa = people.find(p => String(p.id) === String(a));
+      const pb = people.find(p => String(p.id) === String(b));
+      return (pa?.name || '').localeCompare(pb?.name || '');
+    });
+
+    pids.forEach(pid => {
+      const staff = people.find(p => String(p.id) === String(pid));
+      if (!staff) return;
+      const jobs = personJobs[pid] || [];
+      const jobHrs = jobs.reduce((s, j) => s + j.hrs, 0);
+      const charged = jobHrs * jobRate;
+      const wageHrs = personWage[pid] || 0;
+      const paid = wageHrs * parseFloat(staff.rate || 30);
+      const diff = charged - paid;
+      const savedHrs = jobHrs - wageHrs;
+      const savedAmt = savedHrs * jobRate;
+      const staffRate = parseFloat(staff.rate || 30);
+      const labourProAmt = wageHrs * (jobRate - staffRate);
+      dayCharged += charged;
+      dayPaid += paid;
+      daySavedHrs += savedHrs;
+      // Accumulate weekly per-staff totals
+      if (!staffWeek[pid]) staffWeek[pid] = { name: staff.name, wageHrs: 0, savedAmt: 0, labourAmt: 0, total: 0 };
+      staffWeek[pid].wageHrs += wageHrs;
+      staffWeek[pid].savedAmt += savedAmt;
+      staffWeek[pid].labourAmt += labourProAmt;
+      staffWeek[pid].total += diff;
+
+      const jobsDetail = jobs.length
+        ? jobs.map(j => `${j.job} ${j.hrs.toFixed(1)}h`).join(' + ') + ` = ${jobHrs.toFixed(1)}h`
+        : '—';
+      const wageDetail = wageHrs > 0 ? `${wageHrs.toFixed(1)}h × $${staff.rate}` : '—';
+
+      const diffCls = Math.abs(diff) < 0.01 ? 'zero' : (diff > 0 ? 'pos' : 'neg');
+      const diffTxt = Math.abs(diff) < 0.01 ? '±$0' : (diff > 0 ? '+' : '−') + money(Math.abs(diff)).slice(1).replace(/^/, '$');
+
+      // Saved hours badge (gold) — time difference profit
+      let savedHtml = '';
+      if (jobHrs > 0 && wageHrs > 0 && Math.abs(savedHrs) >= 0.05) {
+        const isNeg = savedHrs < 0;
+        savedHtml = `<div class="pr-saved${isNeg ? ' negative' : ''}">⏱ ${isNeg ? 'OVER' : 'SAVED'} ${Math.abs(savedHrs).toFixed(1)}h → ${isNeg ? '−' : '+'}${money(Math.abs(savedAmt))}</div>`;
+      }
+      // Labour profit badge (maroon) — rate margin on paid hours
+      let labourHtml = '';
+      if (wageHrs > 0 && Math.abs(labourProAmt) >= 0.01) {
+        const isNegL = labourProAmt < 0;
+        labourHtml = `<div class="pr-labour${isNegL ? ' negative' : ''}">⚒ LABOUR ${wageHrs.toFixed(1)}h × $${(jobRate - staffRate).toFixed(0)} → ${isNegL ? '−' : '+'}${money(Math.abs(labourProAmt))}</div>`;
+      }
+      // Total badge (green) — moved below the wage line
+      const totalHtml = `<div class="pr-total-line"><span class="pt-badge ${diffCls}">Total ${diff > 0 ? '+' : diff < 0 ? '−' : ''}${money(Math.abs(diff))}</span></div>`;
+      rowsHtml += `
+        <div class="person-row">
+          <div class="pr-top">
+            <div class="pr-name">${staff.name}</div>
+          </div>
+          <div class="pr-lines">
+            <div class="pr-line jobs-line"><span class="lbl">JOBS</span><span class="detail">${jobsDetail}</span><span class="amt">${charged > 0 ? money(charged) : '—'}</span></div>
+            <div class="pr-line"><span class="lbl">WAGE</span><span class="detail">${wageDetail}</span><span class="amt">${paid > 0 ? money(paid) : '—'}</span></div>
+          </div>
+          ${savedHtml}${labourHtml}
+          ${totalHtml}
+        </div>`;
+    });
+
+    // Unmatched workers (typed names that don't match staff)
+    let unmatchedHtml = '';
+    if (unmatched.length) {
+      const items = unmatched.map(u => {
+        const charged = u.hrs * jobRate;
+        dayCharged += charged;
+        return `${u.name} (${u.job}) ${u.hrs.toFixed(1)}h = ${money(charged)}`;
+      }).join(' · ');
+      unmatchedHtml = `<div class="unmatched-note">⚠ Not on staff list: ${items} — charged but no wage matched</div>`;
+    }
+
+    // True profit includes extras gap
+    const dayProfit = (dayCharged - dayPaid) + exGap;
+    const daySavedAmt = daySavedHrs * jobRate;
+    wkCharged += dayCharged + exCharged;
+    wkPaid += dayPaid + exPaid;
+    wkExtrasGap += exGap;
+    wkSavedHrs += daySavedHrs;
+
+    // Extras box (only when there are extras on either side)
+    let extrasHtml = '';
+    if (exCharged > 0.001 || exPaid > 0.001) {
+      const chargedParts = [];
+      if (exChargedPark > 0) chargedParts.push('P ' + money(exChargedPark));
+      if (exChargedMats > 0) chargedParts.push('M ' + money(exChargedMats));
+      const paidParts = [];
+      if (exPaidPark > 0) paidParts.push('P ' + money(exPaidPark));
+      if (exPaidMats > 0) paidParts.push('M ' + money(exPaidMats));
+      if (exPaidFuel > 0) paidParts.push('F ' + money(exPaidFuel));
+      const gapCls = Math.abs(exGap) < 0.01 ? 'zero' : (exGap > 0 ? 'pos' : 'neg');
+      extrasHtml = `
+        <div class="extras-box">
+          <div class="ex-title">🅿 Extras</div>
+          <div class="ex-line"><span class="ex-detail">Charged to client${chargedParts.length ? ': ' + chargedParts.join(' + ') : ''}</span><span class="ex-amt">${exCharged > 0 ? money(exCharged) : '—'}</span></div>
+          <div class="ex-line"><span class="ex-detail">Reimbursed staff${paidParts.length ? ': ' + paidParts.join(' + ') : ''}</span><span class="ex-amt">${exPaid > 0 ? money(exPaid) : '—'}</span></div>
+          <div class="ex-gap ${gapCls}"><span>Gap</span><span>${exGap > 0 ? '+' : exGap < 0 ? '−' : ''}${money(Math.abs(exGap))}</span></div>
+        </div>`;
+    }
+
+    const profitCls = dayProfit >= 0 ? 'profit-pos' : 'profit-neg';
+    const savedFootHtml = Math.abs(daySavedHrs) >= 0.05
+      ? `<span class="df-item" style="color:var(--gold)">⏱ <b style="color:var(--gold)">${daySavedHrs > 0 ? '+' : '−'}${Math.abs(daySavedHrs).toFixed(1)}h (${money(Math.abs(daySavedAmt))})</b></span>`
+      : '';
+
+    daysEl.innerHTML += `
+      <div class="day-block">
+        <div class="day-head">
+          <div class="day-name">${DAY_FULL[day]} ${dateStr}</div>
+          <div class="day-quick">charged <b>${moneyShort(dayCharged + exCharged)}</b> · paid <b>${moneyShort(dayPaid + exPaid)}</b></div>
+        </div>
+        <div class="day-body">
+          ${rowsHtml}
+          ${unmatchedHtml}
+          ${extrasHtml}
+          <div class="day-foot">
+            <span class="df-item">Charged <b>${money(dayCharged + exCharged)}</b></span>
+            <span class="df-item">Paid <b>${money(dayPaid + exPaid)}</b></span>
+            ${savedFootHtml}
+            <span class="df-item ${profitCls}">Profit <b>${dayProfit >= 0 ? '+' : '−'}${money(Math.abs(dayProfit))}</b></span>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  // ── Loss Detector ──
+  const leaks = [];
+
+  // Per-person jobs vs wage hours mismatch across whole week — with per-day tracking
+  const personWeek = {};
+  DAYS.forEach(day => {
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      const wageHrs = (e && e.timeFrom && e.timeTo && !e.off) ? calcH(e.timeFrom, e.timeTo) : 0;
+      if (wageHrs > 0) {
+        if (!personWeek[p.id]) personWeek[p.id] = { name: p.name, wageHrs: 0, jobHrs: 0, days: {} };
+        if (!personWeek[p.id].days[day]) personWeek[p.id].days[day] = { jobHrs: 0, wageHrs: 0, jobs: [] };
+        personWeek[p.id].wageHrs += wageHrs;
+        personWeek[p.id].days[day].wageHrs = wageHrs;
+      }
+    });
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        const s = matchStaff(w.name, people);
+        if (s) {
+          if (!personWeek[s.id]) personWeek[s.id] = { name: s.name, wageHrs: 0, jobHrs: 0, days: {} };
+          if (!personWeek[s.id].days[day]) personWeek[s.id].days[day] = { jobHrs: 0, wageHrs: 0, jobs: [] };
+          personWeek[s.id].jobHrs += hrs;
+          personWeek[s.id].days[day].jobHrs += hrs;
+          if (c.jobName) personWeek[s.id].days[day].jobs.push({ name: c.jobName, hrs });
+        }
+      });
+    });
+  });
+
+  // Helper: build day-by-day breakdown showing only days with a gap
+  const buildDayBreakdown = (dataDays, direction) => {
+    const rows = [];
+    DAYS.forEach(day => {
+      const d = dataDays[day];
+      if (!d) return;
+      const gap = direction === 'billing' ? (d.wageHrs - d.jobHrs) : (d.jobHrs - d.wageHrs);
+      if (gap < 0.25) return; // skip days with no meaningful gap
+      const dt = new Date(mon); dt.setDate(mon.getDate() + DAYS.indexOf(day));
+      const dateStr = dt.toLocaleDateString('en-AU', {day:'numeric', month:'numeric'});
+      const jobsList = d.jobs.length ? ' <span style="color:var(--text3)">(' + d.jobs.map(j => j.name + ' ' + j.hrs.toFixed(1) + 'h').join(', ') + ')</span>' : '';
+      rows.push(`
+        <div class="leak-brow">
+          <span class="lb-day">${DAY_FULL[day]} ${dateStr}</span>
+          <span class="lb-detail">Jobs <b>${d.jobHrs.toFixed(1)}h</b> · Wage <b>${d.wageHrs.toFixed(1)}h</b>${jobsList}</span>
+          <span class="lb-gap">Gap ${gap.toFixed(1)}h</span>
+        </div>`);
+    });
+    return rows.length ? '<div class="leak-breakdown">' + rows.join('') + '</div>' : '';
+  };
+
+  // LEAK: Wage hours significantly higher than job hours (billing leak)
+  Object.entries(personWeek).forEach(([pid, data]) => {
+    const gap = data.wageHrs - data.jobHrs;
+    if (gap >= 3 && data.wageHrs > 0 && data.jobHrs > 0) {
+      const potentialLoss = gap * jobRate;
+      const breakdown = buildDayBreakdown(data.days, 'billing');
+      leaks.push({
+        severity: gap >= 8 ? 'high' : 'medium',
+        title: '💰 BILLING LEAK — ' + data.name,
+        detail: `Total: Jobs <b>${data.jobHrs.toFixed(1)}h</b> · Wage <b>${data.wageHrs.toFixed(1)}h</b> · Missing <b>${gap.toFixed(1)}h</b> from jobs<br>Paid for work not billed to client${breakdown}`,
+        impact: `Potential lost revenue: ${money(potentialLoss)}`
+      });
+    }
+    // LEAK: Job hours higher than wage (missed timesheet)
+    const timesheetGap = data.jobHrs - data.wageHrs;
+    if (timesheetGap >= 3 && data.wageHrs > 0) {
+      const breakdown = buildDayBreakdown(data.days, 'timesheet');
+      leaks.push({
+        severity: timesheetGap >= 8 ? 'high' : 'medium',
+        title: '📋 TIMESHEET LEAK — ' + data.name,
+        detail: `Total: Jobs <b>${data.jobHrs.toFixed(1)}h</b> · Wage <b>${data.wageHrs.toFixed(1)}h</b> · Missing <b>${timesheetGap.toFixed(1)}h</b> from wages<br>Worked more than recorded on wages${breakdown}`,
+        impact: `Missing ${timesheetGap.toFixed(1)}h of wage record`
+      });
+    }
+  });
+
+  // LEAK: Extras gap negative (fuel leak)
+  if (wkExtrasGap < -20) {
+    leaks.push({
+      severity: Math.abs(wkExtrasGap) > 100 ? 'high' : 'medium',
+      title: '⛽ EXTRAS LEAK',
+      detail: `Reimbursed to staff exceeds what you charged the client for extras (parking, materials, fuel)`,
+      impact: `Uncovered cost: ${money(Math.abs(wkExtrasGap))}`
+    });
+  }
+
+  // LEAK: Any day where labour lost money (paid more per hour than earned)
+  const dayLosses = [];
+  DAYS.forEach(day => {
+    const personJobsD = {};
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        const s = matchStaff(w.name, people);
+        if (s) personJobsD[s.id] = (personJobsD[s.id] || 0) + hrs;
+      });
+    });
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (!e || !e.timeFrom || !e.timeTo || e.off) return;
+      const wageHrs = calcH(e.timeFrom, e.timeTo);
+      const jobHrs = personJobsD[p.id] || 0;
+      const paid = wageHrs * parseFloat(p.rate || 30);
+      const charged = jobHrs * jobRate;
+      const dLoss = charged - paid;
+      if (dLoss < -30) {
+        const dt = new Date(mon); dt.setDate(mon.getDate() + DAYS.indexOf(day));
+        dayLosses.push({ name: p.name, day: DAY_FULL[day] + ' ' + dt.toLocaleDateString('en-AU',{day:'numeric',month:'numeric'}), jobHrs, wageHrs, loss: dLoss });
+      }
+    });
+  });
+  dayLosses.slice(0, 5).forEach(dl => {
+    leaks.push({
+      severity: 'low',
+      title: '⏱ TIME OVER — ' + dl.name + ' · ' + dl.day,
+      detail: `Charged <b>${dl.jobHrs.toFixed(1)}h</b>  ·  Paid <b>${dl.wageHrs.toFixed(1)}h</b>  ·  Over <b>${(dl.wageHrs-dl.jobHrs).toFixed(1)}h</b>`,
+      impact: `Loss: ${signed(dl.loss).replace('+','')}`
+    });
+  });
+
+  // Render leaks
+  if (leaks.length) {
+    leaks.sort((a,b) => ({high:0,medium:1,low:2}[a.severity]) - ({high:0,medium:1,low:2}[b.severity]));
+    document.getElementById('leaks-box').style.display = 'block';
+    document.getElementById('leaks-count').textContent = '· ' + leaks.length + ' issue' + (leaks.length===1?'':'s') + ' found';
+    document.getElementById('leaks-list').innerHTML = leaks.map(l => `
+      <div class="leak-item ${l.severity}">
+        <div class="leak-head ${l.severity}">${l.title}</div>
+        <div class="leak-detail">${l.detail}</div>
+        <div class="leak-impact ${l.severity}">${l.impact}</div>
+      </div>`).join('');
+  } else {
+    document.getElementById('leaks-box').style.display = 'block';
+    document.getElementById('leaks-count').textContent = '';
+    document.getElementById('leaks-list').innerHTML = '<div id="leaks-clean">✅ NO LEAKS THIS WEEK</div>';
+  }
+
+  // ── Job Profitability (per day) ──
+  const jobsByDay = []; // [{day, dateStr, jobs:[{name,hrs,revenue,cost,profit,margin}], dayTotals}]
+
+  DAYS.forEach((day, di) => {
+    const workerJobsToday = {};
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c || !c.jobName) return;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        const s = matchStaff(w.name, people);
+        if (!s) return;
+        if (!workerJobsToday[s.id]) workerJobsToday[s.id] = { staff: s, entries: [], totalJobHrs: 0 };
+        workerJobsToday[s.id].entries.push({ jobName: c.jobName.trim(), hrs });
+        workerJobsToday[s.id].totalJobHrs += hrs;
+      });
+    });
+
+    // Per-day job map (fresh for each day)
+    const dayJobs = {};
+
+    Object.values(workerJobsToday).forEach(({ staff, entries, totalJobHrs }) => {
+      const e = (schedule[staff.id] || {})[day];
+      const wageHrs = (e && e.timeFrom && e.timeTo && !e.off) ? calcH(e.timeFrom, e.timeTo) : 0;
+      const staffRate = parseFloat(staff.rate || 30);
+      const totalWagePaid = wageHrs * staffRate;
+
+      entries.forEach(en => {
+        const jn = en.jobName;
+        if (!jn) return;
+        if (!dayJobs[jn]) dayJobs[jn] = { name: jn, hrs: 0, revenue: 0, cost: 0 };
+        dayJobs[jn].hrs += en.hrs;
+        dayJobs[jn].revenue += en.hrs * jobRate;
+        const share = totalJobHrs > 0 ? (en.hrs / totalJobHrs) : 0;
+        dayJobs[jn].cost += totalWagePaid * share;
+      });
+    });
+
+    const jobList = Object.values(dayJobs).filter(j => j.hrs > 0).map(j => {
+      const profit = j.revenue - j.cost;
+      const margin = j.revenue > 0 ? Math.round((profit / j.revenue) * 100) : 0;
+      return { ...j, profit, margin };
+    }).sort((a, b) => a.margin - b.margin);
+
+    if (jobList.length) {
+      const dt = new Date(mon); dt.setDate(mon.getDate() + di);
+      const dateStr = dt.toLocaleDateString('en-AU', { day: 'numeric', month: 'numeric' });
+      const dayHrs = jobList.reduce((s, j) => s + j.hrs, 0);
+      const dayRev = jobList.reduce((s, j) => s + j.revenue, 0);
+      const dayCost = jobList.reduce((s, j) => s + j.cost, 0);
+      const dayProfit = dayRev - dayCost;
+      const dayMargin = dayRev > 0 ? Math.round((dayProfit / dayRev) * 100) : 0;
+      // Total wage hours worked that day by workers who appeared on jobs
+      let dayWageHrs = 0;
+      Object.values(workerJobsToday).forEach(({ staff }) => {
+        const e = (schedule[staff.id] || {})[day];
+        if (e && e.timeFrom && e.timeTo && !e.off) dayWageHrs += calcH(e.timeFrom, e.timeTo);
+      });
+      const daySavedHrsRaw = dayHrs - dayWageHrs;
+      const daySavedHrs = Math.round(daySavedHrsRaw * 2) / 2;
+      const daySavedAmt = daySavedHrs * jobRate;
+      jobsByDay.push({ day, dateStr, jobs: jobList, dayHrs, dayWageHrs, daySavedHrs, daySavedAmt, dayRev, dayCost, dayProfit, dayMargin });
+    }
+  });
+
+  if (jobsByDay.length) {
+    document.getElementById('job-profit').style.display = 'block';
+    document.getElementById('jp-week').textContent = 'WK ' + wn;
+    document.getElementById('jp-rows').innerHTML = jobsByDay.map(d => {
+      const jobRows = d.jobs.map(j => {
+        const cls = j.margin < 10 ? 'low' : j.margin < 25 ? 'mid' : 'high';
+        const pcls = j.profit >= 0 ? 'high' : 'low';
+        return `
+          <div class="jp-row">
+            <span class="jp-name">${j.name}</span>
+            <span class="jp-cell"><span class="jp-lbl">Charged</span><span class="jp-val">${j.hrs.toFixed(1)}h</span></span>
+            <span class="jp-cell"><span class="jp-lbl">Revenue</span><span class="jp-val rev">${money(j.revenue)}</span></span>
+            <span class="jp-cell"><span class="jp-lbl">Wages</span><span class="jp-val cost">−${money(j.cost)}</span></span>
+            <span class="jp-cell"><span class="jp-lbl">Profit</span><span class="jp-val margin ${pcls}">${money(j.profit)}</span></span>
+            <span class="jp-cell"><span class="jp-lbl">Margin</span><span class="jp-val margin ${cls}">${j.margin}%</span></span>
+          </div>`;
+      }).join('');
+      const dcls = d.dayMargin < 10 ? 'low' : d.dayMargin < 25 ? 'mid' : 'high';
+      const dpcls = d.dayProfit >= 0 ? 'high' : 'low';
+      return `
+        <div class="jp-day-head">${DAY_FULL[d.day]} ${d.dateStr}</div>
+        ${jobRows}
+        <div class="jp-day-total">
+          <span class="jp-name">Day Total</span>
+          <span class="jp-cell"><span class="jp-lbl">Charged</span><span class="jp-val">${d.dayHrs.toFixed(1)}h</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Revenue</span><span class="jp-val rev">${money(d.dayRev)}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Wages</span><span class="jp-val cost">−${money(d.dayCost)}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Profit</span><span class="jp-val margin ${dpcls}">${money(d.dayProfit)}</span></span>
+          <span class="jp-cell"><span class="jp-lbl">Margin</span><span class="jp-val margin ${dcls}">${d.dayMargin}%</span></span>
+          <div class="jp-day-hours">
+            <span>Charged <b>${d.dayHrs.toFixed(1)}h</b></span>
+            <span>Paid <b>${d.dayWageHrs.toFixed(1)}h</b></span>
+            ${Math.abs(d.daySavedHrs) >= 0.5 ? `<span class="saved">⏱ Saved ${d.daySavedHrs.toFixed(1)}h · ${signed(d.daySavedAmt)}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  } else {
+    document.getElementById('job-profit').style.display = 'none';
+  }
+
+  // ── Staff week totals ──
+  const stList = Object.values(staffWeek).filter(s => s.wageHrs > 0 || Math.abs(s.total) > 0.01);
+  if (stList.length) {
+    stList.sort((a, b) => b.total - a.total);
+    const maxTotal = Math.max(...stList.map(s => Math.abs(s.total)), 1);
+    document.getElementById('staff-totals').style.display = 'block';
+    document.getElementById('st-week').textContent = 'WK ' + wn;
+    let stHtml = '';
+    let sumSaved = 0, sumLabour = 0, sumTotal = 0, sumHrs = 0;
+    stList.forEach(s => {
+      sumSaved += s.savedAmt; sumLabour += s.labourAmt; sumTotal += s.total; sumHrs += s.wageHrs;
+      const barW = Math.max(2, Math.round((Math.abs(s.total) / maxTotal) * 100));
+      const totCls = s.total >= 0 ? 'pos' : 'neg';
+      const savedBadge = Math.abs(s.savedAmt) >= 0.01
+        ? `<span class="st-mini saved${s.savedAmt < 0 ? ' negative' : ''}">⏱ ${s.savedAmt >= 0 ? '+' : '−'}${money(Math.abs(s.savedAmt))}</span>` : '';
+      const labourBadge = Math.abs(s.labourAmt) >= 0.01
+        ? `<span class="st-mini labour${s.labourAmt < 0 ? ' negative' : ''}">⚒ ${s.labourAmt >= 0 ? '+' : '−'}${money(Math.abs(s.labourAmt))}</span>` : '';
+      stHtml += `
+        <div class="st-row">
+          <div class="st-bar" style="width:${barW}%"></div>
+          <div class="st-main">
+            <span class="st-name">${s.name}</span>
+            <span class="st-hrs">${s.wageHrs.toFixed(1)}h</span>
+            <span class="st-total ${totCls}">${s.total >= 0 ? '+' : '−'}${money(Math.abs(s.total))}</span>
+          </div>
+          <div class="st-badges">${savedBadge}${labourBadge}</div>
+        </div>`;
+    });
+    document.getElementById('st-rows').innerHTML = stHtml;
+    const ftCls = sumTotal >= 0 ? 'pos' : 'neg';
+    document.getElementById('st-foot-badges').innerHTML = `
+      <span style="color:var(--text3)">${sumHrs.toFixed(1)}h</span>
+      <span class="st-mini saved">⏱ ${sumSaved >= 0 ? '+' : '−'}${money(Math.abs(sumSaved))}</span>
+      <span class="st-mini labour">⚒ ${sumLabour >= 0 ? '+' : '−'}${money(Math.abs(sumLabour))}</span>
+      <span class="stf-total ${ftCls}">${sumTotal >= 0 ? '+' : '−'}${money(Math.abs(sumTotal))}</span>`;
+  } else {
+    document.getElementById('staff-totals').style.display = 'none';
+  }
+
+  // ── Week hero ──
+  const wkProfit = wkCharged - wkPaid; // already includes extras both sides
+  const margin = wkCharged > 0 ? Math.round((wkProfit / wkCharged) * 100) : 0;
+  const exGapEl = document.getElementById('h-exgap');
+  exGapEl.textContent = (wkExtrasGap >= 0 ? '+' : '−') + moneyShort(Math.abs(wkExtrasGap)).slice(1).replace(/^/, '$');
+  exGapEl.className = 'hs-val ' + (wkExtrasGap > 0.01 ? 'hs-profit-pos' : wkExtrasGap < -0.01 ? 'hs-profit-neg' : 'hs-paid');
+  document.getElementById('h-charged').textContent = moneyShort(wkCharged);
+  document.getElementById('h-paid').textContent = moneyShort(wkPaid);
+  const savedAmtWk = wkSavedHrs * jobRate;
+  document.getElementById('h-saved').textContent = (wkSavedHrs >= 0 ? '' : '−') + Math.abs(wkSavedHrs).toFixed(1) + 'h';
+  document.getElementById('h-saved-amt').textContent = (wkSavedHrs >= 0 ? '+' : '−') + money(Math.abs(savedAmtWk));
+  const hp = document.getElementById('h-profit');
+  hp.textContent = (wkProfit >= 0 ? '+' : '−') + moneyShort(Math.abs(wkProfit)).slice(1).replace(/^/, '$');
+  hp.className = 'hs-val ' + (wkProfit >= 0 ? 'hs-profit-pos' : 'hs-profit-neg');
+  document.getElementById('h-margin').textContent = margin + '%';
+}
+
+function changeWeek(dir) {
+  offset += dir;
+  load();
+}
+
+load();
+
+// ── Download as PDF ──
+async function downloadPDF() {
+  if (typeof window.jspdf === 'undefined') { alert('PDF library not loaded'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const NAVY = [26, 58, 106];
+  const LIGHT = [232, 238, 248];
+  const GREY = [100, 100, 100];
+  const GREEN = [39, 135, 90];
+  const RED = [192, 54, 42];
+  const GOLD = [200, 168, 75];
+  const BLACK = [20, 20, 20];
+
+  const wk = weekKey(offset);
+  const { mon, sun } = weekDates(offset);
+  const f = d => d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  const wn = wk.split('-W')[1];
+  const label = 'WK ' + wn + ' · ' + f(mon) + ' – ' + f(sun);
+
+  // Refetch data (same as load)
+  const batchKeys = ['jt2_global', 'jt2_wk_' + wk, 'jt2_rate_' + wk, 'roster_wk_' + wk, 'roster_rates_' + wk, 'roster_global'];
+  const batch = await cloudGetMany(batchKeys);
+  const jobsGlobal = batch['jt2_global'] ? JSON.parse(batch['jt2_global']) : { rows: [] };
+  const cells = batch['jt2_wk_' + wk] ? JSON.parse(batch['jt2_wk_' + wk]) : {};
+  const jobRate = batch['jt2_rate_' + wk] ? parseFloat(batch['jt2_rate_' + wk]) : 45;
+  const schedule = batch['roster_wk_' + wk] ? JSON.parse(batch['roster_wk_' + wk]) : {};
+  const global = batch['roster_global'] ? JSON.parse(batch['roster_global']) : { people: [] };
+  const people = global.people || [];
+  if (batch['roster_rates_' + wk]) {
+    try {
+      const rates = JSON.parse(batch['roster_rates_' + wk]);
+      people.forEach(p => { if (rates[p.id] !== undefined) p.rate = rates[p.id]; });
+    } catch (e) {}
+  }
+
+  let y = 15;
+  const L = 15, R = 195, W = R - L;
+
+  // Header
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...NAVY);
+  doc.text('LALH SERVICES — DASHBOARD', L, y); y += 7;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...GREY);
+  doc.text(label, L, y); y += 10;
+
+  // Compute totals
+  let wkCharged = 0, wkPaid = 0, wkExGap = 0, wkSavedHrs = 0, wkSavedAmt = 0, wkLabourAmt = 0;
+  const staffWeek = {};
+  const dayBreakdown = [];
+
+  DAYS.forEach((day, di) => {
+    const personJobs = {};
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      (c.workers || []).forEach(w => {
+        const hrs = calcH(w.from, w.to);
+        if (hrs <= 0) return;
+        const s = matchStaff(w.name, people);
+        if (s) {
+          if (!personJobs[s.id]) personJobs[s.id] = { hrs: 0, jobs: [] };
+          personJobs[s.id].hrs += hrs;
+          personJobs[s.id].jobs.push(c.jobName || '-');
+        }
+      });
+    });
+    const personWage = {};
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (e && e.timeFrom && e.timeTo && !e.off) personWage[p.id] = calcH(e.timeFrom, e.timeTo);
+    });
+    const pids = new Set([...Object.keys(personJobs), ...Object.keys(personWage)]);
+    let dayCharged = 0, dayPaid = 0;
+    const dayRows = [];
+    pids.forEach(pid => {
+      const s = people.find(p => String(p.id) === String(pid));
+      if (!s) return;
+      const jobHrs = (personJobs[pid] || {}).hrs || 0;
+      const wageHrs = personWage[pid] || 0;
+      const charged = jobHrs * jobRate;
+      const paid = wageHrs * parseFloat(s.rate || 30);
+      const savedHrs = jobHrs - wageHrs;
+      const savedAmt = savedHrs * jobRate;
+      const labourAmt = wageHrs * (jobRate - parseFloat(s.rate || 30));
+      const total = charged - paid;
+      dayCharged += charged;
+      dayPaid += paid;
+      if (!staffWeek[pid]) staffWeek[pid] = { name: s.name, wageHrs: 0, savedAmt: 0, labourAmt: 0, total: 0 };
+      staffWeek[pid].wageHrs += wageHrs;
+      staffWeek[pid].savedAmt += savedAmt;
+      staffWeek[pid].labourAmt += labourAmt;
+      staffWeek[pid].total += total;
+      wkSavedHrs += savedHrs;
+      wkSavedAmt += savedAmt;
+      wkLabourAmt += labourAmt;
+      if (jobHrs > 0 || wageHrs > 0) dayRows.push({ name: s.name, jobHrs, wageHrs, charged, paid, savedAmt, labourAmt, total });
+    });
+    let exChP = 0, exChM = 0, exPdP = 0, exPdM = 0, exPdF = 0;
+    (jobsGlobal.rows || []).forEach(rid => {
+      const c = cells[rid + '|' + day];
+      if (!c) return;
+      exChP += parseFloat(c.parking || 0);
+      exChM += parseFloat(c.materials || 0);
+    });
+    people.forEach(p => {
+      const e = (schedule[p.id] || {})[day];
+      if (!e) return;
+      exPdP += parseFloat(e.parking || 0);
+      exPdM += parseFloat(e.materials || 0);
+      exPdF += parseFloat(e.fuel || 0);
+    });
+    const exCh = exChP + exChM, exPd = exPdP + exPdM + exPdF;
+    wkCharged += dayCharged + exCh;
+    wkPaid += dayPaid + exPd;
+    wkExGap += (exCh - exPd);
+    const dt = new Date(mon); dt.setDate(mon.getDate() + di);
+    if (dayRows.length) dayBreakdown.push({ day, date: dt.toLocaleDateString('en-AU',{day:'numeric',month:'numeric'}), rows: dayRows, dayCharged, dayPaid, exCh, exPd, exGap: exCh - exPd });
+  });
+
+  const wkProfit = wkCharged - wkPaid;
+  const wkMargin = wkCharged > 0 ? Math.round((wkProfit / wkCharged) * 100) : 0;
+  const money = n => '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const signed = n => (n >= 0 ? '+' : '-') + money(n);
+
+  // Week hero
+  doc.setFillColor(...NAVY);
+  doc.rect(L, y, W, 8, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  const heroLabels = ['Charged', 'Paid', 'Hrs Saved', 'Extras Gap', 'Profit', 'Margin'];
+  const cw = W / 6;
+  heroLabels.forEach((h, i) => doc.text(h, L + cw*i + cw/2, y + 5.5, {align:'center'}));
+  y += 8;
+  doc.setFillColor(255,255,255);
+  doc.rect(L, y, W, 10, 'F');
+  doc.setDrawColor(...NAVY);
+  doc.rect(L, y, W, 10);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  const heroVals = [money(wkCharged), money(wkPaid), wkSavedHrs.toFixed(1)+'h', signed(wkExGap), signed(wkProfit), wkMargin+'%'];
+  const heroColors = [NAVY, BLACK, GOLD, wkExGap>=0?GREEN:RED, wkProfit>=0?GREEN:RED, GOLD];
+  heroVals.forEach((v, i) => {
+    doc.setTextColor(...heroColors[i]);
+    doc.text(v, L + cw*i + cw/2, y + 6.5, {align:'center'});
+  });
+  y += 14;
+
+  // Staff totals
+  const stList = Object.values(staffWeek).filter(s => s.wageHrs > 0 || Math.abs(s.total) > 0.01).sort((a,b) => b.total - a.total);
+  if (stList.length) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...NAVY);
+    doc.text('STAFF TOTALS', L, y); y += 6;
+    doc.setFillColor(...NAVY);
+    doc.rect(L, y, W, 7, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(8);
+    const stCols = [70, 25, 30, 30, 25];
+    const stHeaders = ['Staff', 'Hours', 'Hrs Saved $', 'Labour $', 'Total'];
+    let x = L;
+    stHeaders.forEach((h, i) => {
+      doc.text(h, i === 0 ? x + 2 : x + stCols[i] - 2, y + 5, { align: i === 0 ? 'left' : 'right' });
+      x += stCols[i];
+    });
+    y += 7;
+    stList.forEach((s, i) => {
+      const bg = i%2===0 ? [255,255,255] : [248,250,252];
+      doc.setFillColor(...bg);
+      doc.rect(L, y, W, 6.5, 'F');
+      doc.setTextColor(...BLACK);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      x = L;
+      doc.text(s.name, x + 2, y + 4.5);
+      x += stCols[0];
+      doc.text(s.wageHrs.toFixed(1) + 'h', x + stCols[1] - 2, y + 4.5, {align:'right'});
+      x += stCols[1];
+      doc.setTextColor(...GOLD);
+      doc.text(signed(s.savedAmt), x + stCols[2] - 2, y + 4.5, {align:'right'});
+      x += stCols[2];
+      doc.setTextColor(181, 96, 32);
+      doc.text(signed(s.labourAmt), x + stCols[3] - 2, y + 4.5, {align:'right'});
+      x += stCols[3];
+      doc.setTextColor(...(s.total >= 0 ? GREEN : RED));
+      doc.setFont('helvetica', 'bold');
+      doc.text(signed(s.total), x + stCols[4] - 2, y + 4.5, {align:'right'});
+      y += 6.5;
+      if (y > 260) { doc.addPage(); y = 15; }
+    });
+    y += 6;
+  }
+
+  // Daily breakdown
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...NAVY);
+  if (y > 250) { doc.addPage(); y = 15; }
+  doc.text('DAILY BREAKDOWN', L, y); y += 6;
+
+  const DAY_FULL = {Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday',Sat:'Saturday',Sun:'Sunday'};
+  dayBreakdown.forEach(d => {
+    if (y > 255) { doc.addPage(); y = 15; }
+    doc.setFillColor(...LIGHT);
+    doc.rect(L, y, W, 7, 'F');
+    doc.setTextColor(...NAVY);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(DAY_FULL[d.day] + ' ' + d.date, L + 2, y + 5);
+    doc.setFontSize(8);
+    doc.text('Charged ' + money(d.dayCharged + d.exCh) + '  ·  Paid ' + money(d.dayPaid + d.exPd), R - 2, y + 5, {align:'right'});
+    y += 7;
+    d.rows.forEach((r, i) => {
+      if (y > 268) { doc.addPage(); y = 15; }
+      const bg = i%2===0 ? [255,255,255] : [248,250,252];
+      doc.setFillColor(...bg);
+      doc.rect(L, y, W, 6, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...BLACK);
+      doc.text(r.name, L + 2, y + 4);
+      doc.text('Jobs ' + r.jobHrs.toFixed(1) + 'h = ' + money(r.charged) + '   Wage ' + r.wageHrs.toFixed(1) + 'h = ' + money(r.paid), L + 30, y + 4);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...(r.total >= 0 ? GREEN : RED));
+      doc.text(signed(r.total), R - 2, y + 4, {align:'right'});
+      y += 6;
+    });
+  });
+
+  const oldTitle = document.title;
+  document.title = 'LALH_Dashboard_WK' + wn;
+  doc.save('LALH_Dashboard_WK' + wn + '_' + f(mon).replace(/ /g,'') + '.pdf');
+  document.title = oldTitle;
+}
+
+</script>
+</body>
+</html>
