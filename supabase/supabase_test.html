@@ -1,1 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Supabase Connection Test</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0f1e35; color: #f0f4f8; padding: 24px; max-width: 640px; margin: 0 auto; }
+  h1 { color: #c8a84b; }
+  .box { background: #16263f; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+  button { background: #2e6da4; color: #fff; border: 0; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-right: 8px; }
+  button:hover { background: #3a7fc4; }
+  input { background: #0f1e35; color: #f0f4f8; border: 1px solid #333; padding: 8px; border-radius: 6px; font-size: 14px; margin-right: 8px; }
+  #log { background: #000; color: #3dd68c; font-family: monospace; padding: 12px; border-radius: 6px; min-height: 200px; white-space: pre-wrap; font-size: 12px; }
+  .ok { color: #3dd68c; } .err { color: #ff6b5e; } .info { color: #c8a84b; }
+</style>
+</head>
+<body>
 
+<h1>Supabase Test</h1>
+
+<div class="box">
+  <h3>1. Connection</h3>
+  <button onclick="testConnection()">Test Connection</button>
+</div>
+
+<div class="box">
+  <h3>2. Write value</h3>
+  <input id="key" placeholder="key" value="test_hello">
+  <input id="val" placeholder="value" value="Hello from Aman!">
+  <button onclick="writeValue()">Write</button>
+</div>
+
+<div class="box">
+  <h3>3. Read value</h3>
+  <input id="rkey" placeholder="key" value="test_hello">
+  <button onclick="readValue()">Read</button>
+</div>
+
+<div class="box">
+  <h3>4. List all keys</h3>
+  <button onclick="listAll()">List All</button>
+</div>
+
+<div class="box">
+  <h3>Console</h3>
+  <div id="log">Ready.\n</div>
+  <button onclick="document.getElementById('log').textContent='Ready.\\n'">Clear</button>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function testConnection() {
+  log('Testing connection...', 'info');
+  try {
+    const { data, error } = await sb.from('roster_data').select('key').limit(1);
+    if (error) throw error;
+    log('✅ Connected! Table exists and is readable.', 'ok');
+    log('Rows found: ' + data.length, 'info');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+async function writeValue() {
+  const key = document.getElementById('key').value;
+  const val = document.getElementById('val').value;
+  log('Writing ' + key + '...', 'info');
+  try {
+    const { error } = await sb.from('roster_data').upsert({ key, value: val, updated: new Date().toISOString() });
+    if (error) throw error;
+    log('✅ Wrote: ' + key + ' = ' + val, 'ok');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+async function readValue() {
+  const key = document.getElementById('rkey').value;
+  log('Reading ' + key + '...', 'info');
+  try {
+    const { data, error } = await sb.from('roster_data').select('*').eq('key', key).maybeSingle();
+    if (error) throw error;
+    if (!data) { log('Key not found: ' + key, 'err'); return; }
+    log('✅ ' + data.key + ' = ' + data.value + ' (updated ' + data.updated + ')', 'ok');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+async function listAll() {
+  log('Listing all rows...', 'info');
+  try {
+    const { data, error } = await sb.from('roster_data').select('key,updated').order('key');
+    if (error) throw error;
+    log('Found ' + data.length + ' rows:', 'info');
+    data.forEach(r => log('  ' + r.key + ' (updated ' + new Date(r.updated).toLocaleString() + ')'));
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+</script>
+</body>
+</html>
