@@ -368,6 +368,35 @@ async function cloudGetMany(keys) {
   }
 }
 
+
+// ── Realtime sync: reload dashboard when data changes ──
+let _realtimeChannel = null;
+let _reloadTimer = null;
+
+function initRealtime() {
+  if (_realtimeChannel) return;
+  try {
+    _realtimeChannel = sb
+      .channel('roster_data_dashboard')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'roster_data' },
+        (payload) => {
+          const changedKey = payload.new?.key || payload.old?.key;
+          if (!changedKey || changedKey.startsWith('backup_')) return;
+          console.log('Realtime: change detected in', changedKey);
+          // Debounce: wait 2 seconds after last change before reloading
+          clearTimeout(_reloadTimer);
+          _reloadTimer = setTimeout(() => load(), 2000);
+        }
+      )
+      .subscribe((status) => {
+        console.log('Dashboard realtime status:', status);
+      });
+  } catch (e) {
+    console.log('Realtime init failed:', e);
+  }
+}
+
 async function cloudGet(key) {
   try {
     const { data, error } = await sb.from('roster_data').select('value').eq('key', key).maybeSingle();

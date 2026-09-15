@@ -1394,6 +1394,59 @@ async function cloudDelete(key) {
   } catch(e) { console.log('cloudDelete error:', key, e); }
 }
 
+// ── Realtime sync: listen for changes from other devices ──
+let _realtimeChannel = null;
+let _lastLocalWrite = 0;
+
+function _originalCloudSet(k, v) { /* replaced below */ }
+
+// Track our own writes so we don't reload from them
+async function _trackedCloudSet(originalFn, key, value) {
+  _lastLocalWrite = Date.now();
+  return originalFn(key, value);
+}
+
+function initRealtime() {
+  if (_realtimeChannel) return;
+  try {
+    _realtimeChannel = sb
+      .channel('roster_data_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'roster_data' },
+        (payload) => {
+          // Ignore changes we just made ourselves (within 2 seconds)
+          if (Date.now() - _lastLocalWrite < 2000) return;
+          const changedKey = payload.new?.key || payload.old?.key;
+          if (!changedKey) return;
+          // Only reload if the change affects the week we're viewing
+          const currentWk = getISOWeekKey(G.currentOffset);
+          const relevant = changedKey === 'roster_wk_' + currentWk
+                        || changedKey === 'roster_rates_' + currentWk
+                        || changedKey === 'wages_paid_' + currentWk
+                        || changedKey === 'roster_global';
+          if (!relevant) return;
+          console.log('Realtime: reloading due to change in', changedKey);
+          // Only reload if we're not currently editing (avoid clobbering typing)
+          if (Date.now() - _lastLocalWrite > 5000) {
+            pollForChanges();
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime status:', status);
+      });
+  } catch (e) {
+    console.log('Realtime init failed:', e);
+  }
+}
+
+// Wrap cloudSet to track our own writes
+const _origSet = cloudSet;
+cloudSet = async function(key, value) {
+  _lastLocalWrite = Date.now();
+  return _origSet(key, value);
+};
+
 async function cloudLoadState() {
   if (!USE_CLOUD) { loadState(); render(); updateWeekLabel(); return; }
   try {
@@ -1512,7 +1565,7 @@ async function pollForChanges() {
 }
 
 function startPolling() {
-  setInterval(pollForChanges, 15000); // Check every 5 seconds
+  setInterval(pollForChanges, 60000); initRealtime(); // Check every 5 seconds
 }
 
 async function cloudScheduleSave() {
