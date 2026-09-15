@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Google → Supabase Migration</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0f1e35; color: #f0f4f8; padding: 24px; max-width: 720px; margin: 0 auto; }
+  h1 { color: #c8a84b; }
+  .box { background: #16263f; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+  button { background: #2e6da4; color: #fff; border: 0; padding: 12px 22px; border-radius: 6px; cursor: pointer; font-size: 15px; margin-right: 8px; font-weight: 600; }
+  button:hover { background: #3a7fc4; }
+  button.go { background: #3dd68c; color: #0f1e35; }
+  button.danger { background: #ff6b5e; }
+  #log { background: #000; color: #3dd68c; font-family: monospace; padding: 12px; border-radius: 6px; min-height: 300px; max-height: 500px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; }
+  .ok { color: #3dd68c; } .err { color: #ff6b5e; } .info { color: #c8a84b; }
+  .step { padding: 12px; background: rgba(200,168,75,0.08); border-left: 3px solid #c8a84b; margin-bottom: 10px; font-size: 13px; }
+  #progress { background: #16263f; border-radius: 6px; overflow: hidden; height: 8px; margin: 10px 0; }
+  #progressBar { background: linear-gradient(90deg, #3dd68c, #c8a84b); height: 100%; width: 0%; transition: width 0.2s; }
+</style>
+</head>
+<body>
+
+<h1>Google → Supabase Migration</h1>
+
+<div class="box">
+  <div class="step">
+    <b>Step 1:</b> Read all data from Google Sheet (via Apps Script). This does NOT modify anything.
+  </div>
+  <button onclick="step1_read()">Step 1: Read from Google</button>
+</div>
+
+<div class="box">
+  <div class="step">
+    <b>Step 2:</b> Preview what will be migrated. Reviews keys, sizes, and total data.
+  </div>
+  <button onclick="step2_preview()">Step 2: Preview</button>
+</div>
+
+<div class="box">
+  <div class="step">
+    <b>Step 3:</b> Write all data to Supabase. This ADDS to Supabase, doesn't touch Google Sheet.
+  </div>
+  <button class="go" onclick="step3_migrate()">Step 3: Migrate to Supabase</button>
+</div>
+
+<div class="box">
+  <div class="step">
+    <b>Step 4:</b> Verify by reading back from Supabase and comparing counts.
+  </div>
+  <button onclick="step4_verify()">Step 4: Verify</button>
+</div>
+
+<div class="box">
+  <h3>Progress</h3>
+  <div id="progress"><div id="progressBar"></div></div>
+  <div id="log">Ready.\n</div>
+  <button onclick="document.getElementById('log').textContent='Ready.\\n'">Clear log</button>
+</div>
+
+<script>
+const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbyV8B4gewTmHsRUyi8J-gxpaMpcB_VlLX_16BpAQX5xmr2IlAGE1LfgN2uYX02OSaio/exec';
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let googleData = null;
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function setProgress(pct) { document.getElementById('progressBar').style.width = pct + '%'; }
+
+async function step1_read() {
+  log('Reading all data from Google Sheet...', 'info');
+  setProgress(0);
+  try {
+    // The list action doesn't exist — we'll fetch known key prefixes
+    // Try 'get' with no key to get all rows
+    const r = await fetch(GOOGLE_URL + '?action=get', { redirect: 'follow' });
+    const d = await r.json();
+    if (!d.ok || !d.data) throw new Error('No data field in response. Try updating Apps Script to support action=get with no key.');
+    googleData = d.data;
+    log('✅ Read ' + googleData.length + ' rows from Google', 'ok');
+    // Filter out Backup_ rows and internal keys - we don't want to migrate those
+    const relevant = googleData.filter(r => !r.key.startsWith('Backup_'));
+    log('Relevant rows (excluding backups): ' + relevant.length, 'info');
+    setProgress(100);
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+    log('Falling back to key-by-key fetch. This will be slower...', 'info');
+    await fetchByKnownKeys();
+  }
+}
+
+async function fetchByKnownKeys() {
+  // Fetch by known keys
+  googleData = [];
+  const keys = [
+    'roster_global', 'jt2_global', 'roster_last_edit', 'jt2_last_edit'
+  ];
+  // Add per-week keys
+  for (let wn = 13; wn <= 40; wn++) {
+    const w = '2026-W' + String(wn).padStart(2, '0');
+    keys.push('roster_wk_' + w, 'roster_rates_' + w, 'wages_paid_' + w,
+              'jt2_wk_' + w, 'jt2_rate_' + w);
+  }
+  let done = 0;
+  for (const key of keys) {
+    try {
+      const r = await fetch(GOOGLE_URL + '?action=get&key=' + encodeURIComponent(key), { redirect: 'follow' });
+      const d = await r.json();
+      if (d.value) {
+        googleData.push({ key, value: d.value });
+      }
+    } catch (e) {}
+    done++;
+    setProgress((done / keys.length) * 100);
+  }
+  log('✅ Fetched ' + googleData.length + ' keys from Google (key-by-key)', 'ok');
+}
+
+async function step2_preview() {
+  if (!googleData) { log('Run Step 1 first', 'err'); return; }
+  log('=== PREVIEW ===', 'info');
+  const relevant = googleData.filter(r => !r.key.startsWith('Backup_'));
+  const groups = {};
+  relevant.forEach(r => {
+    const prefix = r.key.split('_').slice(0,2).join('_');
+    groups[prefix] = (groups[prefix] || 0) + 1;
+  });
+  Object.entries(groups).forEach(([k, v]) => log('  ' + k + ': ' + v + ' rows', 'info'));
+  const totalSize = relevant.reduce((s, r) => s + (r.value ? r.value.length : 0), 0);
+  log('Total data: ' + (totalSize / 1024).toFixed(1) + ' KB', 'info');
+  log('Will migrate ' + relevant.length + ' keys (excluding ' + (googleData.length - relevant.length) + ' backup rows)', 'ok');
+}
+
+async function step3_migrate() {
+  if (!googleData) { log('Run Step 1 first', 'err'); return; }
+  if (!confirm('Migrate ' + googleData.length + ' keys to Supabase? This adds data (nothing gets deleted).')) return;
+  log('=== MIGRATING TO SUPABASE ===', 'info');
+  setProgress(0);
+  const relevant = googleData.filter(r => !r.key.startsWith('Backup_'));
+  // Upsert in batches of 50
+  const batchSize = 50;
+  let done = 0, errs = 0;
+  for (let i = 0; i < relevant.length; i += batchSize) {
+    const batch = relevant.slice(i, i + batchSize).map(r => ({
+      key: r.key, value: r.value, updated: new Date().toISOString()
+    }));
+    try {
+      const { error } = await sb.from('roster_data').upsert(batch);
+      if (error) throw error;
+      done += batch.length;
+    } catch (e) {
+      log('❌ Batch error: ' + e.message, 'err');
+      errs++;
+    }
+    setProgress((done / relevant.length) * 100);
+  }
+  log('✅ Migrated ' + done + ' keys' + (errs ? ' (' + errs + ' errors)' : ''), 'ok');
+}
+
+async function step4_verify() {
+  log('=== VERIFYING ===', 'info');
+  try {
+    const { data, error } = await sb.from('roster_data').select('key');
+    if (error) throw error;
+    log('Supabase now has ' + data.length + ' rows', 'ok');
+    if (googleData) {
+      const relevant = googleData.filter(r => !r.key.startsWith('Backup_'));
+      log('Google had ' + relevant.length + ' relevant rows', 'info');
+      if (data.length >= relevant.length) {
+        log('✅ Row counts match or exceed. Migration verified!', 'ok');
+      } else {
+        log('⚠ Supabase has fewer rows than expected', 'err');
+      }
+    }
+    // Sample a random key to compare
+    const sample = data[Math.floor(Math.random() * data.length)];
+    log('Random sample key: ' + sample.key, 'info');
+    const { data: full } = await sb.from('roster_data').select('*').eq('key', sample.key).maybeSingle();
+    log('Value preview: ' + (full.value || '').slice(0, 100), 'info');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+</script>
+</body>
+</html>
