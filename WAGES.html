@@ -544,7 +544,8 @@ function visiblePeople() {
   return G.people.filter(p => {
     if (!p.inactive) return true;
     // Show inactive people if they have entries in this week
-    const pd = G.schedule[p.id];
+    if (typeof schedule === 'undefined' || !schedule) return false;
+    const pd = schedule[p.id];
     if (!pd) return false;
     return Object.values(pd).some(e => e && (e.timeFrom || e.parking || e.materials || e.fuel));
   });
