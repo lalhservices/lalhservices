@@ -145,25 +145,30 @@ async function step3_migrate() {
   if (!confirm('Migrate ' + googleData.length + ' keys to Supabase? This adds data (nothing gets deleted).')) return;
   log('=== MIGRATING TO SUPABASE ===', 'info');
   setProgress(0);
-  const relevant = googleData.filter(r => !r.key.startsWith('Backup_'));
-  // Upsert in batches of 50
-  const batchSize = 50;
-  let done = 0, errs = 0;
-  for (let i = 0; i < relevant.length; i += batchSize) {
-    const batch = relevant.slice(i, i + batchSize).map(r => ({
-      key: r.key, value: r.value, updated: new Date().toISOString()
-    }));
+  const relevant = googleData.filter(r => !r.key.startsWith('Backup_') && r.key !== 'manual_backup_trigger');
+  // Deduplicate — keep only last occurrence of each key from Google
+  const seen = new Map();
+  relevant.forEach(r => seen.set(r.key, r));
+  const unique = Array.from(seen.values());
+  log('Deduplicated ' + relevant.length + ' → ' + unique.length + ' unique keys', 'info');
+  // Upsert one row at a time to isolate failures
+  let done = 0, errs = 0, skipped = 0;
+  for (const r of unique) {
+    if (!r.value) { skipped++; continue; }
     try {
-      const { error } = await sb.from('roster_data').upsert(batch);
+      const { error } = await sb.from('roster_data').upsert({
+        key: r.key, value: r.value, updated: new Date().toISOString()
+      }, { onConflict: 'key' });
       if (error) throw error;
-      done += batch.length;
+      done++;
     } catch (e) {
-      log('❌ Batch error: ' + e.message, 'err');
+      log('❌ ' + r.key + ': ' + e.message, 'err');
       errs++;
     }
-    setProgress((done / relevant.length) * 100);
+    if (done % 10 === 0) setProgress((done / unique.length) * 100);
   }
-  log('✅ Migrated ' + done + ' keys' + (errs ? ' (' + errs + ' errors)' : ''), 'ok');
+  setProgress(100);
+  log('✅ Migrated ' + done + ' keys, ' + errs + ' errors, ' + skipped + ' skipped (empty)', 'ok');
 }
 
 async function step4_verify() {
