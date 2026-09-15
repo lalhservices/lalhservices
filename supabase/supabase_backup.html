@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Supabase Backup Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0f1e35; color: #f0f4f8; padding: 24px; max-width: 720px; margin: 0 auto; }
+  h1 { color: #c8a84b; }
+  .box { background: #16263f; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+  button { background: #2e6da4; color: #fff; border: 0; padding: 12px 22px; border-radius: 6px; cursor: pointer; font-size: 15px; margin-right: 8px; font-weight: 600; }
+  button:hover { background: #3a7fc4; }
+  button.go { background: #3dd68c; color: #0f1e35; }
+  button.danger { background: #ff6b5e; }
+  #log { background: #000; color: #3dd68c; font-family: monospace; padding: 12px; border-radius: 6px; min-height: 250px; max-height: 500px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; }
+  .ok { color: #3dd68c; } .err { color: #ff6b5e; } .info { color: #c8a84b; }
+  .backup-item { padding: 10px; background: rgba(0,0,0,0.3); border-radius: 6px; margin: 6px 0; display: flex; justify-content: space-between; align-items: center; }
+  .backup-item button { padding: 6px 12px; font-size: 12px; }
+  .step { padding: 12px; background: rgba(200,168,75,0.08); border-left: 3px solid #c8a84b; margin-bottom: 10px; font-size: 13px; }
+  select, input { background: #0f1e35; color: #f0f4f8; border: 1px solid #333; padding: 8px; border-radius: 6px; font-size: 14px; margin-right: 8px; }
+</style>
+</head>
+<body>
+
+<h1>📦 Supabase Backup Manager</h1>
+
+<div class="box">
+  <div class="step">
+    <b>Manual Backup:</b> Save current state as a snapshot. Snapshot name auto-includes today's date.
+  </div>
+  <input id="backup-name" placeholder="Optional label (e.g. before-big-change)" style="width: 60%;">
+  <button class="go" onclick="createBackup()">Create Backup Now</button>
+</div>
+
+<div class="box">
+  <div class="step">
+    <b>Download JSON:</b> Export ALL data as a single JSON file to your computer for local safekeeping.
+  </div>
+  <button onclick="downloadJSON()">Download Full Backup as JSON</button>
+</div>
+
+<div class="box">
+  <h3>Existing Backups in Supabase</h3>
+  <button onclick="listBackups()">Refresh List</button>
+  <div id="backups-list" style="margin-top: 12px;"></div>
+</div>
+
+<div class="box">
+  <h3>Restore from JSON File</h3>
+  <div class="step">
+    Upload a JSON file (previously downloaded) to restore your data. ⚠ This OVERWRITES current data.
+  </div>
+  <input type="file" id="restore-file" accept=".json">
+  <button class="danger" onclick="restoreFromJSON()">Restore from File</button>
+</div>
+
+<div class="box">
+  <h3>Console</h3>
+  <div id="log">Ready.\n</div>
+  <button onclick="document.getElementById('log').textContent='Ready.\\n'">Clear log</button>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function createBackup() {
+  log('Creating backup...', 'info');
+  try {
+    const { data, error } = await sb.from('roster_data')
+      .select('*')
+      .not('key', 'like', 'backup_%');
+    if (error) throw error;
+    // Filter live data only (exclude any existing backups)
+    const liveData = data.filter(r => !r.key.startsWith('backup_'));
+    log('Fetched ' + liveData.length + ' live rows', 'info');
+
+    const nameInput = document.getElementById('backup-name').value.trim();
+    const date = new Date();
+    const dateStr = date.getFullYear() + '_' +
+                    String(date.getMonth()+1).padStart(2,'0') + '_' +
+                    String(date.getDate()).padStart(2,'0') + '_' +
+                    String(date.getHours()).padStart(2,'0') +
+                    String(date.getMinutes()).padStart(2,'0');
+    const backupKey = 'backup_' + dateStr + (nameInput ? '_' + nameInput.replace(/[^a-zA-Z0-9]/g, '_') : '');
+
+    const snapshot = {
+      created: date.toISOString(),
+      name: nameInput || 'manual',
+      row_count: liveData.length,
+      data: liveData
+    };
+
+    const { error: writeError } = await sb.from('roster_data').upsert({
+      key: backupKey,
+      value: JSON.stringify(snapshot),
+      updated: date.toISOString()
+    }, { onConflict: 'key' });
+
+    if (writeError) throw writeError;
+    log('✅ Backup saved: ' + backupKey, 'ok');
+    log('  ' + liveData.length + ' rows preserved', 'info');
+    document.getElementById('backup-name').value = '';
+    listBackups();
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+async function listBackups() {
+  log('Loading backups...', 'info');
+  try {
+    const { data, error } = await sb.from('roster_data')
+      .select('key, value, updated')
+      .like('key', 'backup_%')
+      .order('key', { ascending: false });
+    if (error) throw error;
+    const container = document.getElementById('backups-list');
+    if (!data.length) {
+      container.innerHTML = '<div style="color:#666;padding:10px;">No backups yet</div>';
+      log('No backups found', 'info');
+      return;
+    }
+    log('Found ' + data.length + ' backups', 'ok');
+    container.innerHTML = data.map(b => {
+      let meta = { row_count: '?', created: b.updated };
+      try { const parsed = JSON.parse(b.value); meta = parsed; } catch(e) {}
+      const created = new Date(meta.created || b.updated);
+      return `
+        <div class="backup-item">
+          <div>
+            <div style="font-weight:600;font-size:13px;">${b.key}</div>
+            <div style="color:#888;font-size:11px;">
+              ${meta.row_count} rows · ${created.toLocaleString('en-AU')}
+            </div>
+          </div>
+          <div>
+            <button onclick="downloadBackup('${b.key}')">Download</button>
+            <button class="danger" onclick="restoreBackup('${b.key}')">Restore</button>
+            <button class="danger" onclick="deleteBackup('${b.key}')">Delete</button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+async function downloadBackup(key) {
+  try {
+    const { data, error } = await sb.from('roster_data').select('value').eq('key', key).maybeSingle();
+    if (error) throw error;
+    const blob = new Blob([data.value], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = key + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    log('✅ Downloaded ' + key, 'ok');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+async function restoreBackup(key) {
+  if (!confirm('⚠ Restore from ' + key + '?\n\nThis OVERWRITES all current live data with the backup.\nAny changes made after this backup will be lost.\n\nContinue?')) return;
+  log('Restoring from ' + key + '...', 'info');
+  try {
+    const { data, error } = await sb.from('roster_data').select('value').eq('key', key).maybeSingle();
+    if (error) throw error;
+    const snapshot = JSON.parse(data.value);
+    const rows = snapshot.data;
+    log('Restoring ' + rows.length + ' rows...', 'info');
+    let done = 0;
+    for (const r of rows) {
+      const { error: e } = await sb.from('roster_data').upsert({
+        key: r.key, value: r.value, updated: r.updated
+      }, { onConflict: 'key' });
+      if (!e) done++;
+    }
+    log('✅ Restored ' + done + '/' + rows.length + ' rows', 'ok');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+async function deleteBackup(key) {
+  if (!confirm('Delete backup ' + key + '? Cannot be undone.')) return;
+  try {
+    const { error } = await sb.from('roster_data').delete().eq('key', key);
+    if (error) throw error;
+    log('✅ Deleted ' + key, 'ok');
+    listBackups();
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+async function downloadJSON() {
+  log('Exporting all data...', 'info');
+  try {
+    const { data, error } = await sb.from('roster_data').select('*').not('key', 'like', 'backup_%');
+    if (error) throw error;
+    const liveData = data.filter(r => !r.key.startsWith('backup_'));
+    const snapshot = {
+      created: new Date().toISOString(),
+      row_count: liveData.length,
+      data: liveData
+    };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0,10);
+    a.href = url; a.download = 'LALH_Supabase_Backup_' + dateStr + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    log('✅ Downloaded ' + liveData.length + ' rows', 'ok');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+async function restoreFromJSON() {
+  const file = document.getElementById('restore-file').files[0];
+  if (!file) { log('Choose a file first', 'err'); return; }
+  if (!confirm('⚠ Restore from ' + file.name + '?\n\nThis OVERWRITES all current live data.\nCurrent data will be lost.\n\nContinue?')) return;
+  try {
+    const text = await file.text();
+    const snapshot = JSON.parse(text);
+    const rows = snapshot.data || [];
+    log('Restoring ' + rows.length + ' rows from file...', 'info');
+    let done = 0;
+    for (const r of rows) {
+      const { error } = await sb.from('roster_data').upsert({
+        key: r.key, value: r.value, updated: r.updated
+      }, { onConflict: 'key' });
+      if (!error) done++;
+    }
+    log('✅ Restored ' + done + '/' + rows.length + ' rows from file', 'ok');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  }
+}
+
+// Auto-list on load
+window.addEventListener('load', listBackups);
+</script>
+</body>
+</html>
