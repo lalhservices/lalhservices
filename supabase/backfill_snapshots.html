@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Backfill Weekly Roster Snapshots</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0f1e35; color: #f0f4f8; padding: 24px; max-width: 640px; margin: 0 auto; }
+  h1 { color: #c8a84b; }
+  .box { background: #16263f; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+  button { background: #3dd68c; color: #0f1e35; border: 0; padding: 12px 22px; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 600; }
+  button:hover { background: #4ee89c; }
+  button:disabled { background: #555; color: #999; cursor: not-allowed; }
+  #log { background: #000; color: #3dd68c; font-family: monospace; padding: 12px; border-radius: 6px; min-height: 250px; max-height: 500px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; }
+  .ok { color: #3dd68c; } .err { color: #ff6b5e; } .info { color: #c8a84b; }
+  .step { padding: 12px; background: rgba(200,168,75,0.08); border-left: 3px solid #c8a84b; margin-bottom: 10px; font-size: 13px; }
+  #progress { background: #0f1e35; border: 1px solid #333; border-radius: 6px; overflow: hidden; height: 8px; margin: 10px 0; }
+  #progressBar { background: linear-gradient(90deg, #3dd68c, #c8a84b); height: 100%; width: 0%; transition: width 0.2s; }
+</style>
+</head>
+<body>
+
+<h1>📸 Backfill Weekly Roster Snapshots</h1>
+
+<div class="box">
+  <div class="step">
+    <b>Purpose:</b> Save the current roster (who's on the team right now) as a snapshot for every past week that has data.
+    <br><br>
+    <b>What it does:</b> Locks each week's roster to today's staff list, so future roster changes (add/remove people, mark inactive) won't affect how past weeks display.
+    <br><br>
+    <b>Safe to run:</b> Only creates snapshot entries. Doesn't touch actual wages/jobs data.
+  </div>
+  <button onclick="backfill()" id="btn">Backfill All Past Weeks</button>
+</div>
+
+<div class="box">
+  <h3>Progress</h3>
+  <div id="progress"><div id="progressBar"></div></div>
+  <div id="log">Ready. Click "Backfill All Past Weeks" to start.\n</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function setProgress(pct) { document.getElementById('progressBar').style.width = pct + '%'; }
+
+async function backfill() {
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  try {
+    log('Fetching current roster...', 'info');
+    const { data: globalRow, error: globalErr } = await sb
+      .from('roster_data').select('value').eq('key', 'roster_global').maybeSingle();
+    if (globalErr) throw globalErr;
+    if (!globalRow) throw new Error('No roster_global found');
+    const global = JSON.parse(globalRow.value);
+    const currentPeople = global.people || [];
+    log('Current roster: ' + currentPeople.length + ' people', 'info');
+    currentPeople.forEach(p => log('  · ' + p.name + (p.inactive ? ' [inactive]' : '')));
+
+    // Find all week keys with data
+    log('Finding weeks with data...', 'info');
+    const { data: allRows, error: listErr } = await sb
+      .from('roster_data')
+      .select('key')
+      .like('key', 'roster_wk_%');
+    if (listErr) throw listErr;
+
+    const weeks = (allRows || [])
+      .map(r => r.key.replace('roster_wk_', ''))
+      .filter(w => w.match(/^\d{4}-W\d{2}$/))
+      .sort();
+    log('Found ' + weeks.length + ' weeks: ' + weeks[0] + ' to ' + weeks[weeks.length-1], 'info');
+
+    // Check existing snapshots
+    const { data: existingSnaps } = await sb
+      .from('roster_data')
+      .select('key')
+      .like('key', 'roster_snapshot_%');
+    const snapExists = new Set((existingSnaps || []).map(r => r.key));
+    log('Existing snapshots: ' + snapExists.size, 'info');
+
+    // Backfill missing snapshots
+    let done = 0, skipped = 0;
+    for (let i = 0; i < weeks.length; i++) {
+      const wk = weeks[i];
+      const snapKey = 'roster_snapshot_' + wk;
+      if (snapExists.has(snapKey)) {
+        skipped++;
+      } else {
+        const { error } = await sb.from('roster_data').upsert({
+          key: snapKey,
+          value: JSON.stringify(currentPeople),
+          updated: new Date().toISOString()
+        }, { onConflict: 'key' });
+        if (!error) done++;
+      }
+      setProgress(((i+1) / weeks.length) * 100);
+    }
+
+    log('✅ Done! ' + done + ' new snapshots created, ' + skipped + ' already existed', 'ok');
+    log('Every past week now has its roster locked in.', 'ok');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
