@@ -867,6 +867,34 @@ function setEntry(pid, day, field, value) {
 }
 
 // ── Per-week staff rates ──
+// ── Per-week roster snapshot ──
+// Each week saves its own copy of who was on the team.
+// Past weeks display their historical roster; current/new weeks use G.people.
+async function loadWeekRoster() {
+  if (!USE_CLOUD) return;
+  const wk = getISOWeekKey(G.currentOffset);
+  const snapshot = await cloudGet('roster_snapshot_' + wk);
+  if (snapshot) {
+    try {
+      const snap = JSON.parse(snapshot);
+      if (Array.isArray(snap) && snap.length > 0) {
+        G.people = snap;
+        renderHead();
+        renderFooter();
+      }
+    } catch(e) {}
+  }
+  // If no snapshot: keep G.people as-is (falls through to current global roster)
+}
+
+async function saveWeekRoster() {
+  if (!USE_CLOUD) return;
+  const wk = getISOWeekKey(G.currentOffset);
+  // Only save snapshot for the current week or future edits
+  if (G.currentOffset < 0 && !_pastWeekUnlocked) return;
+  await cloudSet('roster_snapshot_' + wk, JSON.stringify(G.people));
+}
+
 async function loadWeekRates() {
   if (!USE_CLOUD) return;
   const wk = getISOWeekKey(G.currentOffset);
@@ -1029,6 +1057,7 @@ async function cloudSaveGlobal() {
     return;
   }
   await cloudSet('roster_global', JSON.stringify(G));
+  await saveWeekRoster();
 }
 
 function setPerson(pid, field, value) {

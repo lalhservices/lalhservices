@@ -485,13 +485,22 @@ async function load() {
   const rosterRaw = batch['roster_wk_' + wk];
   const ratesRaw = batch['roster_rates_' + wk];
   const globalRaw = batch['roster_global'];
+  // Try per-week roster snapshot first (fallback to global for weeks without snapshot)
+  const snapshotRaw = await cloudGet('roster_snapshot_' + wk);
 
   const jobsGlobal = gRaw ? JSON.parse(gRaw) : { rows: [] };
   const cells = jobsRaw ? JSON.parse(jobsRaw) : {};
   const jobRate = jobsRateRaw ? parseFloat(jobsRateRaw) : 45;
   const schedule = rosterRaw ? JSON.parse(rosterRaw) : {};
   const global = globalRaw ? JSON.parse(globalRaw) : { people: [] };
-  const people = global.people || [];
+  let people = global.people || [];
+  // Override with weekly snapshot if it exists
+  if (snapshotRaw) {
+    try {
+      const snap = JSON.parse(snapshotRaw);
+      if (Array.isArray(snap) && snap.length > 0) people = snap;
+    } catch(e) {}
+  }
 
   // Apply per-week rates
   if (ratesRaw) {
