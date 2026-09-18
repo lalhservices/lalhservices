@@ -488,8 +488,9 @@
 <body>
 <style id="pw-lock-style">
   #pw-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #0f1e35; z-index: 99999;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh;
+    background: #0f1e35; z-index: 999999;
+    pointer-events: auto; touch-action: manipulation;
     display: flex; align-items: center; justify-content: center;
     font-family: 'JetBrains Mono', 'Space Grotesk', monospace, sans-serif;
   }
@@ -519,7 +520,7 @@
   <div id="pw-box">
     <h2>LALH SERVICES</h2>
     <div class="subtitle">Password Required</div>
-    <input id="pw-input" type="password" placeholder="Enter password" autofocus>
+    <input id="pw-input" type="password" placeholder="Enter password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
     <button id="pw-btn" onclick="window.__pwCheck()">Unlock</button>
     <div id="pw-error"></div>
   </div>
@@ -555,13 +556,26 @@
       setTimeout(() => err.textContent = '', 2500);
     }
   };
-  document.addEventListener('DOMContentLoaded', () => {
+  function initPwUI() {
     const input = document.getElementById('pw-input');
-    if (input) {
-      input.focus();
-      input.addEventListener('keydown', e => { if (e.key === 'Enter') window.__pwCheck(); });
+    const btn = document.getElementById('pw-btn');
+    const box = document.getElementById('pw-box');
+    if (!input) return;
+    // Try focus but don't rely on it — mobile browsers often block programmatic focus
+    setTimeout(() => { try { input.focus({preventScroll:true}); } catch(e){} }, 100);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.__pwCheck(); } });
+    // Tap anywhere on box to focus input on mobile
+    if (box) box.addEventListener('click', (e) => { if (e.target !== btn && e.target !== input) input.focus(); });
+    // Handle both touch and click on unlock button
+    if (btn) {
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); window.__pwCheck(); }, {passive:false});
     }
-  });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPwUI);
+  } else {
+    initPwUI();
+  }
 })();
 </script>
 
