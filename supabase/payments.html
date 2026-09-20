@@ -352,14 +352,13 @@ async function sha256(str) {
   return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// Grace period
+// Check master session (set by home page). Valid for 24 hours.
 const STORAGE_KEY = 'lalh_pw_unlocked_v1';
-const GRACE_MS = 15 * 60 * 1000;
+const GRACE_MS = 24 * 60 * 60 * 1000;
 (function checkGrace() {
-  const t = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10);
+  const t = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
   if (t > 0 && (Date.now() - t) < GRACE_MS) {
-    sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
-    // Auto-unlock on page load
+    // Authenticated — auto-unlock on page load
     window.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         const overlay = document.getElementById('pw-overlay');
@@ -372,6 +371,9 @@ const GRACE_MS = 15 * 60 * 1000;
         else if (typeof loadWeeks === 'function') loadWeeks();
       }, 50);
     });
+  } else {
+    // No session — bounce to home for authentication
+    window.location.replace('./');
   }
 })();
 
@@ -382,7 +384,7 @@ window.__pwCheck = async function() {
   if (!val) return;
   const hash = await sha256(val);
   if (hash === PW_HASH) {
-    sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
+    localStorage.setItem(STORAGE_KEY, String(Date.now()));
     document.getElementById('pw-overlay').remove();
     document.getElementById('main').style.display = 'block';
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -413,6 +415,9 @@ function getCurrentWeek() {
   return yr + '-W' + String(wn).padStart(2, '0');
 }
 const CURRENT_WEEK = getCurrentWeek();
+// Check if in view-only mode
+const IS_VIEW_ONLY = new URLSearchParams(location.search).get('view') === '1';
+
 
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
@@ -543,9 +548,14 @@ function render() {
     const weekRowsHtml = s.weeks.slice().reverse().map(w => {
       const amtClass = w.running ? 'running' : (w.paid ? 'paid' : 'unpaid');
       const badge = w.running ? '<span class="wk-badge running">RUNNING</span>' : (w.paid ? '<span class="wk-badge paid">PAID</span>' : '<span class="wk-badge unpaid">OWED</span>');
-      const btn = w.running
-        ? '<span class="mark-btn running-lbl">In Progress</span>'
-        : `<button class="mark-btn ${w.paid ? 'mark-unpaid' : 'mark-paid'}" onclick="event.stopPropagation();togglePaid('${s.id}','${w.wk}',${!w.paid})">${w.paid ? '↩ Unpaid' : '✓ Mark Paid'}</button>`;
+      let btn;
+      if (w.running) {
+        btn = '<span class="mark-btn running-lbl">In Progress</span>';
+      } else if (IS_VIEW_ONLY) {
+        btn = `<span class="mark-btn ${w.paid ? 'mark-unpaid' : 'mark-paid'}" style="cursor:default;opacity:0.7;">${w.paid ? 'PAID' : 'OWED'}</span>`;
+      } else {
+        btn = `<button class="mark-btn ${w.paid ? 'mark-unpaid' : 'mark-paid'}" onclick="event.stopPropagation();togglePaid('${s.id}','${w.wk}',${!w.paid})">${w.paid ? '↩ Unpaid' : '✓ Mark Paid'}</button>`;
+      }
       return `
       <div class="week-row">
         <div class="week-label">${w.wk} ${badge}</div>

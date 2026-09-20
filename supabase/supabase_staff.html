@@ -406,6 +406,14 @@
           </a>
         </div>
 
+        <a class="btn btn-primary" href="payments.html?view=1" style="margin-top:8px;background:linear-gradient(135deg, #1e3a63, #0d1a30);border-color:#34d399;">
+          <div class="btn-icon">💰</div>
+          <div class="btn-content">
+            <div class="btn-title" style="color:#34d399;">Payments</div>
+            <div class="btn-sub">See who's paid · Who's owed</div>
+          </div>
+        </a>
+
   </div>
 
   <div class="footer">
@@ -416,13 +424,13 @@
 <script>
 (function(){
   const STORAGE_KEY = 'lalh_pw_unlocked_v1';
-  const GRACE_MS = 15 * 60 * 1000;
+  const GRACE_MS = 24 * 60 * 60 * 1000; // 24-hour system-wide session
   // Grace period: if authenticated within last 15 min, skip
-  const t = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10);
+  const t = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
   if (t > 0 && (Date.now() - t) < GRACE_MS) {
     const el = document.getElementById('pw-overlay');
     if (el) el.remove();
-    sessionStorage.setItem(STORAGE_KEY, String(Date.now())); // extend
+    localStorage.setItem(STORAGE_KEY, String(Date.now())); // extend
     return;
   }
   const PW_HASH = '785c05f974a8960b2990c2ef1597384587df82fb595b252c702af08570f0f968';
@@ -438,7 +446,7 @@
     if (!val) return;
     const hash = await sha256(val);
     if (hash === PW_HASH) {
-      sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
+      localStorage.setItem(STORAGE_KEY, String(Date.now()));
       document.getElementById('pw-overlay').remove();
     } else {
       err.textContent = '× Wrong password';
