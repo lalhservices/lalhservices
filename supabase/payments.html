@@ -179,6 +179,116 @@
   #pw-input:focus { outline: none; border-color: var(--gold-500); }
   #pw-btn { background: linear-gradient(135deg, var(--gold-500), #a08838); color: var(--navy-950); border: 0; padding: 14px 24px; border-radius: 10px; font-weight: 800; cursor: pointer; width: 100%; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; }
   #pw-error { color: var(--coral); font-size: 12px; margin-top: 12px; min-height: 16px; font-family: monospace; }
+
+  /* Premium hero header */
+  .hero {
+    position: relative;
+    background: linear-gradient(135deg, rgba(200,168,75,0.08) 0%, rgba(30,58,99,0.4) 100%);
+    border: 1px solid rgba(200,168,75,0.25);
+    border-radius: 20px;
+    padding: 32px 28px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .hero-inner { position: relative; z-index: 2; }
+  .hero-glow {
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(200,168,75,0.15), transparent 70%);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--gold-500);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--emerald);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--emerald);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .hero-title {
+    font-size: 40px;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    background: linear-gradient(180deg, #fff, var(--gold-300));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+  .hero-sub {
+    color: var(--text-muted);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+  }
+  /* Better stat cards */
+  .stat-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 20px 24px;
+    text-align: left;
+    border-right: 0;
+    padding-bottom: 20px;
+  }
+  .owed-card {
+    border-color: rgba(255,107,94,0.25);
+    background: linear-gradient(180deg, rgba(255,107,94,0.05), rgba(0,0,0,0.2));
+  }
+  .running-card {
+    border-color: rgba(52,211,153,0.25);
+    background: linear-gradient(180deg, rgba(52,211,153,0.05), rgba(0,0,0,0.2));
+  }
+  .stat-value.running { color: var(--emerald); }
+  .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; letter-spacing: 0.05em; }
+  .top-stats { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+  /* Running badges */
+  .wk-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.1em;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-weight: 700;
+  }
+  .wk-badge.running { background: rgba(52,211,153,0.15); color: var(--emerald); border: 1px solid rgba(52,211,153,0.3); }
+  .wk-badge.paid { background: rgba(52,211,153,0.1); color: var(--emerald); border: 1px solid rgba(52,211,153,0.2); }
+  .wk-badge.unpaid { background: rgba(255,107,94,0.1); color: var(--coral); border: 1px solid rgba(255,107,94,0.2); }
+  .week-amt.running { color: var(--emerald); }
+  .running-amt {
+    color: var(--emerald);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 2px;
+  }
+  .mark-btn.running-lbl {
+    background: rgba(52,211,153,0.1);
+    color: var(--emerald);
+    border: 1px solid rgba(52,211,153,0.2);
+    cursor: default;
+    display: inline-block;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
@@ -194,22 +304,26 @@
 </div>
 
 <div class="container" id="main" style="display:none;">
-  <a href="./" class="back">← Back to Home</a>
-  <h1>💰 Payments Dashboard</h1>
-  <div class="subtitle">Who's owed money · Track weekly payments</div>
+  <a href="./" class="back">← Back</a>
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-eyebrow">Payroll · Live</div>
+      <h1 class="hero-title">Payments</h1>
+      <div class="hero-sub">Track outstanding wages · Mark paid inline</div>
+    </div>
+    <div class="hero-glow"></div>
+  </div>
 
   <div class="top-stats">
-    <div>
+    <div class="stat-card owed-card">
       <div class="stat-label">Total Owed</div>
       <div class="stat-value owed" id="stat-owed">$0</div>
+      <div class="stat-sub" id="stat-owed-sub">0 people · 0 weeks</div>
     </div>
-    <div>
-      <div class="stat-label">Staff with Unpaid</div>
-      <div class="stat-value people" id="stat-people">0</div>
-    </div>
-    <div>
-      <div class="stat-label">Unpaid Weeks</div>
-      <div class="stat-value paid" id="stat-weeks">0</div>
+    <div class="stat-card running-card">
+      <div class="stat-label">Running This Week</div>
+      <div class="stat-value running" id="stat-running">$0</div>
+      <div class="stat-sub" id="stat-running-sub">Locks in on Monday</div>
     </div>
   </div>
 
@@ -262,6 +376,19 @@ document.addEventListener('DOMContentLoaded', () => {
   input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.__pwCheck(); } });
   document.getElementById('pw-btn').addEventListener('touchend', (e) => { e.preventDefault(); window.__pwCheck(); }, {passive:false});
 });
+
+
+function getCurrentWeek() {
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  const yr = mon.getFullYear();
+  const start = new Date(yr, 0, 1);
+  const wn = Math.ceil(((mon - start) / 86400000 + start.getDay() + 1) / 7);
+  return yr + '-W' + String(wn).padStart(2, '0');
+}
+const CURRENT_WEEK = getCurrentWeek();
 
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
@@ -336,8 +463,12 @@ async function loadData() {
       const wages = hrs * rate;
       const amt = wages + extras;
       const isPaid = !!paidStatus[p.id];
-      staffData[p.id].weeks.push({ wk, hrs, rate, wages, extras, amt, paid: isPaid });
-      if (isPaid) {
+      const isRunning = wk === CURRENT_WEEK;
+      staffData[p.id].weeks.push({ wk, hrs, rate, wages, extras, amt, paid: isPaid, running: isRunning });
+      // Current week counts as "running" — not owed, not paid — until Monday of next week
+      if (isRunning) {
+        staffData[p.id].totalRunning = (staffData[p.id].totalRunning || 0) + amt;
+      } else if (isPaid) {
         staffData[p.id].totalPaid += amt;
       } else {
         staffData[p.id].totalOwed += amt;
@@ -361,11 +492,14 @@ function render() {
   // Top stats (based on unpaid regardless of filter)
   const totalOwed = staffArr.reduce((s, x) => s + x.totalOwed, 0);
   const peopleWithUnpaid = staffArr.filter(s => s.totalOwed > 0).length;
-  const unpaidWeekCount = staffArr.reduce((s, x) => s + x.weeks.filter(w => !w.paid).length, 0);
+  const unpaidWeekCount = staffArr.reduce((s, x) => s + x.weeks.filter(w => !w.paid && !w.running).length, 0);
+  const runningTotal = staffArr.reduce((s, x) => s + (x.totalRunning || 0), 0);
+  const runningPeople = staffArr.filter(s => (s.totalRunning || 0) > 0).length;
 
   document.getElementById('stat-owed').textContent = money(totalOwed);
-  document.getElementById('stat-people').textContent = peopleWithUnpaid;
-  document.getElementById('stat-weeks').textContent = unpaidWeekCount;
+  document.getElementById('stat-owed-sub').textContent = peopleWithUnpaid + ' people · ' + unpaidWeekCount + ' weeks';
+  document.getElementById('stat-running').textContent = money(runningTotal);
+  document.getElementById('stat-running-sub').textContent = runningPeople + ' people · ' + CURRENT_WEEK;
 
   const list = document.getElementById('staff-list');
   if (displayed.length === 0) {
@@ -377,17 +511,25 @@ function render() {
   }
 
   list.innerHTML = displayed.map(s => {
-    const unpaidWeeks = s.weeks.filter(w => !w.paid);
+    const unpaidWeeks = s.weeks.filter(w => !w.paid && !w.running);
+    const runningAmt = s.totalRunning || 0;
     const cardClass = s.totalOwed === 0 ? 'staff-card all-paid' : 'staff-card';
     const dotColor = s.totalOwed === 0 ? 'var(--emerald)' : (unpaidWeeks.length >= 3 ? 'var(--coral)' : 'var(--amber)');
 
-    const weekRowsHtml = s.weeks.slice().reverse().map(w => `
+    const weekRowsHtml = s.weeks.slice().reverse().map(w => {
+      const amtClass = w.running ? 'running' : (w.paid ? 'paid' : 'unpaid');
+      const badge = w.running ? '<span class="wk-badge running">RUNNING</span>' : (w.paid ? '<span class="wk-badge paid">PAID</span>' : '<span class="wk-badge unpaid">OWED</span>');
+      const btn = w.running
+        ? '<span class="mark-btn running-lbl">In Progress</span>'
+        : `<button class="mark-btn ${w.paid ? 'mark-unpaid' : 'mark-paid'}" onclick="event.stopPropagation();togglePaid('${s.id}','${w.wk}',${!w.paid})">${w.paid ? '↩ Unpaid' : '✓ Mark Paid'}</button>`;
+      return `
       <div class="week-row">
-        <div class="week-label">${w.wk}</div>
+        <div class="week-label">${w.wk} ${badge}</div>
         <div class="week-hrs">${w.hrs.toFixed(1)}h × $${w.rate}${w.extras>0?' +'+money(w.extras)+' extras':''}</div>
-        <div class="week-amt ${w.paid ? 'paid' : 'unpaid'}">${money(w.amt)}</div>
-        <button class="mark-btn ${w.paid ? 'mark-unpaid' : 'mark-paid'}" onclick="event.stopPropagation();togglePaid('${s.id}','${w.wk}',${!w.paid})">${w.paid ? '↩ Unpaid' : '✓ Mark Paid'}</button>
-      </div>`).join('');
+        <div class="week-amt ${amtClass}">${money(w.amt)}</div>
+        ${btn}
+      </div>`;
+    }).join('');
 
     return `
       <div class="staff-card ${s.totalOwed === 0 ? 'all-paid' : ''}" id="staff-${s.id}">
@@ -396,11 +538,12 @@ function render() {
             <div class="staff-dot" style="background:${dotColor}"></div>
             <div>
               <div class="staff-name">${s.name}${s.inactive?' <span style="color:var(--text-muted);font-size:11px;">[inactive]</span>':''}</div>
-              <div class="staff-meta">${unpaidWeeks.length} unpaid / ${s.weeks.length} total weeks</div>
+              <div class="staff-meta">${unpaidWeeks.length} unpaid${runningAmt>0?' · 1 running':''} / ${s.weeks.length} total</div>
             </div>
           </div>
-          <div>
-            <span class="staff-owed ${s.totalOwed === 0 ? 'zero' : ''}">${s.totalOwed === 0 ? '✓ Clear' : money(s.totalOwed)}</span>
+          <div style="text-align:right;">
+            <span class="staff-owed ${s.totalOwed === 0 ? 'zero' : ''}">${s.totalOwed === 0 ? (runningAmt > 0 ? '' : '✓ Clear') : money(s.totalOwed)}</span>
+            ${runningAmt > 0 ? '<div class="running-amt">'+money(runningAmt)+' running</div>' : ''}
             <span class="expand-icon">▼</span>
           </div>
         </div>
