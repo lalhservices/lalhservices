@@ -1968,26 +1968,26 @@ cloudLoadState();
 <style>
   #home-fab {
     position: fixed;
-    bottom: 24px; right: 24px;
+    bottom: 16px; right: 16px;
     z-index: 9998;
-    width: 56px; height: 56px;
+    width: 38px; height: 38px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #c8a84b, #a08838);
+    background: rgba(200,168,75,0.85);
     color: #060d1a;
-    font-size: 22px;
+    font-size: 14px;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 8px 24px rgba(200,168,75,0.4), 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     text-decoration: none;
     transition: all 0.2s;
-    border: 2px solid rgba(255,255,255,0.15);
+    opacity: 0.55;
   }
   #home-fab:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 12px 32px rgba(200,168,75,0.5), 0 6px 16px rgba(0,0,0,0.4);
+    opacity: 1;
+    transform: scale(1.1);
   }
-  #home-fab:active { transform: scale(0.95); }
+  #home-fab:active { transform: scale(0.9); }
   @media (max-width: 640px) {
-    #home-fab { bottom: 20px; right: 20px; width: 52px; height: 52px; font-size: 20px; }
+    #home-fab { bottom: 14px; right: 14px; width: 36px; height: 36px; font-size: 13px; }
   }
 </style>
 <a href="./" id="home-fab" title="Back to Home">🏠</a>
