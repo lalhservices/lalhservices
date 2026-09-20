@@ -493,44 +493,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<style id="pw-lock-style">
-  #pw-overlay {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh;
-    background: #0f1e35; z-index: 999999;
-    pointer-events: auto; touch-action: manipulation;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'JetBrains Mono', 'Space Grotesk', monospace, sans-serif;
-  }
-  #pw-box {
-    background: #16263f; border: 1px solid rgba(255,255,255,0.15); border-radius: 14px;
-    padding: 36px 32px; text-align: center; max-width: 320px; width: 90%;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-  }
-  #pw-box h2 { color: #c8a84b; font-size: 20px; margin: 0 0 8px; font-weight: 800; letter-spacing: -0.3px; }
-  #pw-box .subtitle { color: rgba(255,255,255,0.5); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 22px; }
-  #pw-input {
-    background: #0f1e35; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
-    padding: 12px 14px; width: 100%; box-sizing: border-box;
-    color: #f0f4f8; font-family: inherit; font-size: 15px; text-align: center;
-    letter-spacing: 0.15em; margin-bottom: 12px;
-  }
-  #pw-input:focus { outline: none; border-color: #c8a84b; }
-  #pw-btn {
-    background: #c8a84b; color: #0f1e35; border: 0; padding: 12px 24px;
-    border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%;
-    font-family: inherit; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase;
-  }
-  #pw-btn:hover { background: #d9b95a; }
-  #pw-error { color: #ff6b5e; font-size: 12px; margin-top: 10px; min-height: 16px; }
-</style>
-<div id="pw-overlay">
-  <div id="pw-box">
-    <h2>LALH SERVICES</h2>
-    <div class="subtitle">Password Required</div>
-    <input id="pw-input" type="password" placeholder="Enter password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
-    <button id="pw-btn" onclick="window.__pwCheck()">Unlock</button>
-    <div id="pw-error"></div>
-  </div>
 </div>
 <script>
 (function(){

@@ -129,17 +129,7 @@
 </head>
 <body>
 
-<div id="pw-overlay">
-  <div id="pw-box">
-    <div id="pw-title">LALH SERVICES</div>
-    <div id="pw-subtitle">Job Search</div>
-    <input id="pw-input" type="password" placeholder="Enter password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
-    <button id="pw-btn" onclick="window.__pwCheck()">Unlock</button>
-    <div id="pw-error"></div>
-  </div>
-</div>
-
-<div class="container" id="main" style="display:none;">
+<div class="container" id="main">
   <a href="./" class="back">← Back to Home</a>
   <h1>🔍 Job History Search</h1>
   <div class="subtitle">Search across all weeks · Filter · Export</div>
@@ -185,53 +175,17 @@ async function sha256(str) {
   return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// Check master session (set by home page). Valid for 24 hours.
-const STORAGE_KEY = 'lalh_pw_unlocked_v1';
-const GRACE_MS = 24 * 60 * 60 * 1000;
-(function checkGrace() {
-  const t = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
-  if (t > 0 && (Date.now() - t) < GRACE_MS) {
-    // Authenticated — auto-unlock on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        const overlay = document.getElementById('pw-overlay');
-        const main = document.getElementById('main');
-        if (overlay) overlay.remove();
-        if (main) main.style.display = 'block';
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        if (typeof loadData === 'function') loadData();
-        else if (typeof loadAllJobs === 'function') loadAllJobs();
-        else if (typeof loadWeeks === 'function') loadWeeks();
-      }, 50);
-    });
-  } else {
-    // No session — bounce to home for authentication
-    window.location.replace('./');
-  }
-})();
+// Auto-init on load (no password on inner pages)
+window.addEventListener('DOMContentLoaded', () => {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  if (typeof loadData === 'function') loadData();
+  else if (typeof loadAllJobs === 'function') loadAllJobs();
+  else if (typeof loadWeeks === 'function') loadWeeks();
+});
 
-window.__pwCheck = async function() {
-  const input = document.getElementById('pw-input');
-  const err = document.getElementById('pw-error');
-  const val = input.value.trim();
-  if (!val) return;
-  const hash = await sha256(val);
-  if (hash === PW_HASH) {
-    localStorage.setItem(STORAGE_KEY, String(Date.now()));
-    document.getElementById('pw-overlay').remove();
-    document.getElementById('main').style.display = 'block';
-    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    loadAllJobs();
-  } else {
-    err.textContent = '× Wrong password';
-    input.value = ''; input.focus();
-    setTimeout(() => err.textContent = '', 2500);
-  }
-};
+// pwCheck removed
 
-document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('pw-input');
-  setTimeout(() => { try { input.focus({preventScroll:true}); } catch(e){} }, 100);
+ } catch(e){} }, 100);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.__pwCheck(); } });
   document.getElementById('pw-btn').addEventListener('touchend', (e) => { e.preventDefault(); window.__pwCheck(); }, {passive:false});
 });
