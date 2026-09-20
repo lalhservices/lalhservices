@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8a84b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LALH">
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23f4d374'/><stop offset='1' stop-color='%23c8a84b'/></linearGradient></defs><rect width='512' height='512' rx='96' fill='%230d1a30'/><path d='M256 40 L472 256 L256 472 L40 256 Z' fill='none' stroke='url(%23g)' stroke-width='8'/><path d='M170 170 L170 342 L262 342 L262 315 L200 315 L200 170 Z' fill='url(%23g)'/></svg>">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Search — LALH Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy-950: #060d1a;
+    --navy-900: #0d1a30;
+    --navy-800: #142748;
+    --navy-700: #1e3a63;
+    --gold-300: #f4d374;
+    --gold-500: #c8a84b;
+    --emerald: #34d399;
+    --coral: #ff6b5e;
+    --text-muted: rgba(255,255,255,0.55);
+  }
+  body {
+    background: radial-gradient(ellipse at top, var(--navy-800), var(--navy-950));
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 60px;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; color: var(--gold-300); }
+  .subtitle { color: var(--text-muted); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 24px; }
+  .search-box {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .search-box input, .search-box select {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+  }
+  .search-box input:focus, .search-box select:focus {
+    outline: none;
+    border-color: var(--gold-500);
+  }
+  .search-box input.wide { grid-column: 1 / -1; }
+  #results {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .job-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 16px;
+    align-items: center;
+  }
+  .job-name { font-weight: 700; color: var(--gold-300); font-size: 15px; }
+  .job-week { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); letter-spacing: 0.1em; }
+  .job-day { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; text-transform: uppercase; }
+  .job-details { font-size: 12px; color: rgba(255,255,255,0.65); grid-column: 1 / -1; }
+  .job-amount { font-weight: 700; color: var(--emerald); font-size: 15px; text-align: right; }
+  .stats-bar {
+    background: linear-gradient(135deg, var(--navy-700), var(--navy-800));
+    border: 1px solid rgba(200,168,75,0.3);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    text-align: center;
+  }
+  .stat-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px; }
+  .stat-value { font-weight: 700; font-size: 18px; color: var(--gold-300); }
+  .loading, .empty { text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 13px; }
+  a.back {
+    display: inline-block; margin-bottom: 20px;
+    color: var(--gold-300); text-decoration: none;
+    font-size: 12px; letter-spacing: 0.1em;
+  }
+  a.back:hover { color: var(--gold-500); }
+  @media (max-width: 640px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .search-box { grid-template-columns: 1fr; }
+  }
+
+  /* Password overlay - same as other pages */
+  #pw-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh;
+    background: radial-gradient(ellipse at center, var(--navy-800), var(--navy-950));
+    z-index: 999999;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    pointer-events: auto; touch-action: manipulation;
+  }
+  #pw-box {
+    background: linear-gradient(135deg, var(--navy-800), var(--navy-900));
+    border: 1px solid rgba(200,168,75,0.3); border-radius: 20px;
+    padding: 44px 32px; text-align: center;
+    max-width: 360px; width: 100%;
+  }
+  #pw-title { font-weight: 900; font-size: 22px; color: var(--gold-300); margin-bottom: 8px; }
+  #pw-subtitle { color: var(--gold-500); font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 28px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  #pw-input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 14px 16px; width: 100%; color: #fff; font-family: monospace; font-size: 16px; text-align: center; letter-spacing: 0.2em; margin-bottom: 12px; }
+  #pw-input:focus { outline: none; border-color: var(--gold-500); }
+  #pw-btn { background: linear-gradient(135deg, var(--gold-500), #a08838); color: var(--navy-950); border: 0; padding: 14px 24px; border-radius: 10px; font-weight: 800; cursor: pointer; width: 100%; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; }
+  #pw-error { color: var(--coral); font-size: 12px; margin-top: 12px; min-height: 16px; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<div id="pw-overlay">
+  <div id="pw-box">
+    <div id="pw-title">LALH SERVICES</div>
+    <div id="pw-subtitle">Job Search</div>
+    <input id="pw-input" type="password" placeholder="Enter password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
+    <button id="pw-btn" onclick="window.__pwCheck()">Unlock</button>
+    <div id="pw-error"></div>
+  </div>
+</div>
+
+<div class="container" id="main" style="display:none;">
+  <a href="./" class="back">← Back to Home</a>
+  <h1>🔍 Job History Search</h1>
+  <div class="subtitle">Search across all weeks · Filter · Export</div>
+
+  <div class="search-box">
+    <input class="wide" id="q" placeholder="Search job name (e.g. 'Country Road', '7/11', 'Adairs')" oninput="doSearch()">
+    <select id="dayFilter" onchange="doSearch()">
+      <option value="">All Days</option>
+      <option value="Mon">Monday</option>
+      <option value="Tue">Tuesday</option>
+      <option value="Wed">Wednesday</option>
+      <option value="Thu">Thursday</option>
+      <option value="Fri">Friday</option>
+      <option value="Sat">Saturday</option>
+      <option value="Sun">Sunday</option>
+    </select>
+    <select id="weekFilter" onchange="doSearch()">
+      <option value="">All Weeks</option>
+    </select>
+  </div>
+
+  <div class="stats-bar" id="stats" style="display:none;">
+    <div><div class="stat-label">Matches</div><div class="stat-value" id="stat-count">0</div></div>
+    <div><div class="stat-label">Total Hours</div><div class="stat-value" id="stat-hours">0h</div></div>
+    <div><div class="stat-label">Total Charged</div><div class="stat-value" id="stat-charged">$0</div></div>
+    <div><div class="stat-label">Avg / Job</div><div class="stat-value" id="stat-avg">$0</div></div>
+  </div>
+
+  <div id="results"><div class="loading">Enter a search term above</div></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const PW_HASH = '785c05f974a8960b2990e50e4b6dad2d8f5c8c5878df15cf22b17b57c6bcf62b';
+
+let sb;
+let allJobs = [];
+
+async function sha256(str) {
+  const buf = new TextEncoder().encode(str);
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+window.__pwCheck = async function() {
+  const input = document.getElementById('pw-input');
+  const err = document.getElementById('pw-error');
+  const val = input.value.trim();
+  if (!val) return;
+  const hash = await sha256(val);
+  if (hash === PW_HASH) {
+    document.getElementById('pw-overlay').remove();
+    document.getElementById('main').style.display = 'block';
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    loadAllJobs();
+  } else {
+    err.textContent = '× Wrong password';
+    input.value = ''; input.focus();
+    setTimeout(() => err.textContent = '', 2500);
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('pw-input');
+  setTimeout(() => { try { input.focus({preventScroll:true}); } catch(e){} }, 100);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.__pwCheck(); } });
+  document.getElementById('pw-btn').addEventListener('touchend', (e) => { e.preventDefault(); window.__pwCheck(); }, {passive:false});
+});
+
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function calcH(from, to) {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(':').map(Number);
+  const [th, tm] = to.split(':').map(Number);
+  let m = (th*60+tm)-(fh*60+fm);
+  if (m<0) m+=1440;
+  return m/60;
+}
+
+async function loadAllJobs() {
+  document.getElementById('results').innerHTML = '<div class="loading">Loading all job history...</div>';
+
+  // Fetch jt2_global (jobs config) + all jt2_wk_* keys
+  const { data: allRows, error } = await sb
+    .from('roster_data')
+    .select('key, value')
+    .or('key.eq.jt2_global,key.like.jt2_wk_%,key.like.jt2_rate_%');
+
+  if (error) {
+    document.getElementById('results').innerHTML = '<div class="empty">Error loading jobs: ' + error.message + '</div>';
+    return;
+  }
+
+  const globalRow = allRows.find(r => r.key === 'jt2_global');
+  const global = globalRow ? JSON.parse(globalRow.value) : { rows: [] };
+
+  const weekRates = {};
+  allRows.filter(r => r.key.startsWith('jt2_rate_')).forEach(r => {
+    const wk = r.key.replace('jt2_rate_', '');
+    weekRates[wk] = parseFloat(r.value) || 45;
+  });
+
+  allJobs = [];
+  const weekSet = new Set();
+
+  allRows.filter(r => r.key.startsWith('jt2_wk_')).forEach(r => {
+    const wk = r.key.replace('jt2_wk_', '');
+    weekSet.add(wk);
+    const rate = weekRates[wk] || 45;
+    let jobs = {};
+    try { jobs = JSON.parse(r.value); } catch(e) { return; }
+    // jobs is keyed by "rid|day"
+    for (const [key, cell] of Object.entries(jobs)) {
+      if (!cell || !cell.jobName) continue;
+      const [rid, day] = key.split('|');
+      let totalHrs = 0;
+      const workers = [];
+      (cell.workers || []).forEach(w => {
+        const h = calcH(w.from, w.to);
+        totalHrs += h;
+        if (h > 0) workers.push(`${w.name} (${h.toFixed(1)}h)`);
+      });
+      if (totalHrs === 0 && !cell.parking && !cell.materials) continue;
+      const charged = totalHrs * rate;
+      allJobs.push({
+        name: cell.jobName,
+        day,
+        week: wk,
+        hours: totalHrs,
+        rate,
+        charged,
+        parking: parseFloat(cell.parking || 0),
+        materials: parseFloat(cell.materials || 0),
+        workers: workers.join(', ')
+      });
+    }
+  });
+
+  // Populate week filter
+  const wkSelect = document.getElementById('weekFilter');
+  Array.from(weekSet).sort().reverse().forEach(w => {
+    const opt = document.createElement('option');
+    opt.value = w;
+    opt.textContent = w;
+    wkSelect.appendChild(opt);
+  });
+
+  document.getElementById('results').innerHTML = '<div class="empty">Loaded ' + allJobs.length + ' jobs across ' + weekSet.size + ' weeks. Start typing to search.</div>';
+}
+
+function doSearch() {
+  const q = document.getElementById('q').value.toLowerCase().trim();
+  const dayF = document.getElementById('dayFilter').value;
+  const wkF = document.getElementById('weekFilter').value;
+
+  let matches = allJobs;
+  if (q) matches = matches.filter(j => j.name.toLowerCase().includes(q));
+  if (dayF) matches = matches.filter(j => j.day === dayF);
+  if (wkF) matches = matches.filter(j => j.week === wkF);
+
+  const stats = document.getElementById('stats');
+  if (matches.length === 0) {
+    stats.style.display = 'none';
+    document.getElementById('results').innerHTML = q ? '<div class="empty">No jobs match "' + q + '"</div>' : '<div class="empty">Start typing to search</div>';
+    return;
+  }
+
+  stats.style.display = 'grid';
+  const totalHrs = matches.reduce((s,j) => s+j.hours, 0);
+  const totalCh = matches.reduce((s,j) => s+j.charged+j.parking+j.materials, 0);
+  document.getElementById('stat-count').textContent = matches.length;
+  document.getElementById('stat-hours').textContent = totalHrs.toFixed(1) + 'h';
+  document.getElementById('stat-charged').textContent = '$' + totalCh.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
+  document.getElementById('stat-avg').textContent = '$' + Math.round(totalCh/matches.length).toLocaleString();
+
+  // Sort by week desc, day
+  const dayOrder = {Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7};
+  matches.sort((a,b) => {
+    if (a.week !== b.week) return b.week.localeCompare(a.week);
+    return dayOrder[a.day] - dayOrder[b.day];
+  });
+
+  const html = matches.map(j => `
+    <div class="job-card">
+      <div>
+        <div class="job-name">${j.name}</div>
+        <div class="job-week">${j.week} · <span class="job-day">${j.day}</span></div>
+      </div>
+      <div class="job-amount">$${j.charged.toFixed(0)}</div>
+      <div class="job-details">
+        ${j.hours.toFixed(1)}h × $${j.rate}${j.parking>0?' · +$'+j.parking.toFixed(0)+' parking':''}${j.materials>0?' · +$'+j.materials.toFixed(0)+' materials':''}
+        ${j.workers?'<br><span style="color:rgba(255,255,255,0.4);font-size:11px;">'+j.workers+'</span>':''}
+      </div>
+    </div>`).join('');
+  document.getElementById('results').innerHTML = html;
+}
+</script>
+</body>
+</html>

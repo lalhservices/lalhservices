@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8a84b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LALH">
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23f4d374'/><stop offset='1' stop-color='%23c8a84b'/></linearGradient></defs><rect width='512' height='512' rx='96' fill='%230d1a30'/><path d='M256 40 L472 256 L256 472 L40 256 Z' fill='none' stroke='url(%23g)' stroke-width='8'/><path d='M170 170 L170 342 L262 342 L262 315 L200 315 L200 170 Z' fill='url(%23g)'/></svg>">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel Export — LALH Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy-950: #060d1a;
+    --navy-900: #0d1a30;
+    --navy-800: #142748;
+    --navy-700: #1e3a63;
+    --gold-300: #f4d374;
+    --gold-500: #c8a84b;
+    --emerald: #34d399;
+    --coral: #ff6b5e;
+    --text-muted: rgba(255,255,255,0.55);
+  }
+  body {
+    background: radial-gradient(ellipse at top, var(--navy-800), var(--navy-950));
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 60px;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; color: var(--gold-300); }
+  .subtitle { color: var(--text-muted); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 24px; }
+  .card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h3 { color: var(--gold-300); font-size: 15px; margin-bottom: 6px; }
+  .card p { color: var(--text-muted); font-size: 12px; margin-bottom: 14px; }
+  select, input {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+  }
+  button {
+    background: linear-gradient(135deg, var(--gold-500), #a08838);
+    color: var(--navy-950);
+    border: 0; padding: 12px 22px;
+    border-radius: 10px;
+    font-weight: 700; cursor: pointer;
+    font-family: inherit;
+    font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase;
+  }
+  button:hover { filter: brightness(1.1); }
+  a.back { display: inline-block; margin-bottom: 20px; color: var(--gold-300); text-decoration: none; font-size: 12px; letter-spacing: 0.1em; }
+  #status { color: var(--emerald); font-family: monospace; font-size: 12px; margin-top: 10px; min-height: 18px; }
+
+  /* Password overlay */
+  #pw-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: radial-gradient(ellipse at center, var(--navy-800), var(--navy-950)); z-index: 999999; display: flex; align-items: center; justify-content: center; padding: 20px; pointer-events: auto; touch-action: manipulation; }
+  #pw-box { background: linear-gradient(135deg, var(--navy-800), var(--navy-900)); border: 1px solid rgba(200,168,75,0.3); border-radius: 20px; padding: 44px 32px; text-align: center; max-width: 360px; width: 100%; }
+  #pw-title { font-weight: 900; font-size: 22px; color: var(--gold-300); margin-bottom: 8px; }
+  #pw-subtitle { color: var(--gold-500); font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 28px; font-family: monospace; font-weight: 600; }
+  #pw-input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 14px 16px; width: 100%; color: #fff; font-family: monospace; font-size: 16px; text-align: center; letter-spacing: 0.2em; margin-bottom: 12px; }
+  #pw-input:focus { outline: none; border-color: var(--gold-500); }
+  #pw-btn { background: linear-gradient(135deg, var(--gold-500), #a08838); color: var(--navy-950); border: 0; padding: 14px 24px; border-radius: 10px; font-weight: 800; cursor: pointer; width: 100%; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; margin: 0; }
+  #pw-error { color: var(--coral); font-size: 12px; margin-top: 12px; min-height: 16px; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<div id="pw-overlay">
+  <div id="pw-box">
+    <div id="pw-title">LALH SERVICES</div>
+    <div id="pw-subtitle">Excel Export</div>
+    <input id="pw-input" type="password" placeholder="Enter password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button id="pw-btn" onclick="window.__pwCheck()">Unlock</button>
+    <div id="pw-error"></div>
+  </div>
+</div>
+
+<div class="container" id="main" style="display:none;">
+  <a href="./" class="back">← Back to Home</a>
+  <h1>📊 Excel Export</h1>
+  <div class="subtitle">Download data as .xlsx for accountant or archives</div>
+
+  <div class="card">
+    <h3>Export Single Week</h3>
+    <p>Wages + Jobs for one specific week</p>
+    <select id="weekSelect"></select>
+    <button onclick="exportWeek()">Download Week</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="card">
+    <h3>Export Full Year</h3>
+    <p>All wages + all jobs across every week</p>
+    <button onclick="exportAll()">Download Full History</button>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const PW_HASH = '785c05f974a8960b2990e50e4b6dad2d8f5c8c5878df15cf22b17b57c6bcf62b';
+
+let sb;
+
+async function sha256(str) {
+  const buf = new TextEncoder().encode(str);
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+window.__pwCheck = async function() {
+  const input = document.getElementById('pw-input');
+  const err = document.getElementById('pw-error');
+  const val = input.value.trim();
+  if (!val) return;
+  const hash = await sha256(val);
+  if (hash === PW_HASH) {
+    document.getElementById('pw-overlay').remove();
+    document.getElementById('main').style.display = 'block';
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    loadWeeks();
+  } else {
+    err.textContent = '× Wrong password';
+    input.value = ''; input.focus();
+    setTimeout(() => err.textContent = '', 2500);
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('pw-input');
+  setTimeout(() => { try { input.focus({preventScroll:true}); } catch(e){} }, 100);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.__pwCheck(); } });
+  document.getElementById('pw-btn').addEventListener('touchend', (e) => { e.preventDefault(); window.__pwCheck(); }, {passive:false});
+});
+
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function calcH(from, to) {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(':').map(Number);
+  const [th, tm] = to.split(':').map(Number);
+  let m = (th*60+tm)-(fh*60+fm);
+  if (m<0) m+=1440;
+  return m/60;
+}
+
+async function loadWeeks() {
+  const { data } = await sb.from('roster_data').select('key').like('key', 'roster_wk_%');
+  const weeks = (data || []).map(r => r.key.replace('roster_wk_', '')).sort().reverse();
+  const sel = document.getElementById('weekSelect');
+  weeks.forEach(w => {
+    const opt = document.createElement('option');
+    opt.value = w; opt.textContent = w;
+    sel.appendChild(opt);
+  });
+}
+
+async function fetchWeekData(wk) {
+  const keys = ['roster_global', 'jt2_global', 'roster_wk_'+wk, 'roster_rates_'+wk, 'jt2_wk_'+wk, 'jt2_rate_'+wk, 'roster_snapshot_'+wk];
+  const { data } = await sb.from('roster_data').select('key, value').in('key', keys);
+  const map = {};
+  (data || []).forEach(r => { map[r.key] = r.value; });
+  return map;
+}
+
+async function exportWeek() {
+  const wk = document.getElementById('weekSelect').value;
+  const status = document.getElementById('status');
+  status.textContent = 'Loading ' + wk + '...';
+
+  const data = await fetchWeekData(wk);
+  const wb = XLSX.utils.book_new();
+
+  // Wages sheet
+  const global = JSON.parse(data['roster_global'] || '{"people":[]}');
+  const snapshot = data['roster_snapshot_'+wk] ? JSON.parse(data['roster_snapshot_'+wk]) : null;
+  let people = (snapshot && Array.isArray(snapshot) && snapshot.length) ? snapshot : (global.people || []);
+  const rates = JSON.parse(data['roster_rates_'+wk] || '{}');
+  people.forEach(p => { if (rates[p.id] !== undefined) p.rate = rates[p.id]; });
+  const roster = JSON.parse(data['roster_wk_'+wk] || '{}');
+
+  const wagesRows = [['Staff', 'Rate', ...DAYS, 'Total Hrs', 'Wages', 'Parking', 'Materials', 'Fuel', 'Total']];
+  let wagesGrand = 0;
+  people.forEach(p => {
+    if (p.inactive) {
+      const pd = roster[p.id];
+      const hasData = pd && Object.values(pd).some(e => e && (e.timeFrom || e.parking || e.materials || e.fuel));
+      if (!hasData) return;
+    }
+    let hrs = 0, park = 0, mat = 0, fuel = 0;
+    const dayCells = DAYS.map(d => {
+      const e = (roster[p.id] || {})[d] || {};
+      if (e.timeFrom && e.timeTo && !e.off) {
+        const h = calcH(e.timeFrom, e.timeTo);
+        hrs += h;
+        park += parseFloat(e.parking||0);
+        mat += parseFloat(e.materials||0);
+        fuel += parseFloat(e.fuel||0);
+        return `${e.timeFrom}-${e.timeTo}`;
+      }
+      return '';
+    });
+    const rate = parseFloat(p.rate || 30);
+    const wages = hrs * rate;
+    const total = wages + park + mat + fuel;
+    wagesGrand += total;
+    wagesRows.push([p.name, rate, ...dayCells, hrs, wages, park, mat, fuel, total]);
+  });
+  wagesRows.push([]);
+  wagesRows.push(['TOTAL', '', '', '', '', '', '', '', '', '', '', '', '', '', '', wagesGrand]);
+  const wsWages = XLSX.utils.aoa_to_sheet(wagesRows);
+  XLSX.utils.book_append_sheet(wb, wsWages, 'Wages');
+
+  // Jobs sheet
+  const jobsGlobal = JSON.parse(data['jt2_global'] || '{"rows":[]}');
+  const jobsWk = JSON.parse(data['jt2_wk_'+wk] || '{}');
+  const jobRate = parseFloat(data['jt2_rate_'+wk] || 45);
+
+  const jobsRows = [['Day', 'Job Name', 'Workers', 'Hours', 'Rate', 'Charged', 'Parking', 'Materials']];
+  let jobsGrand = 0, hrsGrand = 0;
+  for (const day of DAYS) {
+    for (const rid of (jobsGlobal.rows || [])) {
+      const cell = jobsWk[rid+'|'+day];
+      if (!cell || !cell.jobName) continue;
+      let hrs = 0;
+      const workers = (cell.workers||[]).map(w => {
+        const h = calcH(w.from, w.to);
+        hrs += h;
+        return `${w.name} (${h.toFixed(1)}h)`;
+      }).join(', ');
+      const charged = hrs * jobRate;
+      const parking = parseFloat(cell.parking||0);
+      const materials = parseFloat(cell.materials||0);
+      jobsGrand += charged + parking + materials;
+      hrsGrand += hrs;
+      jobsRows.push([day, cell.jobName, workers, hrs, jobRate, charged, parking, materials]);
+    }
+  }
+  jobsRows.push([]);
+  jobsRows.push(['TOTAL', '', '', hrsGrand, '', jobsGrand, '', '']);
+  const wsJobs = XLSX.utils.aoa_to_sheet(jobsRows);
+  XLSX.utils.book_append_sheet(wb, wsJobs, 'Jobs');
+
+  XLSX.writeFile(wb, `LALH_${wk}.xlsx`);
+  status.textContent = '✓ Downloaded LALH_' + wk + '.xlsx';
+}
+
+async function exportAll() {
+  const status = document.getElementById('status');
+  status.textContent = 'Loading all weeks... this may take 20s';
+  const sel = document.getElementById('weekSelect');
+  const weeks = Array.from(sel.options).map(o => o.value);
+
+  const wb = XLSX.utils.book_new();
+
+  // Combined wages
+  const allWagesRows = [['Week', 'Staff', 'Total Hrs', 'Rate', 'Wages', 'Extras', 'Total']];
+  const allJobsRows = [['Week', 'Day', 'Job Name', 'Hours', 'Rate', 'Charged', 'Parking', 'Materials']];
+
+  for (const wk of weeks) {
+    const data = await fetchWeekData(wk);
+    const global = JSON.parse(data['roster_global'] || '{"people":[]}');
+    const snapshot = data['roster_snapshot_'+wk] ? JSON.parse(data['roster_snapshot_'+wk]) : null;
+    let people = (snapshot && Array.isArray(snapshot) && snapshot.length) ? snapshot : (global.people || []);
+    const rates = JSON.parse(data['roster_rates_'+wk] || '{}');
+    people.forEach(p => { if (rates[p.id] !== undefined) p.rate = rates[p.id]; });
+    const roster = JSON.parse(data['roster_wk_'+wk] || '{}');
+
+    people.forEach(p => {
+      let hrs = 0, extras = 0;
+      DAYS.forEach(d => {
+        const e = (roster[p.id]||{})[d] || {};
+        if (e.timeFrom && e.timeTo && !e.off) hrs += calcH(e.timeFrom, e.timeTo);
+        extras += parseFloat(e.parking||0) + parseFloat(e.materials||0) + parseFloat(e.fuel||0);
+      });
+      if (hrs > 0 || extras > 0) {
+        const rate = parseFloat(p.rate||30);
+        const wages = hrs * rate;
+        allWagesRows.push([wk, p.name, hrs, rate, wages, extras, wages+extras]);
+      }
+    });
+
+    const jobsGlobal = JSON.parse(data['jt2_global']||'{"rows":[]}');
+    const jobsWk = JSON.parse(data['jt2_wk_'+wk]||'{}');
+    const jobRate = parseFloat(data['jt2_rate_'+wk]||45);
+    for (const day of DAYS) {
+      for (const rid of (jobsGlobal.rows||[])) {
+        const cell = jobsWk[rid+'|'+day];
+        if (!cell || !cell.jobName) continue;
+        let hrs = 0;
+        (cell.workers||[]).forEach(w => { hrs += calcH(w.from, w.to); });
+        if (hrs > 0 || cell.parking || cell.materials) {
+          allJobsRows.push([wk, day, cell.jobName, hrs, jobRate, hrs*jobRate, parseFloat(cell.parking||0), parseFloat(cell.materials||0)]);
+        }
+      }
+    }
+  }
+
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allWagesRows), 'All Wages');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allJobsRows), 'All Jobs');
+  XLSX.writeFile(wb, `LALH_Full_History.xlsx`);
+  status.textContent = '✓ Downloaded LALH_Full_History.xlsx';
+}
+</script>
+</body>
+</html>
