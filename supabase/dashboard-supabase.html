@@ -481,6 +481,19 @@
     z-index: 0;
   }
   .container { position: relative; z-index: 1; }
+
+  .dash-hero-simple {
+    background: linear-gradient(135deg, rgba(200,168,75,0.05), rgba(30,58,99,0.2));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+  }
+  .dash-hero-simple .dash-week-nav {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top: 0 !important;
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1482,18 +1495,12 @@ document.addEventListener('DOMContentLoaded', function() {
       if (el.textContent.match(/W\d+|Week/) && !wkLabel) wkLabel = el;
     }
 
-    // Build hero
+    // Simple header — just week nav in a lightweight container
     const hero = document.createElement('div');
-    hero.className = 'dash-hero';
+    hero.className = 'dash-hero-simple';
     hero.innerHTML = `
-      <div class="dash-hero-inner">
-        <div class="dash-eyebrow">Live P&L · Realtime</div>
-        <h1 class="dash-title">Profit Dashboard</h1>
-        <div class="dash-subtitle">Week performance · Staff totals · Job profitability</div>
-        <div class="dash-week-nav" id="new-week-nav"></div>
-      </div>
+      <div class="dash-week-nav" id="new-week-nav"></div>
     `;
-    // Insert hero at top of body's first main container
     const container = document.querySelector('.container') || document.body.firstElementChild;
     if (container) container.insertBefore(hero, container.firstChild);
 
@@ -1633,6 +1640,19 @@ document.addEventListener('DOMContentLoaded', function() {
     z-index: 0;
   }
   .container { position: relative; z-index: 1; }
+
+  .dash-hero-simple {
+    background: linear-gradient(135deg, rgba(200,168,75,0.05), rgba(30,58,99,0.2));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+  }
+  .dash-hero-simple .dash-week-nav {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top: 0 !important;
+  }
 </style>
 <a href="./" id="home-fab" title="Back to Home">🏠</a>
 
