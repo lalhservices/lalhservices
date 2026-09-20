@@ -452,6 +452,16 @@
 
 <script>
 (function(){
+  const STORAGE_KEY = 'lalh_pw_unlocked_v1';
+  const GRACE_MS = 24 * 60 * 60 * 1000; // 24-hour system-wide session
+  // Grace period: if authenticated within last 15 min, skip
+  const t = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+  if (t > 0 && (Date.now() - t) < GRACE_MS) {
+    const el = document.getElementById('pw-overlay');
+    if (el) el.remove();
+    localStorage.setItem(STORAGE_KEY, String(Date.now())); // extend
+    return;
+  }
   const PW_HASH = '785c05f974a8960b2990c2ef1597384587df82fb595b252c702af08570f0f968';
   async function sha256(str) {
     const buf = new TextEncoder().encode(str);
@@ -465,6 +475,7 @@
     if (!val) return;
     const hash = await sha256(val);
     if (hash === PW_HASH) {
+      localStorage.setItem(STORAGE_KEY, String(Date.now()));
       document.getElementById('pw-overlay').remove();
     } else {
       err.textContent = '× Wrong password';
