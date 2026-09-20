@@ -302,6 +302,102 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   #refresh-note { text-align: center; font-size: 9px; color: var(--text3); margin-top: 24px; letter-spacing: 0.08em; }
+
+  /* Premium dashboard hero */
+  .dash-hero {
+    position: relative;
+    background: linear-gradient(135deg, rgba(200,168,75,0.08) 0%, rgba(30,58,99,0.4) 100%);
+    border: 1px solid rgba(200,168,75,0.25);
+    border-radius: 20px;
+    padding: 32px 28px 28px;
+    margin: 0 0 24px;
+    overflow: hidden;
+  }
+  .dash-hero-inner { position: relative; z-index: 2; }
+  .dash-hero::after {
+    content: '';
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(200,168,75,0.12), transparent 70%);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .dash-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #c8a84b;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dash-eyebrow::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: #34d399;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #34d399;
+    animation: dashPulse 2s infinite;
+  }
+  @keyframes dashPulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .dash-title {
+    font-size: 40px;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    background: linear-gradient(180deg, #fff 0%, #f4d374 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .dash-subtitle {
+    color: rgba(255,255,255,0.55);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+  }
+  .dash-week-nav {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .dash-week-nav button {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: rgba(255,255,255,0.7) !important;
+    padding: 8px 14px !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-family: inherit !important;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .dash-week-nav button:hover {
+    border-color: rgba(200,168,75,0.5) !important;
+    color: #f4d374 !important;
+  }
+  .dash-week-label {
+    flex: 1;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #f4d374;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+  /* Cleanup old back button and heading */
+  body { padding-top: 20px !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -336,6 +432,102 @@
   }
   #pw-btn:hover { background: #d9b95a; }
   #pw-error { color: #ff6b5e; font-size: 12px; margin-top: 10px; min-height: 16px; }
+
+  /* Premium dashboard hero */
+  .dash-hero {
+    position: relative;
+    background: linear-gradient(135deg, rgba(200,168,75,0.08) 0%, rgba(30,58,99,0.4) 100%);
+    border: 1px solid rgba(200,168,75,0.25);
+    border-radius: 20px;
+    padding: 32px 28px 28px;
+    margin: 0 0 24px;
+    overflow: hidden;
+  }
+  .dash-hero-inner { position: relative; z-index: 2; }
+  .dash-hero::after {
+    content: '';
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(200,168,75,0.12), transparent 70%);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .dash-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #c8a84b;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dash-eyebrow::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: #34d399;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #34d399;
+    animation: dashPulse 2s infinite;
+  }
+  @keyframes dashPulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .dash-title {
+    font-size: 40px;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    background: linear-gradient(180deg, #fff 0%, #f4d374 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .dash-subtitle {
+    color: rgba(255,255,255,0.55);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+  }
+  .dash-week-nav {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .dash-week-nav button {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: rgba(255,255,255,0.7) !important;
+    padding: 8px 14px !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-family: inherit !important;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .dash-week-nav button:hover {
+    border-color: rgba(200,168,75,0.5) !important;
+    color: #f4d374 !important;
+  }
+  .dash-week-label {
+    flex: 1;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #f4d374;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+  /* Cleanup old back button and heading */
+  body { padding-top: 20px !important; }
 </style>
 <div id="pw-overlay">
   <div id="pw-box">
@@ -1374,5 +1566,67 @@ async function downloadPDF() {
 }
 
 </script>
+
+<script>
+// Elevate dashboard header dynamically after DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    // Find week navigation buttons
+    const btns = document.querySelectorAll('button');
+    let prevBtn, nextBtn, wkLabel;
+    btns.forEach(b => {
+      const txt = (b.textContent || '').trim();
+      if (txt === '← Prev' || txt === '‹ Prev' || txt.includes('Prev')) prevBtn = b;
+      if (txt === 'Next →' || txt === 'Next ›' || txt.includes('Next')) nextBtn = b;
+    });
+    // Find week label
+    const allEls = document.querySelectorAll('h1, h2, .week-label, [id*="week"]');
+    for (const el of allEls) {
+      if (el.textContent.match(/W\d+|Week/) && !wkLabel) wkLabel = el;
+    }
+
+    // Build hero
+    const hero = document.createElement('div');
+    hero.className = 'dash-hero';
+    hero.innerHTML = `
+      <div class="dash-hero-inner">
+        <div class="dash-eyebrow">Live P&L · Realtime</div>
+        <h1 class="dash-title">Profit Dashboard</h1>
+        <div class="dash-subtitle">Week performance · Staff totals · Job profitability</div>
+        <div class="dash-week-nav" id="new-week-nav"></div>
+      </div>
+    `;
+    // Insert hero at top of body's first main container
+    const container = document.querySelector('.container') || document.body.firstElementChild;
+    if (container) container.insertBefore(hero, container.firstChild);
+
+    // Move week nav buttons + label into hero
+    const newNav = document.getElementById('new-week-nav');
+    if (newNav && prevBtn && nextBtn) {
+      // Clone buttons preserving their handlers by moving them
+      newNav.appendChild(prevBtn);
+      const lblSpan = document.createElement('div');
+      lblSpan.className = 'dash-week-label';
+      lblSpan.id = 'dash-week-label-mirror';
+      lblSpan.textContent = wkLabel ? wkLabel.textContent : '';
+      newNav.appendChild(lblSpan);
+      newNav.appendChild(nextBtn);
+
+      // Keep mirror updated
+      if (wkLabel) {
+        const observer = new MutationObserver(() => {
+          lblSpan.textContent = wkLabel.textContent;
+        });
+        observer.observe(wkLabel, { childList: true, characterData: true, subtree: true });
+      }
+    }
+
+    // Hide original h1 if it duplicates
+    const origH1 = document.querySelector('body > h1, .container > h1:not(.dash-title)');
+    if (origH1 && origH1.textContent.toLowerCase().includes('dashboard')) origH1.style.display = 'none';
+  }, 300);
+});
+</script>
+
 </body>
 </html>
