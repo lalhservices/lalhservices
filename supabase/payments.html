@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payments — LALH Services</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8a84b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LALH">
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23f4d374"/><stop offset="1" stop-color="%23c8a84b"/></linearGradient></defs><path d="M50 5 L92 50 L50 95 L8 50 Z" fill="%230d1a30" stroke="url(%23g)" stroke-width="3"/><path d="M32 32 L32 68 L52 68 L52 62 L38 62 L38 32 Z" fill="url(%23g)"/></svg>'>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy-950: #060d1a;
+    --navy-900: #0d1a30;
+    --navy-800: #142748;
+    --navy-700: #1e3a63;
+    --gold-300: #f4d374;
+    --gold-500: #c8a84b;
+    --emerald: #34d399;
+    --coral: #ff6b5e;
+    --amber: #fbbf24;
+    --text-muted: rgba(255,255,255,0.55);
+  }
+  body {
+    background: radial-gradient(ellipse at top, var(--navy-800), var(--navy-950));
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 60px;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; color: var(--gold-300); }
+  .subtitle { color: var(--text-muted); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 24px; }
+
+  .top-stats {
+    background: linear-gradient(135deg, var(--navy-700), var(--navy-800));
+    border: 1px solid rgba(200,168,75,0.3);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    text-align: center;
+  }
+  .top-stats > div {
+    padding: 8px;
+    border-right: 1px solid rgba(255,255,255,0.08);
+  }
+  .top-stats > div:last-child { border-right: 0; }
+  .stat-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
+  .stat-value { font-weight: 800; font-size: 26px; letter-spacing: -0.5px; }
+  .stat-value.owed { color: var(--coral); }
+  .stat-value.paid { color: var(--emerald); }
+  .stat-value.people { color: var(--gold-300); }
+
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+  .filter-btn.active {
+    background: rgba(200,168,75,0.15);
+    border-color: var(--gold-500);
+    color: var(--gold-300);
+  }
+  .filter-btn:hover { border-color: var(--gold-500); }
+
+  .staff-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .staff-card.all-paid { opacity: 0.55; }
+  .staff-card.all-paid .staff-header { background: rgba(52,211,153,0.05); }
+  .staff-header {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    gap: 12px;
+    background: rgba(0,0,0,0.15);
+  }
+  .staff-header:hover { background: rgba(200,168,75,0.05); }
+  .staff-name-block { display: flex; align-items: center; gap: 12px; flex: 1; }
+  .staff-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .staff-name { font-weight: 700; font-size: 15px; }
+  .staff-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .staff-owed {
+    font-weight: 800; font-size: 18px;
+    color: var(--coral);
+  }
+  .staff-owed.zero { color: var(--emerald); font-size: 15px; }
+  .expand-icon { color: rgba(255,255,255,0.4); font-size: 10px; transition: transform 0.2s; margin-left: 8px; }
+  .staff-card.expanded .expand-icon { transform: rotate(180deg); }
+
+  .week-list {
+    display: none;
+    padding: 4px 18px 12px;
+  }
+  .staff-card.expanded .week-list { display: block; }
+  .week-row {
+    display: grid;
+    grid-template-columns: 90px 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px;
+  }
+  .week-label { font-family: 'JetBrains Mono', monospace; color: var(--gold-300); font-size: 12px; letter-spacing: 0.05em; }
+  .week-hrs { color: var(--text-muted); font-size: 12px; }
+  .week-amt { font-weight: 700; text-align: right; min-width: 80px; }
+  .week-amt.unpaid { color: var(--coral); }
+  .week-amt.paid { color: var(--emerald); }
+  .mark-btn {
+    border: 0;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.05em;
+    min-width: 90px;
+  }
+  .mark-btn.mark-paid {
+    background: linear-gradient(135deg, var(--emerald), #10b981);
+    color: var(--navy-950);
+  }
+  .mark-btn.mark-paid:hover { filter: brightness(1.1); }
+  .mark-btn.mark-unpaid {
+    background: rgba(255,107,94,0.15);
+    color: var(--coral);
+    border: 1px solid rgba(255,107,94,0.3);
+  }
+  .mark-btn.mark-unpaid:hover { background: rgba(255,107,94,0.25); }
+  .mark-btn:disabled { opacity: 0.4; cursor: wait; }
+
+  a.back { display: inline-block; margin-bottom: 20px; color: var(--gold-300); text-decoration: none; font-size: 12px; letter-spacing: 0.1em; }
+  .loading { text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 13px; }
+
+  @media (max-width: 640px) {
+    .top-stats { grid-template-columns: 1fr; gap: 8px; }
+    .top-stats > div { border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; }
+    .top-stats > div:last-child { border-bottom: 0; }
+    .stat-value { font-size: 22px; }
+    .week-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .week-row .week-hrs { grid-column: 1 / -1; }
+  }
+
+  /* Password overlay */
+  #pw-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: radial-gradient(ellipse at center, var(--navy-800), var(--navy-950)); z-index: 999999; display: flex; align-items: center; justify-content: center; padding: 20px; pointer-events: auto; touch-action: manipulation; }
+  #pw-box { background: linear-gradient(135deg, var(--navy-800), var(--navy-900)); border: 1px solid rgba(200,168,75,0.3); border-radius: 20px; padding: 44px 32px; text-align: center; max-width: 360px; width: 100%; }
+  #pw-title { font-weight: 900; font-size: 22px; color: var(--gold-300); margin-bottom: 8px; }
+  #pw-subtitle { color: var(--gold-500); font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 28px; font-family: monospace; font-weight: 600; }
+  #pw-input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 14px 16px; width: 100%; color: #fff; font-family: monospace; font-size: 16px; text-align: center; letter-spacing: 0.2em; margin-bottom: 12px; }
+  #pw-input:focus { outline: none; border-color: var(--gold-500); }
+  #pw-btn { background: linear-gradient(135deg, var(--gold-500), #a08838); color: var(--navy-950); border: 0; padding: 14px 24px; border-radius: 10px; font-weight: 800; cursor: pointer; width: 100%; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; }
+  #pw-error { color: var(--coral); font-size: 12px; margin-top: 12px; min-height: 16px; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<div id="pw-overlay">
+  <div id="pw-box">
+    <div id="pw-title">LALH SERVICES</div>
+    <div id="pw-subtitle">Payments Dashboard</div>
+    <input id="pw-input" type="password" placeholder="Enter password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button id="pw-btn" onclick="window.__pwCheck()">Unlock</button>
+    <div id="pw-error"></div>
+  </div>
+</div>
+
+<div class="container" id="main" style="display:none;">
+  <a href="./" class="back">← Back to Home</a>
+  <h1>💰 Payments Dashboard</h1>
+  <div class="subtitle">Who's owed money · Track weekly payments</div>
+
+  <div class="top-stats">
+    <div>
+      <div class="stat-label">Total Owed</div>
+      <div class="stat-value owed" id="stat-owed">$0</div>
+    </div>
+    <div>
+      <div class="stat-label">Staff with Unpaid</div>
+      <div class="stat-value people" id="stat-people">0</div>
+    </div>
+    <div>
+      <div class="stat-label">Unpaid Weeks</div>
+      <div class="stat-value paid" id="stat-weeks">0</div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="unpaid" onclick="setFilter('unpaid')">Only Unpaid</button>
+    <button class="filter-btn" data-filter="all" onclick="setFilter('all')">Show All</button>
+    <button class="filter-btn" data-filter="paid" onclick="setFilter('paid')">Fully Paid</button>
+  </div>
+
+  <div id="staff-list"><div class="loading">Loading payment data...</div></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const PW_HASH = '785c05f974a8960b2990c2ef1597384587df82fb595b252c702af08570f0f968';
+const START_WEEK = '2026-W31'; // Only look at W31 onwards
+
+let sb;
+let currentFilter = 'unpaid';
+let staffData = {}; // { staffId: { name, weeks: [{wk, hrs, amt, paid}], totalOwed } }
+
+async function sha256(str) {
+  const buf = new TextEncoder().encode(str);
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+window.__pwCheck = async function() {
+  const input = document.getElementById('pw-input');
+  const err = document.getElementById('pw-error');
+  const val = input.value.trim();
+  if (!val) return;
+  const hash = await sha256(val);
+  if (hash === PW_HASH) {
+    document.getElementById('pw-overlay').remove();
+    document.getElementById('main').style.display = 'block';
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    loadData();
+  } else {
+    err.textContent = '× Wrong password';
+    input.value = ''; input.focus();
+    setTimeout(() => err.textContent = '', 2500);
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('pw-input');
+  setTimeout(() => { try { input.focus({preventScroll:true}); } catch(e){} }, 100);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.__pwCheck(); } });
+  document.getElementById('pw-btn').addEventListener('touchend', (e) => { e.preventDefault(); window.__pwCheck(); }, {passive:false});
+});
+
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function calcH(from, to) {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(':').map(Number);
+  const [th, tm] = to.split(':').map(Number);
+  let m = (th*60+tm)-(fh*60+fm);
+  if (m<0) m+=1440;
+  return m/60;
+}
+
+function money(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+async function loadData() {
+  document.getElementById('staff-list').innerHTML = '<div class="loading">Loading...</div>';
+
+  // Fetch everything we need from Supabase
+  const { data: allRows, error } = await sb
+    .from('roster_data')
+    .select('key, value')
+    .or('key.eq.roster_global,key.like.roster_wk_%,key.like.roster_rates_%,key.like.wages_paid_%,key.like.roster_snapshot_%');
+
+  if (error) {
+    document.getElementById('staff-list').innerHTML = '<div class="loading">Error: ' + error.message + '</div>';
+    return;
+  }
+
+  // Parse rows into maps
+  const map = {};
+  allRows.forEach(r => { map[r.key] = r.value; });
+
+  const global = JSON.parse(map['roster_global'] || '{"people":[]}');
+
+  // Get all weeks from W31 onwards
+  const weeks = [];
+  Object.keys(map).forEach(k => {
+    if (k.startsWith('roster_wk_')) {
+      const wk = k.replace('roster_wk_', '');
+      if (wk >= START_WEEK) weeks.push(wk);
+    }
+  });
+  weeks.sort();
+
+  // Build staff data structure
+  staffData = {};
+
+  // Include all active + inactive people who might have entries
+  global.people.forEach(p => {
+    staffData[p.id] = { id: p.id, name: p.name, inactive: !!p.inactive, weeks: [], totalOwed: 0, totalPaid: 0 };
+  });
+
+  weeks.forEach(wk => {
+    const roster = JSON.parse(map['roster_wk_' + wk] || '{}');
+    const rates = JSON.parse(map['roster_rates_' + wk] || '{}');
+    const paidStatus = JSON.parse(map['wages_paid_' + wk] || '{}');
+    const snapshot = map['roster_snapshot_' + wk] ? JSON.parse(map['roster_snapshot_' + wk]) : null;
+    const weekPeople = (snapshot && Array.isArray(snapshot) && snapshot.length) ? snapshot : global.people;
+
+    weekPeople.forEach(p => {
+      if (!staffData[p.id]) {
+        staffData[p.id] = { id: p.id, name: p.name, inactive: !!p.inactive, weeks: [], totalOwed: 0, totalPaid: 0 };
+      }
+      let hrs = 0, extras = 0;
+      DAYS.forEach(d => {
+        const e = (roster[p.id] || {})[d] || {};
+        if (e.timeFrom && e.timeTo && !e.off) hrs += calcH(e.timeFrom, e.timeTo);
+        extras += parseFloat(e.parking||0) + parseFloat(e.materials||0) + parseFloat(e.fuel||0);
+      });
+      if (hrs === 0 && extras === 0) return;
+      const rate = parseFloat(rates[p.id] !== undefined ? rates[p.id] : (p.rate || 30));
+      const wages = hrs * rate;
+      const amt = wages + extras;
+      const isPaid = !!paidStatus[p.id];
+      staffData[p.id].weeks.push({ wk, hrs, rate, wages, extras, amt, paid: isPaid });
+      if (isPaid) {
+        staffData[p.id].totalPaid += amt;
+      } else {
+        staffData[p.id].totalOwed += amt;
+      }
+    });
+  });
+
+  render();
+}
+
+function render() {
+  const staffArr = Object.values(staffData)
+    .filter(s => s.weeks.length > 0)
+    .sort((a, b) => b.totalOwed - a.totalOwed);
+
+  // Filter
+  let displayed = staffArr;
+  if (currentFilter === 'unpaid') displayed = staffArr.filter(s => s.totalOwed > 0);
+  if (currentFilter === 'paid') displayed = staffArr.filter(s => s.totalOwed === 0);
+
+  // Top stats (based on unpaid regardless of filter)
+  const totalOwed = staffArr.reduce((s, x) => s + x.totalOwed, 0);
+  const peopleWithUnpaid = staffArr.filter(s => s.totalOwed > 0).length;
+  const unpaidWeekCount = staffArr.reduce((s, x) => s + x.weeks.filter(w => !w.paid).length, 0);
+
+  document.getElementById('stat-owed').textContent = money(totalOwed);
+  document.getElementById('stat-people').textContent = peopleWithUnpaid;
+  document.getElementById('stat-weeks').textContent = unpaidWeekCount;
+
+  const list = document.getElementById('staff-list');
+  if (displayed.length === 0) {
+    list.innerHTML = '<div class="loading">' +
+      (currentFilter === 'unpaid' ? '✓ All caught up — nobody owed anything!' :
+       currentFilter === 'paid' ? 'Nobody fully paid yet' :
+       'No payment data yet') + '</div>';
+    return;
+  }
+
+  list.innerHTML = displayed.map(s => {
+    const unpaidWeeks = s.weeks.filter(w => !w.paid);
+    const cardClass = s.totalOwed === 0 ? 'staff-card all-paid' : 'staff-card';
+    const dotColor = s.totalOwed === 0 ? 'var(--emerald)' : (unpaidWeeks.length >= 3 ? 'var(--coral)' : 'var(--amber)');
+
+    const weekRowsHtml = s.weeks.slice().reverse().map(w => `
+      <div class="week-row">
+        <div class="week-label">${w.wk}</div>
+        <div class="week-hrs">${w.hrs.toFixed(1)}h × $${w.rate}${w.extras>0?' +'+money(w.extras)+' extras':''}</div>
+        <div class="week-amt ${w.paid ? 'paid' : 'unpaid'}">${money(w.amt)}</div>
+        <button class="mark-btn ${w.paid ? 'mark-unpaid' : 'mark-paid'}" onclick="event.stopPropagation();togglePaid('${s.id}','${w.wk}',${!w.paid})">${w.paid ? '↩ Unpaid' : '✓ Mark Paid'}</button>
+      </div>`).join('');
+
+    return `
+      <div class="staff-card ${s.totalOwed === 0 ? 'all-paid' : ''}" id="staff-${s.id}">
+        <div class="staff-header" onclick="toggleCard('${s.id}')">
+          <div class="staff-name-block">
+            <div class="staff-dot" style="background:${dotColor}"></div>
+            <div>
+              <div class="staff-name">${s.name}${s.inactive?' <span style="color:var(--text-muted);font-size:11px;">[inactive]</span>':''}</div>
+              <div class="staff-meta">${unpaidWeeks.length} unpaid / ${s.weeks.length} total weeks</div>
+            </div>
+          </div>
+          <div>
+            <span class="staff-owed ${s.totalOwed === 0 ? 'zero' : ''}">${s.totalOwed === 0 ? '✓ Clear' : money(s.totalOwed)}</span>
+            <span class="expand-icon">▼</span>
+          </div>
+        </div>
+        <div class="week-list">
+          ${weekRowsHtml}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleCard(id) {
+  const card = document.getElementById('staff-' + id);
+  if (card) card.classList.toggle('expanded');
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === f);
+  });
+  render();
+}
+
+async function togglePaid(staffId, wk, markAsPaid) {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    // Fetch current paid status
+    const { data: cur } = await sb.from('roster_data').select('value').eq('key', 'wages_paid_' + wk).maybeSingle();
+    const paidStatus = cur ? JSON.parse(cur.value) : {};
+    if (markAsPaid) {
+      paidStatus[staffId] = true;
+    } else {
+      delete paidStatus[staffId];
+    }
+    await sb.from('roster_data').upsert({
+      key: 'wages_paid_' + wk,
+      value: JSON.stringify(paidStatus),
+      updated: new Date().toISOString()
+    }, { onConflict: 'key' });
+
+    // Update local data & re-render
+    const s = staffData[staffId];
+    if (s) {
+      const wkEntry = s.weeks.find(w => w.wk === wk);
+      if (wkEntry) {
+        if (wkEntry.paid && !markAsPaid) {
+          s.totalPaid -= wkEntry.amt;
+          s.totalOwed += wkEntry.amt;
+        } else if (!wkEntry.paid && markAsPaid) {
+          s.totalOwed -= wkEntry.amt;
+          s.totalPaid += wkEntry.amt;
+        }
+        wkEntry.paid = markAsPaid;
+      }
+    }
+    render();
+    // Keep card expanded
+    const card = document.getElementById('staff-' + staffId);
+    if (card) card.classList.add('expanded');
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
