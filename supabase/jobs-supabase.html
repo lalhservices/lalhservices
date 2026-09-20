@@ -490,69 +490,7 @@
 </head>
 <body>
 </div>
-<script>
-(function(){
-  const PW_HASH = '785c05f974a8960b2990c2ef1597384587df82fb595b252c702af08570f0f968';
-  const STORAGE_KEY = 'lalh_pw_unlocked_v1';
-  const SESSION_HOURS = 24 * 30; // stay unlocked for 30 days per browser
-  async function sha256(str) {
-    const buf = new TextEncoder().encode(str);
-    const hash = await crypto.subtle.digest('SHA-256', buf);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
-  }
-  function isUnlocked() {
-    const t = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
-    return t > 0 && (Date.now() - t) < (SESSION_HOURS * 3600000);
-  }
-  // Check master session (set by home page). Valid for 24 hours.
-  const GRACE_MS = 24 * 60 * 60 * 1000;
-  const t = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
-  if (t > 0 && (Date.now() - t) < GRACE_MS) {
-    const el = document.getElementById('pw-overlay'); if (el) el.remove();
-    const st = document.getElementById('pw-lock-style'); if (st) st.remove();
-    return;
-  }
-  // No valid session — bounce back to home page for authentication
-  window.location.replace('./');
-  return;
-  window.__pwCheck = async function() {
-    const input = document.getElementById('pw-input');
-    const err = document.getElementById('pw-error');
-    const val = input.value.trim();
-    if (!val) return;
-    const hash = await sha256(val);
-    if (hash === PW_HASH) {
-      localStorage.setItem(STORAGE_KEY, String(Date.now()));
-      document.getElementById('pw-overlay').remove();
-      document.getElementById('pw-lock-style').remove();
-    } else {
-      err.textContent = 'Wrong password';
-      input.value = ''; input.focus();
-      setTimeout(() => err.textContent = '', 2500);
-    }
-  };
-  function initPwUI() {
-    const input = document.getElementById('pw-input');
-    const btn = document.getElementById('pw-btn');
-    const box = document.getElementById('pw-box');
-    if (!input) return;
-    // Try focus but don't rely on it — mobile browsers often block programmatic focus
-    setTimeout(() => { try { input.focus({preventScroll:true}); } catch(e){} }, 100);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.__pwCheck(); } });
-    // Tap anywhere on box to focus input on mobile
-    if (box) box.addEventListener('click', (e) => { if (e.target !== btn && e.target !== input) input.focus(); });
-    // Handle both touch and click on unlock button
-    if (btn) {
-      btn.addEventListener('touchend', (e) => { e.preventDefault(); window.__pwCheck(); }, {passive:false});
-    }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPwUI);
-  } else {
-    initPwUI();
-  }
-})();
-</script>
+
 
 <div id="edit-lock-bar">
 🔒 VIEWING PAST WEEK — READ ONLY

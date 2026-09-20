@@ -106,25 +106,15 @@
   }
 
   /* Password overlay - same as other pages */
-  #pw-overlay {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh;
-    background: radial-gradient(ellipse at center, var(--navy-800), var(--navy-950));
-    z-index: 999999;
-    display: flex; align-items: center; justify-content: center; padding: 20px;
-    pointer-events: auto; touch-action: manipulation;
-  }
-  #pw-box {
+#pw-box {
     background: linear-gradient(135deg, var(--navy-800), var(--navy-900));
     border: 1px solid rgba(200,168,75,0.3); border-radius: 20px;
     padding: 44px 32px; text-align: center;
     max-width: 360px; width: 100%;
   }
-  #pw-title { font-weight: 900; font-size: 22px; color: var(--gold-300); margin-bottom: 8px; }
-  #pw-subtitle { color: var(--gold-500); font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 28px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
-  #pw-input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 14px 16px; width: 100%; color: #fff; font-family: monospace; font-size: 16px; text-align: center; letter-spacing: 0.2em; margin-bottom: 12px; }
-  #pw-input:focus { outline: none; border-color: var(--gold-500); }
-  #pw-btn { background: linear-gradient(135deg, var(--gold-500), #a08838); color: var(--navy-950); border: 0; padding: 14px 24px; border-radius: 10px; font-weight: 800; cursor: pointer; width: 100%; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; }
-  #pw-error { color: var(--coral); font-size: 12px; margin-top: 12px; min-height: 16px; font-family: monospace; }
+#pw-subtitle { color: var(--gold-500); font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 28px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+#pw-input:focus { outline: none; border-color: var(--gold-500); }
+#pw-error { color: var(--coral); font-size: 12px; margin-top: 12px; min-height: 16px; font-family: monospace; }
 </style>
 </head>
 <body>
@@ -164,16 +154,10 @@
 <script>
 const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
-const PW_HASH = '785c05f974a8960b2990c2ef1597384587df82fb595b252c702af08570f0f968';
-
 let sb;
 let allJobs = [];
 
-async function sha256(str) {
-  const buf = new TextEncoder().encode(str);
-  const h = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
+
 
 // Auto-init on load (no password on inner pages)
 window.addEventListener('DOMContentLoaded', () => {
@@ -186,9 +170,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // pwCheck removed
 
  } catch(e){} }, 100);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.__pwCheck(); } });
-  document.getElementById('pw-btn').addEventListener('touchend', (e) => { e.preventDefault(); window.__pwCheck(); }, {passive:false});
-});
+  });
 
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
