@@ -398,6 +398,89 @@
   }
   /* Cleanup old back button and heading */
   body { padding-top: 20px !important; }
+
+  /* Enhanced dashboard styling — world class polish */
+  .container { max-width: 1080px !important; padding: 0 20px 60px !important; }
+
+  /* Section headers upgrade */
+  h2, h3 {
+    font-family: 'Playfair Display', 'Inter', serif;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-top: 32px !important;
+    margin-bottom: 16px !important;
+    position: relative;
+    padding-left: 16px;
+  }
+  h2::before, h3::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0.15em;
+    bottom: 0.15em;
+    width: 4px;
+    background: linear-gradient(180deg, #f4d374, #c8a84b);
+    border-radius: 2px;
+  }
+
+  /* Card upgrades */
+  .stat-card, .metric-card, [class*="card"] {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.15)) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 14px !important;
+    transition: all 0.2s !important;
+  }
+  .stat-card:hover, .metric-card:hover {
+    border-color: rgba(200,168,75,0.2) !important;
+    transform: translateY(-2px);
+  }
+
+  /* Better tables */
+  table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: rgba(0,0,0,0.15) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+  }
+  th {
+    background: linear-gradient(180deg, rgba(200,168,75,0.15), rgba(200,168,75,0.05)) !important;
+    color: #f4d374 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 10px !important;
+    letter-spacing: 0.15em !important;
+    text-transform: uppercase !important;
+    padding: 12px !important;
+    border-bottom: 1px solid rgba(200,168,75,0.2) !important;
+  }
+  td {
+    padding: 10px 12px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    font-size: 13px !important;
+  }
+  tr:last-child td { border-bottom: 0 !important; }
+  tr:hover td { background: rgba(200,168,75,0.03) !important; }
+
+  /* Number emphasis */
+  .money, [class*="amount"], [class*="profit"] {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-weight: 700 !important;
+  }
+
+  /* Print / subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,168,75,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,168,75,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    z-index: 0;
+  }
+  .container { position: relative; z-index: 1; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -528,6 +611,89 @@
   }
   /* Cleanup old back button and heading */
   body { padding-top: 20px !important; }
+
+  /* Enhanced dashboard styling — world class polish */
+  .container { max-width: 1080px !important; padding: 0 20px 60px !important; }
+
+  /* Section headers upgrade */
+  h2, h3 {
+    font-family: 'Playfair Display', 'Inter', serif;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-top: 32px !important;
+    margin-bottom: 16px !important;
+    position: relative;
+    padding-left: 16px;
+  }
+  h2::before, h3::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0.15em;
+    bottom: 0.15em;
+    width: 4px;
+    background: linear-gradient(180deg, #f4d374, #c8a84b);
+    border-radius: 2px;
+  }
+
+  /* Card upgrades */
+  .stat-card, .metric-card, [class*="card"] {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.15)) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 14px !important;
+    transition: all 0.2s !important;
+  }
+  .stat-card:hover, .metric-card:hover {
+    border-color: rgba(200,168,75,0.2) !important;
+    transform: translateY(-2px);
+  }
+
+  /* Better tables */
+  table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: rgba(0,0,0,0.15) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+  }
+  th {
+    background: linear-gradient(180deg, rgba(200,168,75,0.15), rgba(200,168,75,0.05)) !important;
+    color: #f4d374 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 10px !important;
+    letter-spacing: 0.15em !important;
+    text-transform: uppercase !important;
+    padding: 12px !important;
+    border-bottom: 1px solid rgba(200,168,75,0.2) !important;
+  }
+  td {
+    padding: 10px 12px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    font-size: 13px !important;
+  }
+  tr:last-child td { border-bottom: 0 !important; }
+  tr:hover td { background: rgba(200,168,75,0.03) !important; }
+
+  /* Number emphasis */
+  .money, [class*="amount"], [class*="profit"] {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-weight: 700 !important;
+  }
+
+  /* Print / subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,168,75,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,168,75,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    z-index: 0;
+  }
+  .container { position: relative; z-index: 1; }
 </style>
 <div id="pw-overlay">
   <div id="pw-box">
@@ -552,7 +718,16 @@
     const t = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
     return t > 0 && (Date.now() - t) < (SESSION_HOURS * 3600000);
   }
-  // Always require password on visit (no session memory)
+  // 15-min grace period across page navigation
+  const GRACE_MS = 15 * 60 * 1000;
+  const t = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10);
+  if (t > 0 && (Date.now() - t) < GRACE_MS) {
+    const el = document.getElementById('pw-overlay'); if (el) el.remove();
+    const st = document.getElementById('pw-lock-style'); if (st) st.remove();
+    // Refresh timestamp on every page load to extend grace period
+    sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
+    return;
+  }
   window.__pwCheck = async function() {
     const input = document.getElementById('pw-input');
     const err = document.getElementById('pw-error');
@@ -560,7 +735,7 @@
     if (!val) return;
     const hash = await sha256(val);
     if (hash === PW_HASH) {
-      // session not stored - password required each visit
+      sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
       document.getElementById('pw-overlay').remove();
       document.getElementById('pw-lock-style').remove();
     } else {
@@ -1627,6 +1802,117 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 300);
 });
 </script>
+
+
+<style>
+  #home-fab {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    z-index: 9998;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #c8a84b, #a08838);
+    color: #060d1a;
+    font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(200,168,75,0.4), 0 4px 12px rgba(0,0,0,0.3);
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 2px solid rgba(255,255,255,0.15);
+  }
+  #home-fab:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 12px 32px rgba(200,168,75,0.5), 0 6px 16px rgba(0,0,0,0.4);
+  }
+  #home-fab:active { transform: scale(0.95); }
+  @media (max-width: 640px) {
+    #home-fab { bottom: 20px; right: 20px; width: 52px; height: 52px; font-size: 20px; }
+  }
+
+  /* Enhanced dashboard styling — world class polish */
+  .container { max-width: 1080px !important; padding: 0 20px 60px !important; }
+
+  /* Section headers upgrade */
+  h2, h3 {
+    font-family: 'Playfair Display', 'Inter', serif;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-top: 32px !important;
+    margin-bottom: 16px !important;
+    position: relative;
+    padding-left: 16px;
+  }
+  h2::before, h3::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0.15em;
+    bottom: 0.15em;
+    width: 4px;
+    background: linear-gradient(180deg, #f4d374, #c8a84b);
+    border-radius: 2px;
+  }
+
+  /* Card upgrades */
+  .stat-card, .metric-card, [class*="card"] {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.15)) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 14px !important;
+    transition: all 0.2s !important;
+  }
+  .stat-card:hover, .metric-card:hover {
+    border-color: rgba(200,168,75,0.2) !important;
+    transform: translateY(-2px);
+  }
+
+  /* Better tables */
+  table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: rgba(0,0,0,0.15) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+  }
+  th {
+    background: linear-gradient(180deg, rgba(200,168,75,0.15), rgba(200,168,75,0.05)) !important;
+    color: #f4d374 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 10px !important;
+    letter-spacing: 0.15em !important;
+    text-transform: uppercase !important;
+    padding: 12px !important;
+    border-bottom: 1px solid rgba(200,168,75,0.2) !important;
+  }
+  td {
+    padding: 10px 12px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    font-size: 13px !important;
+  }
+  tr:last-child td { border-bottom: 0 !important; }
+  tr:hover td { background: rgba(200,168,75,0.03) !important; }
+
+  /* Number emphasis */
+  .money, [class*="amount"], [class*="profit"] {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-weight: 700 !important;
+  }
+
+  /* Print / subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,168,75,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,168,75,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    z-index: 0;
+  }
+  .container { position: relative; z-index: 1; }
+</style>
+<a href="./" id="home-fab" title="Back to Home">🏠</a>
 
 </body>
 </html>

@@ -542,7 +542,16 @@
     const t = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
     return t > 0 && (Date.now() - t) < (SESSION_HOURS * 3600000);
   }
-  // Always require password on visit (no session memory)
+  // 15-min grace period across page navigation
+  const GRACE_MS = 15 * 60 * 1000;
+  const t = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10);
+  if (t > 0 && (Date.now() - t) < GRACE_MS) {
+    const el = document.getElementById('pw-overlay'); if (el) el.remove();
+    const st = document.getElementById('pw-lock-style'); if (st) st.remove();
+    // Refresh timestamp on every page load to extend grace period
+    sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
+    return;
+  }
   window.__pwCheck = async function() {
     const input = document.getElementById('pw-input');
     const err = document.getElementById('pw-error');
@@ -550,7 +559,7 @@
     if (!val) return;
     const hash = await sha256(val);
     if (hash === PW_HASH) {
-      // session not stored - password required each visit
+      sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
       document.getElementById('pw-overlay').remove();
       document.getElementById('pw-lock-style').remove();
     } else {
@@ -1955,5 +1964,33 @@ document.addEventListener('click', () => {
 // Pre-load existing data into cloud on first run
 cloudLoadState();
 </script>
+
+<style>
+  #home-fab {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    z-index: 9998;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #c8a84b, #a08838);
+    color: #060d1a;
+    font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(200,168,75,0.4), 0 4px 12px rgba(0,0,0,0.3);
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 2px solid rgba(255,255,255,0.15);
+  }
+  #home-fab:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 12px 32px rgba(200,168,75,0.5), 0 6px 16px rgba(0,0,0,0.4);
+  }
+  #home-fab:active { transform: scale(0.95); }
+  @media (max-width: 640px) {
+    #home-fab { bottom: 20px; right: 20px; width: 52px; height: 52px; font-size: 20px; }
+  }
+</style>
+<a href="./" id="home-fab" title="Back to Home">🏠</a>
+
 </body>
 </html>

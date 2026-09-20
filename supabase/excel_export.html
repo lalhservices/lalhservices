@@ -126,6 +126,29 @@ async function sha256(str) {
   return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
+// Grace period
+const STORAGE_KEY = 'lalh_pw_unlocked_v1';
+const GRACE_MS = 15 * 60 * 1000;
+(function checkGrace() {
+  const t = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10);
+  if (t > 0 && (Date.now() - t) < GRACE_MS) {
+    sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
+    // Auto-unlock on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const overlay = document.getElementById('pw-overlay');
+        const main = document.getElementById('main');
+        if (overlay) overlay.remove();
+        if (main) main.style.display = 'block';
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        if (typeof loadData === 'function') loadData();
+        else if (typeof loadAllJobs === 'function') loadAllJobs();
+        else if (typeof loadWeeks === 'function') loadWeeks();
+      }, 50);
+    });
+  }
+})();
+
 window.__pwCheck = async function() {
   const input = document.getElementById('pw-input');
   const err = document.getElementById('pw-error');
@@ -133,6 +156,7 @@ window.__pwCheck = async function() {
   if (!val) return;
   const hash = await sha256(val);
   if (hash === PW_HASH) {
+    sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
     document.getElementById('pw-overlay').remove();
     document.getElementById('main').style.display = 'block';
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -320,5 +344,33 @@ async function exportAll() {
   status.textContent = '✓ Downloaded LALH_Full_History.xlsx';
 }
 </script>
+
+<style>
+  #home-fab {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    z-index: 9998;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #c8a84b, #a08838);
+    color: #060d1a;
+    font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(200,168,75,0.4), 0 4px 12px rgba(0,0,0,0.3);
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 2px solid rgba(255,255,255,0.15);
+  }
+  #home-fab:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 12px 32px rgba(200,168,75,0.5), 0 6px 16px rgba(0,0,0,0.4);
+  }
+  #home-fab:active { transform: scale(0.95); }
+  @media (max-width: 640px) {
+    #home-fab { bottom: 20px; right: 20px; width: 52px; height: 52px; font-size: 20px; }
+  }
+</style>
+<a href="./" id="home-fab" title="Back to Home">🏠</a>
+
 </body>
 </html>
