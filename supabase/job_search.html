@@ -205,6 +205,31 @@ function formatJobDate(wk, day) {
   return day + ' ' + d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 }
 
+
+function formatTime12(t) {
+  // "07:00" -> "7am", "10:30" -> "10:30am", "13:00" -> "1pm"
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const period = h >= 12 ? 'pm' : 'am';
+  const h12 = ((h + 11) % 12) + 1;
+  return h12 + (m > 0 ? ':' + String(m).padStart(2, '0') : '') + period;
+}
+
+function summariseTimes(rawWorkers) {
+  // Group workers by identical from-to window, then show "7am – 10am · N"
+  if (!rawWorkers || !rawWorkers.length) return '';
+  const groups = {};
+  rawWorkers.forEach(w => {
+    const key = w.from + '|' + w.to;
+    if (!groups[key]) groups[key] = { from: w.from, to: w.to, count: 0 };
+    groups[key].count++;
+  });
+  const parts = Object.values(groups)
+    .sort((a, b) => a.from.localeCompare(b.from))
+    .map(g => formatTime12(g.from) + ' – ' + formatTime12(g.to) + ' · ' + g.count);
+  return parts.join(' | ');
+}
+
 function calcH(from, to) {
   if (!from || !to) return 0;
   const [fh, fm] = from.split(':').map(Number);
@@ -252,10 +277,14 @@ async function loadAllJobs() {
       const [rid, day] = key.split('|');
       let totalHrs = 0;
       const workers = [];
+      const rawWorkers = [];
       (cell.workers || []).forEach(w => {
         const h = calcH(w.from, w.to);
         totalHrs += h;
-        if (h > 0) workers.push(`${w.name} (${h.toFixed(1)}h)`);
+        if (h > 0) {
+          workers.push(`${w.name} (${h.toFixed(1)}h)`);
+          rawWorkers.push({ from: w.from, to: w.to, hrs: h });
+        }
       });
       if (totalHrs === 0 && !cell.parking && !cell.materials) continue;
       const charged = totalHrs * rate;
@@ -268,7 +297,8 @@ async function loadAllJobs() {
         charged,
         parking: parseFloat(cell.parking || 0),
         materials: parseFloat(cell.materials || 0),
-        workers: workers.join(', ')
+        workers: workers.join(', '),
+        rawWorkers
       });
     }
   });
@@ -326,6 +356,7 @@ function doSearch() {
       <div class="job-amount">$${j.charged.toFixed(0)}</div>
       <div class="job-details">
         ${j.hours.toFixed(1)}h × $${j.rate}${j.parking>0?' · +$'+j.parking.toFixed(0)+' parking':''}${j.materials>0?' · +$'+j.materials.toFixed(0)+' materials':''}
+        ${j.rawWorkers && j.rawWorkers.length ? '<br><span style="color:rgba(200,168,75,0.7);font-size:11px;font-family:\'JetBrains Mono\',monospace;">'+summariseTimes(j.rawWorkers)+'</span>' : ''}
         ${j.workers?'<br><span style="color:rgba(255,255,255,0.4);font-size:11px;">'+j.workers+'</span>':''}
       </div>
     </div>`).join('');
