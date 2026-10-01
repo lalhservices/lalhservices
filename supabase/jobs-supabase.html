@@ -808,8 +808,7 @@ function renderBody(){
 
       const park=c.parking||'', mats=c.materials||'';
       h+=`</div>
-          <div style="display:flex;gap:4px;align-items:center;">
-            <button class="add-worker-btn" onclick="addWorker(${rid},'${day}')">+ worker</button>
+          <button class="add-worker-btn" onclick="addWorker(${rid},'${day}')">+ worker</button>
           <div class="cell-footer">
             <div class="cell-total-hrs" id="cdh_${rid}_${day}">${dh>0?(fmt(dh)||''):'&nbsp;'}</div>
             <div class="cell-extra-row">
