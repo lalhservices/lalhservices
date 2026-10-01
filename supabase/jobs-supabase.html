@@ -872,7 +872,23 @@ function setW(rid,day,wi,field,value){
   const k=ck(rid,day);
   if(!cells[k]) cells[k]={jobName:'',workers:[],parking:'',materials:''};
   if(!cells[k].workers[wi]) cells[k].workers[wi]=newWorker();
+  const workerArr = cells[k].workers;
+  const prevHadNoName = !workerArr[wi].name;
   cells[k].workers[wi][field]=value;
+  // Auto-fill times from first worker when a new name is entered
+  // Only triggers once per row: when name goes from empty to non-empty, and this row has no times yet
+  if (field === 'name' && value && prevHadNoName && wi > 0) {
+    const target = workerArr[wi];
+    if (!target.from && !target.to) {
+      const first = workerArr[0];
+      if (first && first.from && first.to) {
+        target.from = first.from;
+        target.to = first.to;
+        // Re-render this cell so time inputs show the filled values
+        render();
+      }
+    }
+  }
   const w=cells[k].workers[wi];
   const wh=calcH(w.from,w.to);
   const badge=document.getElementById('whb_'+rid+'_'+day+'_'+wi);
