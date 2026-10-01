@@ -157,14 +157,6 @@
   .cell-extra-sym { font-size: 9px; color: var(--text3); flex-shrink: 0; }
   .cell-extra-inp { font-size: 10px; color: var(--text2); font-weight: 500; }
   .cell-extra-inp.filled { color: var(--text); font-weight: 600; }
-  
-  .apply-times-btn {
-    display: inline-block; margin-top: 5px; margin-left: 4px; padding: 3px 8px;
-    background: rgba(200,168,75,0.12); border: 1px dashed rgba(200,168,75,0.4); border-radius: 3px;
-    font-size: 8px; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase;
-    cursor: pointer; transition: all 0.12s;
-  }
-  .apply-times-btn:hover { background: rgba(200,168,75,0.25); border-color: var(--accent); }
 
   .add-worker-btn {
     display: block; width: 100%; margin-top: 5px; padding: 3px 0;
@@ -818,8 +810,6 @@ function renderBody(){
       h+=`</div>
           <div style="display:flex;gap:4px;align-items:center;">
             <button class="add-worker-btn" onclick="addWorker(${rid},'${day}')">+ worker</button>
-            ${(c.workers||[]).length>=2 ? '<button class="apply-times-btn" onclick="applyTimesToAll('+rid+',&quot;'+day+'&quot;)" title="Copy first worker&apos;s times to all">⇄ Same times</button>' : ''}
-          </div>
           <div class="cell-footer">
             <div class="cell-total-hrs" id="cdh_${rid}_${day}">${dh>0?(fmt(dh)||''):'&nbsp;'}</div>
             <div class="cell-extra-row">
@@ -916,24 +906,6 @@ function addWorker(rid,day){
   if(!cells[k]) cells[k]={jobName:'',workers:[],parking:'',materials:''};
   cells[k].workers.push(newWorker());
   render();cloudScheduleSave();
-}
-
-
-function applyTimesToAll(rid, day) {
-  const k = ck(rid, day);
-  if (!cells[k] || !cells[k].workers || cells[k].workers.length < 2) return;
-  const first = cells[k].workers[0];
-  if (!first.from || !first.to) {
-    alert('Set times for the first worker before applying to all.');
-    return;
-  }
-  cells[k].workers.forEach((w, i) => {
-    if (i === 0) return;
-    w.from = first.from;
-    w.to = first.to;
-  });
-  render();
-  cloudScheduleSave();
 }
 
 function delWorker(rid,day,wi){
