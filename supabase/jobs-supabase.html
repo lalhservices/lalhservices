@@ -873,8 +873,20 @@ function setW(rid,day,wi,field,value){
       if (first && first.from && first.to) {
         target.from = first.from;
         target.to = first.to;
-        // Re-render this cell so time inputs show the filled values
-        render();
+        // Update time inputs directly in DOM to avoid full re-render (preserves name input focus)
+        const row = document.querySelector('[data-wkey="'+rid+'_'+day+'_'+wi+'"]');
+        if (row) {
+          const parent = row.closest('.worker-row') || row.parentElement;
+          if (parent) {
+            const timeInputs = parent.querySelectorAll('.worker-time-inp');
+            if (timeInputs[0]) { timeInputs[0].value = toDisp(first.from); timeInputs[0].classList.add('filled'); }
+            if (timeInputs[1]) { timeInputs[1].value = toDisp(first.to); timeInputs[1].classList.add('filled'); }
+          }
+        }
+        // Update hours badge
+        const wh = calcH(target.from, target.to);
+        const badge = document.getElementById('whb_'+rid+'_'+day+'_'+wi);
+        if (badge) { badge.textContent = wh>0?(fmt(wh)||''):'–'; badge.className='worker-hrs-badge'+(wh>0?' has-hrs':''); }
       }
     }
   }
