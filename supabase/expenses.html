@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Expenses — LALH Services</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8a84b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23f4d374"/><stop offset="1" stop-color="%23c8a84b"/></linearGradient></defs><path d="M50 5 L92 50 L50 95 L8 50 Z" fill="%230d1a30" stroke="url(%23g)" stroke-width="3"/><path d="M32 32 L32 68 L52 68 L52 62 L38 62 L38 32 Z" fill="url(%23g)"/></svg>'>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy-950: #060d1a;
+    --navy-900: #0d1a30;
+    --navy-800: #142748;
+    --navy-700: #1e3a63;
+    --gold-300: #f4d374;
+    --gold-500: #c8a84b;
+    --emerald: #34d399;
+    --coral: #ff6b5e;
+    --amber: #fbbf24;
+    --text-muted: rgba(255,255,255,0.55);
+  }
+  body {
+    background: radial-gradient(ellipse at top, var(--navy-800), var(--navy-950));
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 80px;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; color: var(--gold-300); font-weight: 800; }
+  .subtitle { color: var(--text-muted); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 24px; }
+
+  .week-nav {
+    background: linear-gradient(135deg, rgba(200,168,75,0.05), rgba(30,58,99,0.2));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .week-nav button {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .week-nav button:hover { border-color: var(--gold-500); color: var(--gold-300); }
+  .week-label {
+    flex: 1;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--gold-300);
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+
+  .week-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .sum-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.15));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .sum-card.cash-in { border-color: rgba(52,211,153,0.25); }
+  .sum-card.cash-out { border-color: rgba(255,107,94,0.25); }
+  .sum-card.profit { border-color: rgba(200,168,75,0.3); }
+  .sum-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
+  .sum-value { font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+  .sum-value.in { color: var(--emerald); }
+  .sum-value.out { color: var(--coral); }
+  .sum-value.net { color: var(--gold-300); }
+  .sum-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  .day-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .day-header {
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 16px;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+  .day-header:hover { background: rgba(200,168,75,0.05); }
+  .day-title { font-weight: 700; font-size: 14px; }
+  .day-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .day-in { color: var(--emerald); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .day-out { color: var(--coral); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .day-net { color: var(--gold-300); font-weight: 800; font-family: 'JetBrains Mono', monospace; min-width: 90px; text-align: right; }
+  .expand-icon { color: rgba(255,255,255,0.4); font-size: 10px; transition: transform 0.2s; }
+  .day-card.open .expand-icon { transform: rotate(180deg); }
+
+  .day-body { display: none; padding: 4px 18px 16px; }
+  .day-card.open .day-body { display: block; }
+
+  .section {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  .section-label {
+    font-size: 10px;
+    color: var(--gold-500);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .line {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 6px 0;
+    gap: 12px;
+    font-size: 13px;
+    border-bottom: 1px dotted rgba(255,255,255,0.05);
+  }
+  .line:last-child { border-bottom: 0; }
+  .line .label { color: rgba(255,255,255,0.75); }
+  .line .amt { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #fff; }
+  .line.in .amt { color: var(--emerald); }
+  .line.out .amt { color: var(--coral); }
+  .line .meta { color: var(--text-muted); font-size: 11px; }
+
+  .loading { text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 13px; }
+  a.back { display: inline-block; margin-bottom: 20px; color: var(--gold-300); text-decoration: none; font-size: 12px; letter-spacing: 0.1em; }
+
+  @media (max-width: 640px) {
+    .week-summary { grid-template-columns: 1fr 1fr; }
+    .day-header { grid-template-columns: 1fr auto; }
+    .day-in, .day-out { display: none; }
+  }
+
+  #home-fab {
+    position: fixed; bottom: 16px; right: 16px; z-index: 9998;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(200,168,75,0.85); color: #060d1a; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-decoration: none;
+    opacity: 0.55; transition: all 0.2s;
+  }
+  #home-fab:hover { opacity: 1; transform: scale(1.1); }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <a href="./" class="back">← Back</a>
+  <h1>💵 Weekly Expenses</h1>
+  <div class="subtitle">Daily cash in · Cash out · Net per day</div>
+
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)">← Prev</button>
+    <div class="week-label" id="week-label">Loading...</div>
+    <button onclick="changeWeek(1)">Next →</button>
+    <button onclick="goToday()">Today</button>
+  </div>
+
+  <div class="week-summary">
+    <div class="sum-card cash-in">
+      <div class="sum-label">Charged (In)</div>
+      <div class="sum-value in" id="w-in">$0</div>
+      <div class="sum-sub" id="w-in-sub"></div>
+    </div>
+    <div class="sum-card cash-out">
+      <div class="sum-label">Paid Out</div>
+      <div class="sum-value out" id="w-out">$0</div>
+      <div class="sum-sub" id="w-out-sub"></div>
+    </div>
+    <div class="sum-card profit">
+      <div class="sum-label">Net Profit</div>
+      <div class="sum-value net" id="w-net">$0</div>
+      <div class="sum-sub" id="w-net-sub"></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Margin</div>
+      <div class="sum-value net" id="w-margin">0%</div>
+      <div class="sum-sub">Of total charged</div>
+    </div>
+  </div>
+
+  <div id="days-list"><div class="loading">Loading...</div></div>
+</div>
+
+<a href="./" id="home-fab" title="Home">🏠</a>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+
+let sb;
+let offset = 0;
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function calcH(from, to) {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(':').map(Number);
+  const [th, tm] = to.split(':').map(Number);
+  let m = (th*60+tm)-(fh*60+fm);
+  if (m<0) m+=1440;
+  return m/60;
+}
+
+function money(n) { return '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function signed(n) { return (n>=0?'+':'-') + money(n); }
+
+function weekDates(off) {
+  const now = new Date(), d = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - d + (d === 0 ? -6 : 1) + off * 7);
+  mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  return { mon, sun };
+}
+function weekKey(off) {
+  const { mon } = weekDates(off);
+  const yr = mon.getFullYear();
+  const start = new Date(yr, 0, 1);
+  const wn = Math.ceil(((mon - start) / 86400000 + start.getDay() + 1) / 7);
+  return yr + '-W' + String(wn).padStart(2, '0');
+}
+
+function normName(n) { return (n||'').toLowerCase().trim().replace(/\s+/g, ' '); }
+function matchStaff(typed, people) {
+  const t = normName(typed);
+  if (!t) return null;
+  for (const p of people) {
+    const full = normName(p.name);
+    const first = full.split(' ')[0];
+    if (t === full || t === first) return p;
+  }
+  for (const p of people) {
+    const first = normName(p.name).split(' ')[0];
+    if (first.length>=3 && (t.startsWith(first.slice(0,4)) || first.startsWith(t.slice(0,4)))) return p;
+  }
+  return null;
+}
+
+function changeWeek(dir) { offset += dir; load(); }
+function goToday() { offset = 0; load(); }
+
+async function load() {
+  document.getElementById('days-list').innerHTML = '<div class="loading">Loading...</div>';
+  const wk = weekKey(offset);
+  const { mon, sun } = weekDates(offset);
+  const fmt = (d) => d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  document.getElementById('week-label').textContent = 'W' + wk.split('W')[1] + ' · ' + fmt(mon) + ' – ' + fmt(sun);
+
+  const keys = ['roster_global','jt2_global','roster_wk_'+wk,'roster_rates_'+wk,'jt2_wk_'+wk,'jt2_rate_'+wk,'roster_snapshot_'+wk];
+  const { data, error } = await sb.from('roster_data').select('key, value').in('key', keys);
+  if (error) { document.getElementById('days-list').innerHTML = '<div class="loading">Error: '+error.message+'</div>'; return; }
+  const map = {}; (data||[]).forEach(r=>{map[r.key]=r.value;});
+
+  const global = JSON.parse(map['roster_global']||'{"people":[]}');
+  const snapshot = map['roster_snapshot_'+wk] ? JSON.parse(map['roster_snapshot_'+wk]) : null;
+  let people = (snapshot && Array.isArray(snapshot) && snapshot.length) ? snapshot : (global.people||[]);
+  const rates = JSON.parse(map['roster_rates_'+wk]||'{}');
+  people.forEach(p=>{ if(rates[p.id]!==undefined) p.rate = rates[p.id]; });
+  const roster = JSON.parse(map['roster_wk_'+wk]||'{}');
+  const jobsGlobal = JSON.parse(map['jt2_global']||'{"rows":[]}');
+  const jobsWk = JSON.parse(map['jt2_wk_'+wk]||'{}');
+  const jobRate = parseFloat(map['jt2_rate_'+wk]||45);
+
+  // Build per-day summary
+  const daily = {};
+  let wIn=0, wOut=0, wJobCharge=0, wExCharge=0, wWages=0, wParking=0, wMat=0, wFuel=0;
+
+  DAYS.forEach(day => {
+    daily[day] = {
+      jobs: [],      // {name, hrs, charged, parking, materials}
+      wages: [],     // {name, hrs, rate, pay}
+      exPark: 0, exMat: 0, exFuel: 0,  // extras paid to staff
+      chJobHrs: 0, chAmt: 0, chPark: 0, chMat: 0,
+      pdWages: 0, pdHrs: 0,
+      in: 0, out: 0
+    };
+
+    // Jobs billed on this day
+    (jobsGlobal.rows||[]).forEach(rid => {
+      const cell = jobsWk[rid+'|'+day];
+      if (!cell || !cell.jobName) return;
+      let hrs = 0;
+      (cell.workers||[]).forEach(w => { hrs += calcH(w.from, w.to); });
+      const charged = hrs * jobRate;
+      const parking = parseFloat(cell.parking||0);
+      const materials = parseFloat(cell.materials||0);
+      if (hrs>0 || parking>0 || materials>0) {
+        daily[day].jobs.push({ name: cell.jobName, hrs, charged, parking, materials });
+        daily[day].chJobHrs += hrs;
+        daily[day].chAmt += charged;
+        daily[day].chPark += parking;
+        daily[day].chMat += materials;
+      }
+    });
+
+    // Wages paid on this day
+    people.forEach(p => {
+      const e = (roster[p.id]||{})[day];
+      if (!e) return;
+      const park = parseFloat(e.parking||0);
+      const mat = parseFloat(e.materials||0);
+      const fuel = parseFloat(e.fuel||0);
+      let hrs = 0, pay = 0;
+      if (e.timeFrom && e.timeTo && !e.off) {
+        hrs = calcH(e.timeFrom, e.timeTo);
+        pay = hrs * parseFloat(p.rate||30);
+      }
+      if (hrs>0 || park>0 || mat>0 || fuel>0) {
+        daily[day].wages.push({ name: p.name, hrs, rate: parseFloat(p.rate||30), pay, park, mat, fuel });
+        daily[day].pdWages += pay;
+        daily[day].pdHrs += hrs;
+        daily[day].exPark += park;
+        daily[day].exMat += mat;
+        daily[day].exFuel += fuel;
+      }
+    });
+
+    daily[day].in = daily[day].chAmt + daily[day].chPark + daily[day].chMat;
+    daily[day].out = daily[day].pdWages + daily[day].exPark + daily[day].exMat + daily[day].exFuel;
+
+    wIn += daily[day].in;
+    wOut += daily[day].out;
+    wJobCharge += daily[day].chAmt;
+    wExCharge += daily[day].chPark + daily[day].chMat;
+    wWages += daily[day].pdWages;
+    wParking += daily[day].exPark;
+    wMat += daily[day].exMat;
+    wFuel += daily[day].exFuel;
+  });
+
+  const net = wIn - wOut;
+  const margin = wIn>0 ? Math.round((net/wIn)*100) : 0;
+  document.getElementById('w-in').textContent = money(wIn);
+  document.getElementById('w-in-sub').textContent = 'Jobs ' + money(wJobCharge) + ' · Extras ' + money(wExCharge);
+  document.getElementById('w-out').textContent = money(wOut);
+  document.getElementById('w-out-sub').textContent = 'Wages ' + money(wWages) + ' · Parking ' + money(wParking) + ' · Fuel ' + money(wFuel);
+  document.getElementById('w-net').textContent = signed(net);
+  document.getElementById('w-net-sub').textContent = net>=0 ? 'Profit this week' : 'Loss this week';
+  document.getElementById('w-margin').textContent = margin + '%';
+
+  // Render per-day cards
+  const html = DAYS.map(day => {
+    const d = daily[day];
+    const dt = new Date(mon); dt.setDate(mon.getDate() + DAYS.indexOf(day));
+    const dateStr = dt.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+    const dayNet = d.in - d.out;
+    const empty = d.in === 0 && d.out === 0;
+
+    const jobsHtml = d.jobs.length ? d.jobs.map(j => `
+      <div class="line in">
+        <div>
+          <div class="label">${j.name}</div>
+          <div class="meta">${j.hrs.toFixed(1)}h × $${jobRate}${j.parking>0?' · +'+money(j.parking)+' parking':''}${j.materials>0?' · +'+money(j.materials)+' materials':''}</div>
+        </div>
+        <div class="amt">${money(j.charged + j.parking + j.materials)}</div>
+      </div>`).join('') : '<div class="meta" style="padding:6px 0;">No jobs billed</div>';
+
+    const wagesHtml = d.wages.length ? d.wages.map(w => {
+      const total = w.pay + w.park + w.mat + w.fuel;
+      const extras = [];
+      if (w.park>0) extras.push('park '+money(w.park));
+      if (w.mat>0) extras.push('mat '+money(w.mat));
+      if (w.fuel>0) extras.push('fuel '+money(w.fuel));
+      return `
+      <div class="line out">
+        <div>
+          <div class="label">${w.name}</div>
+          <div class="meta">${w.hrs>0?w.hrs.toFixed(1)+'h × $'+w.rate:''}${extras.length?(w.hrs>0?' · ':'')+extras.join(' · '):''}</div>
+        </div>
+        <div class="amt">${money(total)}</div>
+      </div>`;
+    }).join('') : '<div class="meta" style="padding:6px 0;">No wages paid</div>';
+
+    return `
+      <div class="day-card ${empty?'':''}" id="day-${day}">
+        <div class="day-header" onclick="toggleDay('${day}')">
+          <div>
+            <div class="day-title">${day} · ${dateStr}</div>
+            <div class="day-sub">${d.jobs.length} job${d.jobs.length===1?'':'s'} · ${d.wages.length} staff</div>
+          </div>
+          <div class="day-in">${empty?'':'+ '+money(d.in)}</div>
+          <div class="day-out">${empty?'':'− '+money(d.out)}</div>
+          <div class="day-net">${empty?'—':signed(dayNet)} <span class="expand-icon">▼</span></div>
+        </div>
+        <div class="day-body">
+          <div class="section">
+            <div class="section-label">Cash In · Jobs billed</div>
+            ${jobsHtml}
+          </div>
+          <div class="section">
+            <div class="section-label">Cash Out · Staff paid</div>
+            ${wagesHtml}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('days-list').innerHTML = html;
+}
+
+function toggleDay(day) {
+  const card = document.getElementById('day-'+day);
+  if (card) card.classList.toggle('open');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  load();
+});
+</script>
+</body>
+</html>
