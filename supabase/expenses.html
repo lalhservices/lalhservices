@@ -166,8 +166,8 @@
 
 <div class="container">
   <a href="./" class="back">← Back</a>
-  <h1>💵 Weekly Expenses</h1>
-  <div class="subtitle">Daily cash in · Cash out · Net per day</div>
+  <h1>💵 Expenses</h1>
+  <div class="subtitle">Parking · Materials · Fuel · Per day</div>
 
   <div class="week-nav">
     <button onclick="changeWeek(-1)">← Prev</button>
@@ -178,24 +178,24 @@
 
   <div class="week-summary">
     <div class="sum-card cash-in">
-      <div class="sum-label">Charged (In)</div>
-      <div class="sum-value in" id="w-in">$0</div>
-      <div class="sum-sub" id="w-in-sub"></div>
+      <div class="sum-label">Charged to Client</div>
+      <div class="sum-value in" id="w-ch">$0</div>
+      <div class="sum-sub" id="w-ch-sub">Parking + Materials</div>
     </div>
     <div class="sum-card cash-out">
-      <div class="sum-label">Paid Out</div>
-      <div class="sum-value out" id="w-out">$0</div>
-      <div class="sum-sub" id="w-out-sub"></div>
+      <div class="sum-label">Paid to Staff</div>
+      <div class="sum-value out" id="w-pd">$0</div>
+      <div class="sum-sub" id="w-pd-sub">Parking + Materials + Fuel</div>
     </div>
     <div class="sum-card profit">
-      <div class="sum-label">Net Profit</div>
-      <div class="sum-value net" id="w-net">$0</div>
-      <div class="sum-sub" id="w-net-sub"></div>
+      <div class="sum-label">Gap</div>
+      <div class="sum-value net" id="w-gap">$0</div>
+      <div class="sum-sub" id="w-gap-sub">Charged – Reimbursed</div>
     </div>
     <div class="sum-card">
-      <div class="sum-label">Margin</div>
-      <div class="sum-value net" id="w-margin">0%</div>
-      <div class="sum-sub">Of total charged</div>
+      <div class="sum-label">Fuel Only</div>
+      <div class="sum-value out" id="w-fuel">$0</div>
+      <div class="sum-sub">Never charged to client</div>
     </div>
   </div>
 
@@ -281,135 +281,121 @@ async function load() {
   const jobsWk = JSON.parse(map['jt2_wk_'+wk]||'{}');
   const jobRate = parseFloat(map['jt2_rate_'+wk]||45);
 
-  // Build per-day summary
+  // Build per-day expense summary (parking / materials / fuel only)
   const daily = {};
-  let wIn=0, wOut=0, wJobCharge=0, wExCharge=0, wWages=0, wParking=0, wMat=0, wFuel=0;
+  let wChargedPark=0, wChargedMat=0, wPaidPark=0, wPaidMat=0, wPaidFuel=0;
 
   DAYS.forEach(day => {
     daily[day] = {
-      jobs: [],      // {name, hrs, charged, parking, materials}
-      wages: [],     // {name, hrs, rate, pay}
-      exPark: 0, exMat: 0, exFuel: 0,  // extras paid to staff
-      chJobHrs: 0, chAmt: 0, chPark: 0, chMat: 0,
-      pdWages: 0, pdHrs: 0,
-      in: 0, out: 0
+      chargedItems: [],   // {jobName, parking, materials}
+      paidItems: [],      // {name, park, mat, fuel}
+      chPark: 0, chMat: 0, pdPark: 0, pdMat: 0, pdFuel: 0
     };
 
-    // Jobs billed on this day
+    // Charged to client — parking/materials from job cells
     (jobsGlobal.rows||[]).forEach(rid => {
       const cell = jobsWk[rid+'|'+day];
       if (!cell || !cell.jobName) return;
-      let hrs = 0;
-      (cell.workers||[]).forEach(w => { hrs += calcH(w.from, w.to); });
-      const charged = hrs * jobRate;
       const parking = parseFloat(cell.parking||0);
       const materials = parseFloat(cell.materials||0);
-      if (hrs>0 || parking>0 || materials>0) {
-        daily[day].jobs.push({ name: cell.jobName, hrs, charged, parking, materials });
-        daily[day].chJobHrs += hrs;
-        daily[day].chAmt += charged;
+      if (parking>0 || materials>0) {
+        daily[day].chargedItems.push({ jobName: cell.jobName, parking, materials });
         daily[day].chPark += parking;
         daily[day].chMat += materials;
       }
     });
 
-    // Wages paid on this day
+    // Paid to staff — parking/materials/fuel
     people.forEach(p => {
       const e = (roster[p.id]||{})[day];
       if (!e) return;
       const park = parseFloat(e.parking||0);
       const mat = parseFloat(e.materials||0);
       const fuel = parseFloat(e.fuel||0);
-      let hrs = 0, pay = 0;
-      if (e.timeFrom && e.timeTo && !e.off) {
-        hrs = calcH(e.timeFrom, e.timeTo);
-        pay = hrs * parseFloat(p.rate||30);
-      }
-      if (hrs>0 || park>0 || mat>0 || fuel>0) {
-        daily[day].wages.push({ name: p.name, hrs, rate: parseFloat(p.rate||30), pay, park, mat, fuel });
-        daily[day].pdWages += pay;
-        daily[day].pdHrs += hrs;
-        daily[day].exPark += park;
-        daily[day].exMat += mat;
-        daily[day].exFuel += fuel;
+      if (park>0 || mat>0 || fuel>0) {
+        daily[day].paidItems.push({ name: p.name, park, mat, fuel });
+        daily[day].pdPark += park;
+        daily[day].pdMat += mat;
+        daily[day].pdFuel += fuel;
       }
     });
 
-    daily[day].in = daily[day].chAmt + daily[day].chPark + daily[day].chMat;
-    daily[day].out = daily[day].pdWages + daily[day].exPark + daily[day].exMat + daily[day].exFuel;
-
-    wIn += daily[day].in;
-    wOut += daily[day].out;
-    wJobCharge += daily[day].chAmt;
-    wExCharge += daily[day].chPark + daily[day].chMat;
-    wWages += daily[day].pdWages;
-    wParking += daily[day].exPark;
-    wMat += daily[day].exMat;
-    wFuel += daily[day].exFuel;
+    wChargedPark += daily[day].chPark;
+    wChargedMat += daily[day].chMat;
+    wPaidPark += daily[day].pdPark;
+    wPaidMat += daily[day].pdMat;
+    wPaidFuel += daily[day].pdFuel;
   });
-
-  const net = wIn - wOut;
-  const margin = wIn>0 ? Math.round((net/wIn)*100) : 0;
-  document.getElementById('w-in').textContent = money(wIn);
-  document.getElementById('w-in-sub').textContent = 'Jobs ' + money(wJobCharge) + ' · Extras ' + money(wExCharge);
-  document.getElementById('w-out').textContent = money(wOut);
-  document.getElementById('w-out-sub').textContent = 'Wages ' + money(wWages) + ' · Parking ' + money(wParking) + ' · Fuel ' + money(wFuel);
-  document.getElementById('w-net').textContent = signed(net);
-  document.getElementById('w-net-sub').textContent = net>=0 ? 'Profit this week' : 'Loss this week';
-  document.getElementById('w-margin').textContent = margin + '%';
+  const totalCharged = wChargedPark + wChargedMat;
+  const totalPaid = wPaidPark + wPaidMat + wPaidFuel;
+  const gap = totalCharged - totalPaid;
+  document.getElementById('w-ch').textContent = money(totalCharged);
+  document.getElementById('w-ch-sub').textContent = 'Park ' + money(wChargedPark) + ' · Mat ' + money(wChargedMat);
+  document.getElementById('w-pd').textContent = money(totalPaid);
+  document.getElementById('w-pd-sub').textContent = 'Park ' + money(wPaidPark) + ' · Mat ' + money(wPaidMat) + ' · Fuel ' + money(wPaidFuel);
+  document.getElementById('w-gap').textContent = signed(gap);
+  document.getElementById('w-gap-sub').textContent = gap>=0 ? 'Covered by client' : 'Out of pocket';
+  document.getElementById('w-fuel').textContent = money(wPaidFuel);
 
   // Render per-day cards
   const html = DAYS.map(day => {
     const d = daily[day];
     const dt = new Date(mon); dt.setDate(mon.getDate() + DAYS.indexOf(day));
     const dateStr = dt.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-    const dayNet = d.in - d.out;
-    const empty = d.in === 0 && d.out === 0;
+    const dayCharged = d.chPark + d.chMat;
+    const dayPaid = d.pdPark + d.pdMat + d.pdFuel;
+    const dayGap = dayCharged - dayPaid;
+    const empty = dayCharged === 0 && dayPaid === 0;
 
-    const jobsHtml = d.jobs.length ? d.jobs.map(j => `
+    const chHtml = d.chargedItems.length ? d.chargedItems.map(it => {
+      const parts = [];
+      if (it.parking>0) parts.push('Parking '+money(it.parking));
+      if (it.materials>0) parts.push('Materials '+money(it.materials));
+      return `
       <div class="line in">
         <div>
-          <div class="label">${j.name}</div>
-          <div class="meta">${j.hrs.toFixed(1)}h × $${jobRate}${j.parking>0?' · +'+money(j.parking)+' parking':''}${j.materials>0?' · +'+money(j.materials)+' materials':''}</div>
+          <div class="label">${it.jobName}</div>
+          <div class="meta">${parts.join(' · ')}</div>
         </div>
-        <div class="amt">${money(j.charged + j.parking + j.materials)}</div>
-      </div>`).join('') : '<div class="meta" style="padding:6px 0;">No jobs billed</div>';
+        <div class="amt">${money(it.parking + it.materials)}</div>
+      </div>`;
+    }).join('') : '<div class="meta" style="padding:6px 0;">Nothing charged to client</div>';
 
-    const wagesHtml = d.wages.length ? d.wages.map(w => {
-      const total = w.pay + w.park + w.mat + w.fuel;
-      const extras = [];
-      if (w.park>0) extras.push('park '+money(w.park));
-      if (w.mat>0) extras.push('mat '+money(w.mat));
-      if (w.fuel>0) extras.push('fuel '+money(w.fuel));
+    const pdHtml = d.paidItems.length ? d.paidItems.map(it => {
+      const total = it.park + it.mat + it.fuel;
+      const parts = [];
+      if (it.park>0) parts.push('Parking '+money(it.park));
+      if (it.mat>0) parts.push('Materials '+money(it.mat));
+      if (it.fuel>0) parts.push('Fuel '+money(it.fuel));
       return `
       <div class="line out">
         <div>
-          <div class="label">${w.name}</div>
-          <div class="meta">${w.hrs>0?w.hrs.toFixed(1)+'h × $'+w.rate:''}${extras.length?(w.hrs>0?' · ':'')+extras.join(' · '):''}</div>
+          <div class="label">${it.name}</div>
+          <div class="meta">${parts.join(' · ')}</div>
         </div>
         <div class="amt">${money(total)}</div>
       </div>`;
-    }).join('') : '<div class="meta" style="padding:6px 0;">No wages paid</div>';
+    }).join('') : '<div class="meta" style="padding:6px 0;">Nothing paid to staff</div>';
 
     return `
-      <div class="day-card ${empty?'':''}" id="day-${day}">
+      <div class="day-card" id="day-${day}">
         <div class="day-header" onclick="toggleDay('${day}')">
           <div>
             <div class="day-title">${day} · ${dateStr}</div>
-            <div class="day-sub">${d.jobs.length} job${d.jobs.length===1?'':'s'} · ${d.wages.length} staff</div>
+            <div class="day-sub">${d.chargedItems.length} charged · ${d.paidItems.length} paid</div>
           </div>
-          <div class="day-in">${empty?'':'+ '+money(d.in)}</div>
-          <div class="day-out">${empty?'':'− '+money(d.out)}</div>
-          <div class="day-net">${empty?'—':signed(dayNet)} <span class="expand-icon">▼</span></div>
+          <div class="day-in">${empty?'':'+ '+money(dayCharged)}</div>
+          <div class="day-out">${empty?'':'− '+money(dayPaid)}</div>
+          <div class="day-net">${empty?'—':signed(dayGap)} <span class="expand-icon">▼</span></div>
         </div>
         <div class="day-body">
           <div class="section">
-            <div class="section-label">Cash In · Jobs billed</div>
-            ${jobsHtml}
+            <div class="section-label">Charged to Client · Parking + Materials</div>
+            ${chHtml}
           </div>
           <div class="section">
-            <div class="section-label">Cash Out · Staff paid</div>
-            ${wagesHtml}
+            <div class="section-label">Paid to Staff · Parking + Materials + Fuel</div>
+            ${pdHtml}
           </div>
         </div>
       </div>`;
