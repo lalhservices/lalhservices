@@ -345,6 +345,84 @@
     .week-row .week-hrs { font-size: 11px; }
     .status-pill { width: 100%; min-width: 0; }
   }
+
+  /* Confirmation modal */
+  #confirm-modal {
+    position: fixed; inset: 0; z-index: 10000;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  #confirm-modal.show { opacity: 1; }
+  .cm-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(6, 13, 26, 0.75);
+    backdrop-filter: blur(4px);
+  }
+  .cm-card {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: linear-gradient(180deg, var(--navy-800), var(--navy-900));
+    border: 1px solid rgba(200,168,75,0.25);
+    border-radius: 16px;
+    padding: 24px 24px 20px;
+    width: min(92vw, 360px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    transition: transform 0.2s;
+  }
+  #confirm-modal.show .cm-card { transform: translate(-50%, -50%) scale(1); }
+  .cm-title {
+    font-family: 'Playfair Display', 'Inter', serif;
+    font-size: 20px; font-weight: 700;
+    color: var(--gold-300);
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
+  }
+  .cm-message {
+    color: rgba(255,255,255,0.75);
+    font-size: 14px; line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .cm-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px; font-weight: 700;
+    color: var(--gold-300);
+    margin-bottom: 20px;
+    text-align: center;
+    padding: 10px;
+    background: rgba(200,168,75,0.08);
+    border: 1px dashed rgba(200,168,75,0.25);
+    border-radius: 10px;
+  }
+  .cm-amount:empty { display: none; }
+  .cm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .cm-cancel, .cm-ok {
+    padding: 12px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .cm-cancel {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.7);
+  }
+  .cm-cancel:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .cm-ok.cm-primary {
+    background: linear-gradient(135deg, var(--gold-300), var(--gold-500));
+    color: var(--navy-950);
+  }
+  .cm-ok.cm-danger {
+    background: linear-gradient(135deg, #ff6b5e, #d9493e);
+    color: #fff;
+  }
+  .cm-ok:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .cm-ok:active { transform: scale(0.97); }
 </style>
 </head>
 <body>
@@ -741,8 +819,141 @@ async function togglePaid(staffId, wk, markAsPaid) {
     .week-row .week-hrs { font-size: 11px; }
     .status-pill { width: 100%; min-width: 0; }
   }
+
+  /* Confirmation modal */
+  #confirm-modal {
+    position: fixed; inset: 0; z-index: 10000;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  #confirm-modal.show { opacity: 1; }
+  .cm-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(6, 13, 26, 0.75);
+    backdrop-filter: blur(4px);
+  }
+  .cm-card {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: linear-gradient(180deg, var(--navy-800), var(--navy-900));
+    border: 1px solid rgba(200,168,75,0.25);
+    border-radius: 16px;
+    padding: 24px 24px 20px;
+    width: min(92vw, 360px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    transition: transform 0.2s;
+  }
+  #confirm-modal.show .cm-card { transform: translate(-50%, -50%) scale(1); }
+  .cm-title {
+    font-family: 'Playfair Display', 'Inter', serif;
+    font-size: 20px; font-weight: 700;
+    color: var(--gold-300);
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
+  }
+  .cm-message {
+    color: rgba(255,255,255,0.75);
+    font-size: 14px; line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .cm-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px; font-weight: 700;
+    color: var(--gold-300);
+    margin-bottom: 20px;
+    text-align: center;
+    padding: 10px;
+    background: rgba(200,168,75,0.08);
+    border: 1px dashed rgba(200,168,75,0.25);
+    border-radius: 10px;
+  }
+  .cm-amount:empty { display: none; }
+  .cm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .cm-cancel, .cm-ok {
+    padding: 12px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .cm-cancel {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.7);
+  }
+  .cm-cancel:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .cm-ok.cm-primary {
+    background: linear-gradient(135deg, var(--gold-300), var(--gold-500));
+    color: var(--navy-950);
+  }
+  .cm-ok.cm-danger {
+    background: linear-gradient(135deg, #ff6b5e, #d9493e);
+    color: #fff;
+  }
+  .cm-ok:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .cm-ok:active { transform: scale(0.97); }
 </style>
 <a href="./" id="home-fab" title="Back to Home">🏠</a>
+
+
+<!-- Confirmation Modal -->
+<div id="confirm-modal" style="display:none;">
+  <div class="cm-backdrop" onclick="confirmCancel()"></div>
+  <div class="cm-card">
+    <div class="cm-title" id="cm-title">Confirm</div>
+    <div class="cm-message" id="cm-message"></div>
+    <div class="cm-amount" id="cm-amount"></div>
+    <div class="cm-actions">
+      <button class="cm-cancel" onclick="confirmCancel()">Cancel</button>
+      <button class="cm-ok" id="cm-ok-btn" onclick="confirmOk()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Confirmation Modal ──
+let _confirmResolve = null;
+
+function askConfirm(opts) {
+  return new Promise(resolve => {
+    _confirmResolve = resolve;
+    document.getElementById('cm-title').textContent = opts.title || 'Confirm';
+    document.getElementById('cm-message').textContent = opts.message || 'Are you sure?';
+    document.getElementById('cm-amount').textContent = opts.amount || '';
+    const okBtn = document.getElementById('cm-ok-btn');
+    okBtn.textContent = opts.okLabel || 'Confirm';
+    okBtn.className = 'cm-ok ' + (opts.danger ? 'cm-danger' : 'cm-primary');
+    document.getElementById('confirm-modal').style.display = 'block';
+    setTimeout(() => document.getElementById('confirm-modal').classList.add('show'), 10);
+  });
+}
+
+function confirmOk() {
+  if (_confirmResolve) _confirmResolve(true);
+  closeConfirm();
+}
+function confirmCancel() {
+  if (_confirmResolve) _confirmResolve(false);
+  closeConfirm();
+}
+function closeConfirm() {
+  const m = document.getElementById('confirm-modal');
+  m.classList.remove('show');
+  setTimeout(() => { m.style.display = 'none'; _confirmResolve = null; }, 200);
+}
+
+// Escape key closes modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('confirm-modal').style.display === 'block') {
+    confirmCancel();
+  }
+});
+</script>
 
 </body>
 </html>
