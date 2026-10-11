@@ -116,6 +116,30 @@
 #pw-input:focus { outline: none; border-color: var(--gold-500); }
 #pw-error { color: var(--coral); font-size: 12px; margin-top: 12px; min-height: 16px; font-family: monospace; }
 </style>
+
+<script>
+// Context-aware Home button — route staff back to staff.html, admin to admin index
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  // Set flag if came from staff
+  if (params.get('staff') === '1') {
+    sessionStorage.setItem('lalh_user_type', 'staff');
+  }
+  // Check flag and redirect home button
+  const userType = sessionStorage.getItem('lalh_user_type');
+  if (userType === 'staff') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const homeBtn = document.getElementById('home-fab');
+      if (homeBtn) homeBtn.href = 'staff.html';
+      // Also any Back links
+      document.querySelectorAll('a.back').forEach(a => {
+        if (a.getAttribute('href') === './') a.href = 'staff.html';
+      });
+    });
+  }
+})();
+</script>
+
 </head>
 <body>
 
