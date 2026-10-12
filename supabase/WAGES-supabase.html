@@ -1245,7 +1245,13 @@ function updateWeekLabel() {
 }
 
 async function changeWeek(dir) {
-  clearTimeout(saveTimer);
+  // CRITICAL: flush any pending save BEFORE navigating.
+  // Otherwise edits made within the 800ms debounce window get dropped.
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    await cloudForceFlushSave();
+  }
   G.currentOffset += dir;
   // Show loading indicator
   const wl = document.getElementById('week-label');
@@ -1626,36 +1632,51 @@ function startPolling() {
   setInterval(pollForChanges, 60000); initRealtime(); // Check every 5 seconds
 }
 
+// Immediately save current schedule to current-offset week, no debounce.
+// Called before week navigation to prevent dropping unsaved edits.
+async function cloudForceFlushSave() {
+  if (!USE_CLOUD) return;
+  const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
+  const val = JSON.stringify(schedule);
+  if (!scheduleHasData() && _lastHash && _lastHash !== '{}') {
+    console.log('WAGES flush skipped - schedule has no real data');
+    return;
+  }
+  try {
+    console.log('Flush-saving to:', wkKey);
+    await cloudSet(wkKey, val);
+    _lastHash = val;
+    await saveLastEditTime();
+  } catch(e) { console.error('Force flush failed', e); }
+}
+
 async function cloudScheduleSave() {
   clearTimeout(saveTimer);
+  // CRITICAL: snapshot target week AND schedule data NOW, not when timer fires.
+  // Prevents race where navigating weeks mid-debounce saves data to wrong week.
+  const snapshotOffset = G.currentOffset;
+  const snapshotWkKey = 'roster_wk_' + getISOWeekKey(snapshotOffset);
+  const snapshotData = JSON.parse(JSON.stringify(schedule));
   saveTimer = setTimeout(async () => {
     const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
     if (USE_CLOUD) {
       _isSaving = true;
-      // Save to the week currently being viewed
-      const wkKey = 'roster_wk_' + getISOWeekKey(G.currentOffset);
-      // SAFEGUARD: verify we're saving to the right week
-      const expectedThisWeek = 'roster_wk_' + getISOWeekKey(0);
-      if (G.currentOffset === 0 && wkKey !== expectedThisWeek) {
-        console.error('BLOCKED: save week mismatch. Expected', expectedThisWeek, 'got', wkKey);
-        _isSaving = false;
-        return;
-      }
-      const val = JSON.stringify(schedule);
-      // Never save empty schedule
-      if (!scheduleHasData() && _lastHash && _lastHash !== '{}') {
+      const val = JSON.stringify(snapshotData);
+      // Guard against saving empty over existing — only when snapshot is for currently-viewed week
+      if (snapshotOffset === G.currentOffset && !scheduleHasData() && _lastHash && _lastHash !== '{}') {
         console.log('WAGES save skipped - schedule has no real data');
         _isSaving = false;
         return;
       }
-      await cloudSet(wkKey, val);
-      _lastHash = val;
+      console.log('Saving to (snapshotted):', snapshotWkKey);
+      await cloudSet(snapshotWkKey, val);
+      if (snapshotOffset === G.currentOffset) _lastHash = val;
       _isSaving = false;
       await saveLastEditTime();
     } else {
       try {
         localStorage.setItem('roster_global', JSON.stringify(G));
-        localStorage.setItem('roster_wk_' + getISOWeekKey(G.currentOffset), JSON.stringify(schedule));
+        localStorage.setItem(snapshotWkKey, JSON.stringify(snapshotData));
       } catch(e) {}
     }
     const b = document.getElementById('save-badge');
