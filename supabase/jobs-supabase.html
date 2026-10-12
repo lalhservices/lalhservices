@@ -1684,7 +1684,7 @@ async function cloudForceFlushSave() {
     console.log('Flush-saving to:', wkKey);
     await cloudSet(wkKey, val);
     _lastHash = val;
-    try { await cloudSet('jt2_rate_' + weekKey(G.currentOffset), String(currentRate)); } catch(e){}
+    await saveWeekRate();
     await saveLastEditTime();
   } catch(e) { console.error('Force flush failed', e); }
 }
@@ -1696,28 +1696,30 @@ async function cloudScheduleSave() {
   const snapshotOffset = G.currentOffset;
   const snapshotWkKey = 'jt2_wk_' + weekKey(snapshotOffset);
   const snapshotCells = JSON.parse(JSON.stringify(cells));
-  const snapshotRate = currentRate;
   saveTimer = setTimeout(async () => {
     const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
     if (USE_CLOUD) {
       _isSaving = true;
-      const gToSave = { rows: G.rows, nextRow: G.nextRow, globalRate: G.globalRate, currentOffset: 0 };
-      await cloudSet('jt2_global', JSON.stringify(gToSave));
-      const val = JSON.stringify(snapshotCells);
-      // Never save empty data over existing data for the SAME snapshot week
-      if (Object.keys(snapshotCells).length === 0 && _lastHash && _lastHash !== '{}' && _lastHash !== '' && snapshotOffset === G.currentOffset) {
-        console.log('Save skipped — cells empty but sheet has data');
-        _isSaving = false;
-        return;
+      try {
+        const gToSave = { rows: G.rows, nextRow: G.nextRow, globalRate: G.globalRate, currentOffset: 0 };
+        await cloudSet('jt2_global', JSON.stringify(gToSave));
+        const val = JSON.stringify(snapshotCells);
+        // Never save empty over existing — only for same-week snapshot
+        if (Object.keys(snapshotCells).length === 0 && _lastHash && _lastHash !== '{}' && _lastHash !== '' && snapshotOffset === G.currentOffset) {
+          console.log('Save skipped — cells empty but sheet has data');
+          _isSaving = false;
+          return;
+        }
+        console.log('Saving to week key (snapshotted):', snapshotWkKey);
+        await cloudSet(snapshotWkKey, val);
+        if (snapshotOffset === G.currentOffset) _lastHash = val;
+        // Save rate using the normal function (which uses correct week)
+        if (snapshotOffset === G.currentOffset) await saveWeekRate();
+        await saveLastEditTime();
+      } catch(e) {
+        console.error('Save failed:', e);
       }
-      console.log('Saving to week key (snapshotted):', snapshotWkKey);
-      await cloudSet(snapshotWkKey, val);
-      // Only update _lastHash if snapshot was for the currently-viewed week
-      if (snapshotOffset === G.currentOffset) _lastHash = val;
       _isSaving = false;
-      // Save rate for the snapshotted week
-      try { await cloudSet('jt2_rate_' + weekKey(snapshotOffset), String(snapshotRate)); } catch(e){}
-      await saveLastEditTime();
     } else {
       try {
         localStorage.setItem('jt2_global', JSON.stringify(G));
