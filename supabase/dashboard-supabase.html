@@ -494,6 +494,19 @@
     padding-top: 0 !important;
     border-top: 0 !important;
   }
+/* MOBILE SWEEP */
+  @media (max-width: 640px) {
+    body { padding: 12px 10px 60px; }
+    .container { padding: 0; }
+    h1, h2, h3 { font-size: 18px !important; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 4px !important; }
+    .week-nav { padding: 10px 12px; gap: 8px; }
+    .week-nav button { padding: 6px 10px; font-size: 11px; }
+    .week-label { font-size: 11px; }
+    /* Allow tables to scroll horizontally rather than squash */
+    .table-wrap, .scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1676,6 +1689,19 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-top: 0 !important;
     padding-top: 0 !important;
     border-top: 0 !important;
+  }
+/* MOBILE SWEEP */
+  @media (max-width: 640px) {
+    body { padding: 12px 10px 60px; }
+    .container { padding: 0; }
+    h1, h2, h3 { font-size: 18px !important; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 4px !important; }
+    .week-nav { padding: 10px 12px; gap: 8px; }
+    .week-nav button { padding: 6px 10px; font-size: 11px; }
+    .week-label { font-size: 11px; }
+    /* Allow tables to scroll horizontally rather than squash */
+    .table-wrap, .scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   }
 </style>
 <a href="./" id="home-fab" title="Back to Home">🏠</a>

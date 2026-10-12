@@ -70,7 +70,15 @@
   a.back { display: inline-block; margin-bottom: 20px; color: var(--gold-300); text-decoration: none; font-size: 12px; letter-spacing: 0.1em; }
   #status { color: var(--emerald); font-family: monospace; font-size: 12px; margin-top: 10px; min-height: 18px; }
 
-  </style>
+  /* MOBILE SWEEP */
+  @media (max-width: 480px) {
+    body { padding: 12px 10px 60px; }
+    h1 { font-size: 20px !important; }
+    button { font-size: 12px; padding: 10px 12px; }
+    .btn-row { flex-direction: column; gap: 8px; }
+    .btn-row button { width: 100%; }
+  }
+</style>
 
 <script>
 // Context-aware Home button — route staff back to staff.html, admin to admin index
@@ -328,6 +336,14 @@ async function exportAll() {
   #home-fab:active { transform: scale(0.9); }
   @media (max-width: 640px) {
     #home-fab { bottom: 14px; right: 14px; width: 36px; height: 36px; font-size: 13px; }
+  }
+/* MOBILE SWEEP */
+  @media (max-width: 480px) {
+    body { padding: 12px 10px 60px; }
+    h1 { font-size: 20px !important; }
+    button { font-size: 12px; padding: 10px 12px; }
+    .btn-row { flex-direction: column; gap: 8px; }
+    .btn-row button { width: 100%; }
   }
 </style>
 <a href="./" id="home-fab" title="Back to Home">🏠</a>
