@@ -731,7 +731,14 @@ function updateWeekLabel(){
   const wn=weekKey(G.currentOffset).split('-W')[1];document.getElementById('week-label').textContent='WK '+wn+' · Week of '+f(mon)+' – '+f(sun);
 }
 async function changeWeek(dir){
-  clearTimeout(saveTimer);
+  // CRITICAL: flush any pending save BEFORE navigating.
+  // If we just clearTimeout, the user's edit to the current week gets dropped.
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    // Force an immediate save of the week we're leaving
+    await cloudForceFlushSave();
+  }
   G.currentOffset += dir;
   // Never save currentOffset to sheet — it's always calculated from today
   // Show loading indicator
@@ -1662,39 +1669,59 @@ function startPolling() {
   setInterval(pollForChanges, 60000); initRealtime();
 }
 
+
+// Immediately save current cells to current-offset week, no debounce.
+// Called before week navigation to prevent dropping unsaved edits.
+async function cloudForceFlushSave() {
+  if (!USE_CLOUD) return;
+  const wkKey = 'jt2_wk_' + weekKey(G.currentOffset);
+  const val = JSON.stringify(cells);
+  if (Object.keys(cells).length === 0 && _lastHash && _lastHash !== '{}' && _lastHash !== '') {
+    console.log('Flush skipped — cells empty but sheet has data');
+    return;
+  }
+  try {
+    console.log('Flush-saving to:', wkKey);
+    await cloudSet(wkKey, val);
+    _lastHash = val;
+    try { await cloudSet('jt2_rate_' + weekKey(G.currentOffset), String(currentRate)); } catch(e){}
+    await saveLastEditTime();
+  } catch(e) { console.error('Force flush failed', e); }
+}
+
 async function cloudScheduleSave() {
   clearTimeout(saveTimer);
+  // CRITICAL: snapshot the target week key AND the cells data NOW, not when the timer fires.
+  // Prevents race condition where navigating weeks mid-debounce saves data to the wrong week.
+  const snapshotOffset = G.currentOffset;
+  const snapshotWkKey = 'jt2_wk_' + weekKey(snapshotOffset);
+  const snapshotCells = JSON.parse(JSON.stringify(cells));
+  const snapshotRate = currentRate;
   saveTimer = setTimeout(async () => {
     const el=document.getElementById('last-saved'); if(el){el.textContent='Saving…';el.className='saving';}
     if (USE_CLOUD) {
       _isSaving = true;
-      // Never save currentOffset — always calculate from today's date
       const gToSave = { rows: G.rows, nextRow: G.nextRow, globalRate: G.globalRate, currentOffset: 0 };
       await cloudSet('jt2_global', JSON.stringify(gToSave));
-      const wkKey = 'jt2_wk_' + weekKey(G.currentOffset);
-      // SAFEGUARD: verify we're saving to the right week
-      const expectedThisWeek = 'jt2_wk_' + weekKey(0);
-      if (G.currentOffset === 0 && wkKey !== expectedThisWeek) {
-        console.error('BLOCKED: save week mismatch. Expected', expectedThisWeek, 'got', wkKey);
-        _isSaving = false;
-        return;
-      }
-      const val = JSON.stringify(cells);
-      // Never save empty data over existing data
-      if (Object.keys(cells).length === 0 && _lastHash && _lastHash !== '{}' && _lastHash !== '') {
+      const val = JSON.stringify(snapshotCells);
+      // Never save empty data over existing data for the SAME snapshot week
+      if (Object.keys(snapshotCells).length === 0 && _lastHash && _lastHash !== '{}' && _lastHash !== '' && snapshotOffset === G.currentOffset) {
         console.log('Save skipped — cells empty but sheet has data');
         _isSaving = false;
         return;
       }
-      await cloudSet(wkKey, val);
-      _lastHash = val;
+      console.log('Saving to week key (snapshotted):', snapshotWkKey);
+      await cloudSet(snapshotWkKey, val);
+      // Only update _lastHash if snapshot was for the currently-viewed week
+      if (snapshotOffset === G.currentOffset) _lastHash = val;
       _isSaving = false;
-      await saveWeekRate();
+      // Save rate for the snapshotted week
+      try { await cloudSet('jt2_rate_' + weekKey(snapshotOffset), String(snapshotRate)); } catch(e){}
       await saveLastEditTime();
     } else {
       try {
         localStorage.setItem('jt2_global', JSON.stringify(G));
-        localStorage.setItem('jt2_wk_' + weekKey(G.currentOffset), JSON.stringify(cells));
+        localStorage.setItem(snapshotWkKey, JSON.stringify(snapshotCells));
       } catch(e) {}
       updateSavedTimestamp();
     }
