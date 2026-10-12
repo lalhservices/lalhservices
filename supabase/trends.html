@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performance Trends — LALH Services</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8a84b">
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23f4d374"/><stop offset="1" stop-color="%23c8a84b"/></linearGradient></defs><path d="M50 5 L92 50 L50 95 L8 50 Z" fill="%230d1a30" stroke="url(%23g)" stroke-width="3"/><path d="M32 32 L32 68 L52 68 L52 62 L38 62 L38 32 Z" fill="url(%23g)"/></svg>'>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy-950: #060d1a;
+    --navy-900: #0d1a30;
+    --navy-800: #142748;
+    --navy-700: #1e3a63;
+    --gold-300: #f4d374;
+    --gold-500: #c8a84b;
+    --emerald: #34d399;
+    --coral: #ff6b5e;
+    --amber: #fbbf24;
+    --purple: #a78bfa;
+    --text-muted: rgba(255,255,255,0.55);
+  }
+  body {
+    background: radial-gradient(ellipse at top, var(--navy-800), var(--navy-950));
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 80px;
+  }
+  .container { max-width: 1080px; margin: 0 auto; }
+  a.back { display: inline-block; margin-bottom: 20px; color: var(--gold-300); text-decoration: none; font-size: 12px; letter-spacing: 0.1em; }
+
+  .hero {
+    background: linear-gradient(135deg, rgba(200,168,75,0.08), rgba(30,58,99,0.3));
+    border: 1px solid rgba(200,168,75,0.15);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .hero-eyebrow { font-size: 10px; letter-spacing: 0.25em; color: var(--gold-500); font-weight: 700; margin-bottom: 6px; }
+  .hero-eyebrow .dot { display: inline-block; width: 7px; height: 7px; background: var(--emerald); border-radius: 50%; margin-right: 6px; animation: pulse 1.8s infinite; }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+  h1 { font-family: 'Playfair Display', serif; font-size: 32px; color: var(--gold-300); font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+
+  .range-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .range-tab {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.6);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+  }
+  .range-tab.active {
+    background: rgba(200,168,75,0.15);
+    border-color: var(--gold-500);
+    color: var(--gold-300);
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .sum-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.15));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .sum-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
+  .sum-value { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; color: var(--gold-300); }
+  .sum-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .sum-value.good { color: var(--emerald); }
+  .sum-value.bad { color: var(--coral); }
+
+  .chart-section {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 20px 20px 10px;
+    margin-bottom: 20px;
+  }
+  .chart-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold-300);
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .chart-title::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 16px;
+    background: linear-gradient(180deg, var(--gold-300), var(--gold-500));
+    border-radius: 2px;
+  }
+  .chart-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; margin-left: 13px; }
+  .chart-wrap { position: relative; height: 260px; }
+  .chart-wrap.tall { height: 320px; }
+
+  .week-table-wrap {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 20px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  thead th {
+    background: linear-gradient(180deg, rgba(200,168,75,0.15), rgba(200,168,75,0.05));
+    color: var(--gold-300);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 10px 8px;
+    border-bottom: 1px solid rgba(200,168,75,0.2);
+    text-align: left;
+    font-weight: 700;
+  }
+  tbody td {
+    padding: 10px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: rgba(200,168,75,0.03); }
+  td.wk { color: var(--gold-300); font-weight: 600; }
+  td.money { font-weight: 600; }
+  td.money.up { color: var(--emerald); }
+  td.money.down { color: var(--coral); }
+  td.pct { font-weight: 700; }
+
+  .loading { text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 13px; }
+
+  @media (max-width: 640px) {
+    .hero { padding: 18px 20px; }
+    h1 { font-size: 24px; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .sum-value { font-size: 18px; }
+    .chart-wrap { height: 220px; }
+    .chart-wrap.tall { height: 240px; }
+    .range-tab { padding: 6px 10px; font-size: 11px; }
+    table { font-size: 11px; }
+    thead th, tbody td { padding: 8px 4px; }
+  }
+
+  #home-fab {
+    position: fixed; bottom: 16px; right: 16px; z-index: 9998;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(200,168,75,0.85); color: #060d1a; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-decoration: none;
+    opacity: 0.55; transition: all 0.2s;
+  }
+  #home-fab:hover { opacity: 1; transform: scale(1.1); }
+</style>
+
+<script>
+// Context-aware Home button
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('staff') === '1') sessionStorage.setItem('lalh_user_type', 'staff');
+  const userType = sessionStorage.getItem('lalh_user_type');
+  if (userType === 'staff') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const homeBtn = document.getElementById('home-fab');
+      if (homeBtn) homeBtn.href = 'staff.html';
+      document.querySelectorAll('a.back').forEach(a => { if (a.getAttribute('href') === './') a.href = 'staff.html'; });
+    });
+  }
+})();
+</script>
+</head>
+<body>
+
+<div class="container">
+  <a href="./" class="back">← Back</a>
+
+  <div class="hero">
+    <div class="hero-eyebrow"><span class="dot"></span>ANALYTICS · LIVE</div>
+    <h1>Performance Trends</h1>
+    <div class="hero-sub">Revenue · Costs · Profit · Hours — across weeks</div>
+  </div>
+
+  <div class="range-tabs">
+    <button class="range-tab active" data-range="8">Last 8 weeks</button>
+    <button class="range-tab" data-range="12">Last 12 weeks</button>
+    <button class="range-tab" data-range="26">Last 6 months</button>
+    <button class="range-tab" data-range="999">All time</button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="sum-card">
+      <div class="sum-label">Avg Weekly Revenue</div>
+      <div class="sum-value" id="s-avg-rev">$0</div>
+      <div class="sum-sub" id="s-avg-rev-sub"></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Avg Weekly Profit</div>
+      <div class="sum-value good" id="s-avg-profit">$0</div>
+      <div class="sum-sub" id="s-avg-profit-sub"></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Avg Margin</div>
+      <div class="sum-value" id="s-avg-margin">0%</div>
+      <div class="sum-sub" id="s-avg-margin-sub"></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Avg Weekly Hours</div>
+      <div class="sum-value" id="s-avg-hrs">0h</div>
+      <div class="sum-sub" id="s-avg-hrs-sub"></div>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-title">Revenue vs Costs</div>
+    <div class="chart-sub">Weekly totals — green area = profit</div>
+    <div class="chart-wrap tall"><canvas id="chart-rev"></canvas></div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-title">Weekly Profit</div>
+    <div class="chart-sub">Bar height = profit, color = above/below average</div>
+    <div class="chart-wrap"><canvas id="chart-profit"></canvas></div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-title">Margin %</div>
+    <div class="chart-sub">Profit as % of charged revenue</div>
+    <div class="chart-wrap"><canvas id="chart-margin"></canvas></div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-title">Hours Worked</div>
+    <div class="chart-sub">Total staff hours per week</div>
+    <div class="chart-wrap"><canvas id="chart-hours"></canvas></div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-title">Weekly Detail</div>
+    <div class="chart-sub">All weeks, newest first</div>
+    <div class="week-table-wrap" style="padding:12px 0 0;">
+      <table id="week-table">
+        <thead>
+          <tr>
+            <th>Week</th>
+            <th style="text-align:right">Charged</th>
+            <th style="text-align:right">Wages</th>
+            <th style="text-align:right">Profit</th>
+            <th style="text-align:right">Margin</th>
+            <th style="text-align:right">Hours</th>
+          </tr>
+        </thead>
+        <tbody id="week-tbody"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<a href="./" id="home-fab" title="Home">🏠</a>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+let sb;
+let allWeeks = []; // sorted ascending
+let currentRange = 8;
+let charts = {};
+
+function calcH(from, to) {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(':').map(Number);
+  const [th, tm] = to.split(':').map(Number);
+  let m = (th*60+tm) - (fh*60+fm);
+  if (m < 0) m += 1440;
+  return m / 60;
+}
+
+function money(n) {
+  const sign = n < 0 ? '-' : '';
+  return sign + '$' + Math.abs(n).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function moneyShort(n) {
+  if (Math.abs(n) >= 1000) return (n >= 0 ? '$' : '-$') + (Math.abs(n)/1000).toFixed(1) + 'k';
+  return money(n);
+}
+function weekLabel(wk) { return 'W' + wk.split('-W')[1]; }
+
+async function loadAll() {
+  // Load everything in one shot
+  const { data, error } = await sb.from('roster_data').select('key, value');
+  if (error) { document.getElementById('week-tbody').innerHTML = '<tr><td colspan="6" class="loading">Error: '+error.message+'</td></tr>'; return; }
+  const map = {};
+  (data||[]).forEach(r => { map[r.key] = r.value; });
+
+  // Find all weeks that have data
+  const weekSet = new Set();
+  Object.keys(map).forEach(k => {
+    const m = k.match(/^(?:jt2_wk_|roster_wk_)(\d{4}-W\d{2})$/);
+    if (m) weekSet.add(m[1]);
+  });
+
+  const weekKeys = Array.from(weekSet).sort(); // ascending
+  const global = JSON.parse(map['roster_global'] || '{"people":[]}');
+  const jobsGlobal = JSON.parse(map['jt2_global'] || '{"rows":[]}');
+
+  // Build per-week performance
+  allWeeks = weekKeys.map(wk => {
+    const roster = JSON.parse(map['roster_wk_' + wk] || '{}');
+    const jobs = JSON.parse(map['jt2_wk_' + wk] || '{}');
+    const jobRate = parseFloat(map['jt2_rate_' + wk] || 45);
+    const snapshot = map['roster_snapshot_' + wk] ? JSON.parse(map['roster_snapshot_' + wk]) : null;
+    const rates = JSON.parse(map['roster_rates_' + wk] || '{}');
+    let people = (snapshot && Array.isArray(snapshot) && snapshot.length) ? snapshot : (global.people || []);
+    people = people.map(p => ({ ...p, rate: rates[p.id] !== undefined ? rates[p.id] : p.rate }));
+
+    // Revenue (jobs charged + parking + materials)
+    let charged = 0, parkingClient = 0, matClient = 0;
+    (jobsGlobal.rows || []).forEach(rid => {
+      DAYS.forEach(day => {
+        const cell = jobs[rid + '|' + day];
+        if (!cell || !cell.jobName) return;
+        let hrs = 0;
+        (cell.workers || []).forEach(w => { hrs += calcH(w.from, w.to); });
+        charged += hrs * jobRate;
+        parkingClient += parseFloat(cell.parking || 0);
+        matClient += parseFloat(cell.materials || 0);
+      });
+    });
+
+    // Wages (staff hours × rate) + extras paid
+    let wages = 0, hours = 0, parkingStaff = 0, matStaff = 0, fuelStaff = 0;
+    people.forEach(p => {
+      DAYS.forEach(day => {
+        const e = (roster[p.id] || {})[day];
+        if (!e) return;
+        const park = parseFloat(e.parking || 0);
+        const mat = parseFloat(e.materials || 0);
+        const fuel = parseFloat(e.fuel || 0);
+        if (e.timeFrom && e.timeTo && !e.off) {
+          const h = calcH(e.timeFrom, e.timeTo);
+          hours += h;
+          wages += h * parseFloat(p.rate || 30);
+        }
+        parkingStaff += park;
+        matStaff += mat;
+        fuelStaff += fuel;
+      });
+    });
+
+    const totalRev = charged + parkingClient + matClient;
+    const totalCost = wages + parkingStaff + matStaff + fuelStaff;
+    const profit = totalRev - totalCost;
+    const margin = totalRev > 0 ? (profit / totalRev) * 100 : 0;
+
+    return {
+      wk,
+      charged, totalRev,
+      wages, totalCost,
+      profit, margin, hours,
+      parkingClient, matClient,
+      parkingStaff, matStaff, fuelStaff
+    };
+  }).filter(w => w.totalRev > 0 || w.totalCost > 0); // drop fully-empty weeks
+
+  renderRange();
+}
+
+function renderRange() {
+  const sliced = currentRange >= 999 ? allWeeks : allWeeks.slice(-currentRange);
+  renderSummary(sliced);
+  renderCharts(sliced);
+  renderTable(sliced);
+}
+
+function renderSummary(weeks) {
+  if (!weeks.length) return;
+  const totalRev = weeks.reduce((s, w) => s + w.totalRev, 0);
+  const totalProfit = weeks.reduce((s, w) => s + w.profit, 0);
+  const totalHrs = weeks.reduce((s, w) => s + w.hours, 0);
+  const avgRev = totalRev / weeks.length;
+  const avgProfit = totalProfit / weeks.length;
+  const avgMargin = totalRev > 0 ? (totalProfit / totalRev) * 100 : 0;
+  const avgHrs = totalHrs / weeks.length;
+
+  // Best/worst week
+  const bestProfit = weeks.reduce((best, w) => w.profit > best.profit ? w : best);
+  const worstProfit = weeks.reduce((worst, w) => w.profit < worst.profit ? w : worst);
+  const bestRev = weeks.reduce((best, w) => w.totalRev > best.totalRev ? w : best);
+
+  document.getElementById('s-avg-rev').textContent = money(avgRev);
+  document.getElementById('s-avg-rev-sub').textContent = 'Best: ' + weekLabel(bestRev.wk) + ' ' + money(bestRev.totalRev);
+  document.getElementById('s-avg-profit').textContent = money(avgProfit);
+  document.getElementById('s-avg-profit-sub').textContent = 'Best: ' + weekLabel(bestProfit.wk) + ' ' + money(bestProfit.profit);
+  document.getElementById('s-avg-margin').textContent = avgMargin.toFixed(0) + '%';
+  document.getElementById('s-avg-margin-sub').textContent = weeks.length + ' weeks';
+  document.getElementById('s-avg-hrs').textContent = avgHrs.toFixed(0) + 'h';
+  document.getElementById('s-avg-hrs-sub').textContent = 'Total: ' + totalHrs.toFixed(0) + 'h';
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(e) {} });
+  charts = {};
+}
+
+function renderCharts(weeks) {
+  destroyCharts();
+  const labels = weeks.map(w => weekLabel(w.wk));
+  const common = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: { color: 'rgba(255,255,255,0.75)', font: { size: 11 } }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(13,26,48,0.95)',
+        borderColor: 'rgba(200,168,75,0.3)',
+        borderWidth: 1,
+        titleColor: '#f4d374',
+        bodyColor: '#fff',
+        callbacks: {
+          label: (ctx) => ctx.dataset.label + ': ' + money(ctx.parsed.y)
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }
+      },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 }, callback: (v) => moneyShort(v) }
+      }
+    }
+  };
+
+  // Chart 1: Revenue vs Costs
+  charts.rev = new Chart(document.getElementById('chart-rev'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Revenue', data: weeks.map(w => w.totalRev),
+          borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.15)', fill: true,
+          tension: 0.3, pointRadius: 3, pointBackgroundColor: '#34d399', borderWidth: 2 },
+        { label: 'Costs', data: weeks.map(w => w.totalCost),
+          borderColor: '#ff6b5e', backgroundColor: 'rgba(255,107,94,0.1)', fill: true,
+          tension: 0.3, pointRadius: 3, pointBackgroundColor: '#ff6b5e', borderWidth: 2 }
+      ]
+    },
+    options: common
+  });
+
+  // Chart 2: Profit (bars) with avg line
+  const avgProfit = weeks.reduce((s,w)=>s+w.profit,0) / weeks.length;
+  charts.profit = new Chart(document.getElementById('chart-profit'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Profit',
+        data: weeks.map(w => w.profit),
+        backgroundColor: weeks.map(w => w.profit >= avgProfit ? 'rgba(52,211,153,0.75)' : 'rgba(200,168,75,0.6)'),
+        borderColor: weeks.map(w => w.profit >= avgProfit ? '#34d399' : '#c8a84b'),
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: common
+  });
+
+  // Chart 3: Margin %
+  const marginOpts = JSON.parse(JSON.stringify(common));
+  marginOpts.scales.y.ticks.callback = (v) => v + '%';
+  marginOpts.plugins.tooltip.callbacks = {
+    label: (ctx) => 'Margin: ' + ctx.parsed.y.toFixed(1) + '%'
+  };
+  charts.margin = new Chart(document.getElementById('chart-margin'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Margin %',
+        data: weeks.map(w => w.margin),
+        borderColor: '#f4d374',
+        backgroundColor: 'rgba(244,211,116,0.1)',
+        fill: true, tension: 0.3,
+        pointRadius: 3, pointBackgroundColor: '#f4d374',
+        borderWidth: 2
+      }]
+    },
+    options: marginOpts
+  });
+
+  // Chart 4: Hours
+  const hoursOpts = JSON.parse(JSON.stringify(common));
+  hoursOpts.scales.y.ticks.callback = (v) => v + 'h';
+  hoursOpts.plugins.tooltip.callbacks = {
+    label: (ctx) => 'Hours: ' + ctx.parsed.y.toFixed(1) + 'h'
+  };
+  charts.hours = new Chart(document.getElementById('chart-hours'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Hours',
+        data: weeks.map(w => w.hours),
+        backgroundColor: 'rgba(167,139,250,0.6)',
+        borderColor: '#a78bfa',
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: hoursOpts
+  });
+}
+
+function renderTable(weeks) {
+  const reversed = weeks.slice().reverse(); // newest first
+  const tbody = document.getElementById('week-tbody');
+  if (!reversed.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading">No data</td></tr>'; return; }
+  tbody.innerHTML = reversed.map(w => `
+    <tr>
+      <td class="wk">${weekLabel(w.wk)}</td>
+      <td class="money" style="text-align:right">${money(w.totalRev)}</td>
+      <td class="money" style="text-align:right">${money(w.totalCost)}</td>
+      <td class="money ${w.profit>=0?'up':'down'}" style="text-align:right">${money(w.profit)}</td>
+      <td class="pct ${w.margin>=20?'up':w.margin<10?'down':''}" style="text-align:right;color:${w.margin>=20?'var(--emerald)':w.margin<10?'var(--coral)':'var(--gold-300)'}">${w.margin.toFixed(0)}%</td>
+      <td style="text-align:right;color:rgba(255,255,255,0.65)">${w.hours.toFixed(0)}h</td>
+    </tr>
+  `).join('');
+}
+
+// Tab click handling
+document.querySelectorAll('.range-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.range-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentRange = parseInt(tab.dataset.range);
+    renderRange();
+  });
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  loadAll();
+});
+</script>
+</body>
+</html>
