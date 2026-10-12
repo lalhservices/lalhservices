@@ -385,7 +385,7 @@
 
   <div class="buttons">
 
-        <a class="btn btn-primary" href="dashboard-supabase.html">
+        <a class="btn btn-primary" href="dashboard-supabase.html?staff=1">
           <div class="btn-icon">📊</div>
           <div class="btn-content">
             <div class="btn-title">Profit Dashboard</div>
@@ -394,19 +394,27 @@
         </a>
 
         <div class="btn-row">
-          <a class="btn btn-view" href="WAGES-supabase_readonly.html">
+          <a class="btn btn-view" href="WAGES-supabase_readonly.html?staff=1">
             <div class="btn-badge view">VIEW</div>
             <div class="btn-icon">👁</div>
             <div class="btn-title-sm">Wages</div>
           </a>
-          <a class="btn btn-view" href="jobs-supabase_readonly.html">
+          <a class="btn btn-view" href="jobs-supabase_readonly.html?staff=1">
             <div class="btn-badge view">VIEW</div>
             <div class="btn-icon">👁</div>
             <div class="btn-title-sm">Jobs</div>
           </a>
         </div>
 
-        <a class="btn btn-primary" href="payments.html?view=1" style="margin-top:8px;background:linear-gradient(135deg, #1e3a63, #0d1a30);border-color:#34d399;">
+        <a class="btn btn-primary" href="trends.html?staff=1" style="margin-top:8px;background:linear-gradient(135deg, #1e3a63, #0d1a30);border-color:#a78bfa;">
+          <div class="btn-icon">📈</div>
+          <div class="btn-content">
+            <div class="btn-title" style="color:#a78bfa;">Performance Trends</div>
+            <div class="btn-sub">Revenue · Profit · Margin</div>
+          </div>
+        </a>
+
+        <a class="btn btn-primary" href="payments.html?view=1&staff=1" style="margin-top:8px;background:linear-gradient(135deg, #1e3a63, #0d1a30);border-color:#34d399;">
           <div class="btn-icon">💰</div>
           <div class="btn-content">
             <div class="btn-title" style="color:#34d399;">Payments</div>
@@ -414,7 +422,7 @@
           </div>
         </a>
 
-        <a class="btn btn-primary" href="expenses.html" style="margin-top:8px;background:linear-gradient(135deg, #1e3a63, #0d1a30);border-color:#fbbf24;">
+        <a class="btn btn-primary" href="expenses.html?staff=1" style="margin-top:8px;background:linear-gradient(135deg, #1e3a63, #0d1a30);border-color:#fbbf24;">
           <div class="btn-icon">💵</div>
           <div class="btn-content">
             <div class="btn-title" style="color:#fbbf24;">Weekly Expenses</div>
