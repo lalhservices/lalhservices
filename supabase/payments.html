@@ -166,7 +166,6 @@
     .top-stats > div { border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; }
     .top-stats > div:last-child { border-bottom: 0; }
     .stat-value { font-size: 22px; }
-    .week-row { grid-template-columns: 1fr 1fr; gap: 8px; }
     .week-row .week-hrs { grid-column: 1 / -1; }
   }
 
@@ -340,30 +339,7 @@
     50% { opacity: 0.4; }
   }
 
-  @media (max-width: 640px) {
-    .week-row {
-      grid-template-columns: auto 1fr auto !important;
-      gap: 10px;
-      padding: 10px 12px;
-    }
-    .week-row .week-label { font-size: 11px; }
-    .week-row .week-hrs { font-size: 10px; }
-    .status-pill {
-      padding: 7px 10px;
-      font-size: 10px;
-      min-width: 0;
-      white-space: nowrap;
-      letter-spacing: 0.04em;
-    }
-  }
-  @media (max-width: 400px) {
-    .week-row { gap: 6px; padding: 8px 10px; }
-    .week-row .week-label { font-size: 10px; }
-    .week-row .week-hrs { font-size: 9px; }
-    .status-pill { padding: 6px 8px; font-size: 9px; }
-  }
-  /* Ensure pill never wraps even at narrow widths */
-  .status-pill { white-space: nowrap; }
+
 
   @media (max-width: 640px) {
     .hero { padding: 20px 16px; }
@@ -808,9 +784,7 @@ async function togglePaid(staffId, wk, markAsPaid) {
   }
 
   /* Status pill — single element, status + action */
-  .week-row {
-    grid-template-columns: 90px 1fr auto !important;
-  }
+  
   .status-pill {
     display: inline-flex;
     align-items: center;
@@ -867,30 +841,7 @@ async function togglePaid(staffId, wk, markAsPaid) {
     50% { opacity: 0.4; }
   }
 
-  @media (max-width: 640px) {
-    .week-row {
-      grid-template-columns: auto 1fr auto !important;
-      gap: 10px;
-      padding: 10px 12px;
-    }
-    .week-row .week-label { font-size: 11px; }
-    .week-row .week-hrs { font-size: 10px; }
-    .status-pill {
-      padding: 7px 10px;
-      font-size: 10px;
-      min-width: 0;
-      white-space: nowrap;
-      letter-spacing: 0.04em;
-    }
-  }
-  @media (max-width: 400px) {
-    .week-row { gap: 6px; padding: 8px 10px; }
-    .week-row .week-label { font-size: 10px; }
-    .week-row .week-hrs { font-size: 9px; }
-    .status-pill { padding: 6px 8px; font-size: 9px; }
-  }
-  /* Ensure pill never wraps even at narrow widths */
-  .status-pill { white-space: nowrap; }
+
 
   @media (max-width: 640px) {
     .hero { padding: 20px 16px; }
@@ -979,6 +930,45 @@ async function togglePaid(staffId, wk, markAsPaid) {
   }
   .cm-ok:hover { filter: brightness(1.1); transform: translateY(-1px); }
   .cm-ok:active { transform: scale(0.97); }
+
+  /* ── MOBILE FIX (one clean block, Oct 2026) ── */
+  @media (max-width: 640px) {
+    .week-row {
+      grid-template-columns: auto 1fr auto !important;
+      gap: 10px !important;
+      padding: 10px 12px !important;
+      align-items: center;
+    }
+    .week-row .week-label {
+      font-size: 11px !important;
+      min-width: 55px;
+    }
+    .week-row .week-hrs {
+      font-size: 10px !important;
+      color: rgba(255,255,255,0.5);
+    }
+    .status-pill {
+      padding: 7px 10px !important;
+      font-size: 10px !important;
+      min-width: 0 !important;
+      letter-spacing: 0.04em !important;
+      white-space: nowrap !important;
+      flex-shrink: 0;
+    }
+    .top-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .top-stats > div { border-right: 0; }
+  }
+  @media (max-width: 400px) {
+    .week-row {
+      gap: 6px !important;
+      padding: 8px 10px !important;
+    }
+    .week-row .week-label { font-size: 10px !important; }
+    .week-row .week-hrs { font-size: 9px !important; }
+    .status-pill { padding: 6px 8px !important; font-size: 9px !important; }
+  }
+  /* Pill never wraps, ever */
+  .status-pill { white-space: nowrap !important; }
 </style>
 <a href="./" id="home-fab" title="Back to Home">🏠</a>
 
