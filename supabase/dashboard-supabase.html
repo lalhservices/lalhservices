@@ -210,7 +210,30 @@
     background: linear-gradient(135deg, rgba(255,107,94,0.08), rgba(200,168,75,0.04));
     border: 1px solid rgba(255,107,94,0.25); border-radius: 14px;
     padding: 18px 18px; margin-bottom: 22px;
+    position: relative;
   }
+  #leaks-box.has-leaks {
+    border-color: rgba(255,107,94,0.6);
+    box-shadow: 0 0 0 1px rgba(255,107,94,0.2), 0 0 20px rgba(255,107,94,0.08);
+    animation: pulseLeak 2.5s ease-in-out infinite;
+  }
+  @keyframes pulseLeak {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(255,107,94,0.2), 0 0 20px rgba(255,107,94,0.08); }
+    50% { box-shadow: 0 0 0 1px rgba(255,107,94,0.4), 0 0 30px rgba(255,107,94,0.15); }
+  }
+  #leaks-totals {
+    background: rgba(255,107,94,0.08);
+    border: 1px dashed rgba(255,107,94,0.3);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--coral);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    display: none;
+  }
+  #leaks-totals.show { display: block; }
   #leaks-title { font-family: var(--head); font-size: 14px; font-weight: 800; color: var(--red); margin-bottom: 12px; }
   .leak-item {
     padding: 11px 12px; margin-bottom: 8px;
@@ -565,6 +588,7 @@
       </div>
     </div>
     <div id="leaks-box" style="display:none">
+    <div id="leaks-totals"></div>
       <div id="leaks-title">⚠ WEEK LEAKS <span id="leaks-count" style="font-size:11px;color:var(--text3);"></span></div>
       <div id="leaks-list"></div>
     </div>
@@ -1016,11 +1040,11 @@ async function load() {
   // LEAK: Wage hours significantly higher than job hours (billing leak)
   Object.entries(personWeek).forEach(([pid, data]) => {
     const gap = data.wageHrs - data.jobHrs;
-    if (gap >= 3 && data.wageHrs > 0 && data.jobHrs > 0) {
+    if (gap >= 1 && data.wageHrs > 0 && data.jobHrs > 0) {
       const potentialLoss = gap * jobRate;
       const breakdown = buildDayBreakdown(data.days, 'billing');
       leaks.push({
-        severity: gap >= 8 ? 'high' : 'medium',
+        severity: gap >= 4 ? 'high' : (gap >= 2 ? 'medium' : 'low'),
         title: '💰 BILLING LEAK — ' + data.name,
         detail: `Total: Jobs <b>${data.jobHrs.toFixed(1)}h</b> · Wage <b>${data.wageHrs.toFixed(1)}h</b> · Missing <b>${gap.toFixed(1)}h</b> from jobs<br>Paid for work not billed to client${breakdown}`,
         impact: `Potential lost revenue: ${money(potentialLoss)}`
@@ -1028,10 +1052,10 @@ async function load() {
     }
     // LEAK: Job hours higher than wage (missed timesheet)
     const timesheetGap = data.jobHrs - data.wageHrs;
-    if (timesheetGap >= 3 && data.wageHrs > 0) {
+    if (timesheetGap >= 1 && data.wageHrs > 0) {
       const breakdown = buildDayBreakdown(data.days, 'timesheet');
       leaks.push({
-        severity: timesheetGap >= 8 ? 'high' : 'medium',
+        severity: timesheetGap >= 4 ? 'high' : (timesheetGap >= 2 ? 'medium' : 'low'),
         title: '📋 TIMESHEET LEAK — ' + data.name,
         detail: `Total: Jobs <b>${data.jobHrs.toFixed(1)}h</b> · Wage <b>${data.wageHrs.toFixed(1)}h</b> · Missing <b>${timesheetGap.toFixed(1)}h</b> from wages<br>Worked more than recorded on wages${breakdown}`,
         impact: `Missing ${timesheetGap.toFixed(1)}h of wage record`
@@ -1040,9 +1064,9 @@ async function load() {
   });
 
   // LEAK: Extras gap negative (fuel leak)
-  if (wkExtrasGap < -20) {
+  if (wkExtrasGap < -5) {
     leaks.push({
-      severity: Math.abs(wkExtrasGap) > 100 ? 'high' : 'medium',
+      severity: Math.abs(wkExtrasGap) > 50 ? 'high' : (Math.abs(wkExtrasGap) > 20 ? 'medium' : 'low'),
       title: '⛽ EXTRAS LEAK',
       detail: `Reimbursed to staff exceeds what you charged the client for extras (parking, materials, fuel)`,
       impact: `Uncovered cost: ${money(Math.abs(wkExtrasGap))}`
@@ -1077,7 +1101,7 @@ async function load() {
       }
     });
   });
-  dayLosses.slice(0, 5).forEach(dl => {
+  dayLosses.slice(0, 10).forEach(dl => {
     leaks.push({
       severity: 'low',
       title: '⏱ TIME OVER — ' + dl.name + ' · ' + dl.day,
@@ -1097,8 +1121,29 @@ async function load() {
         <div class="leak-detail">${l.detail}</div>
         <div class="leak-impact ${l.severity}">${l.impact}</div>
       </div>`).join('');
+    // Add pulsing animation + total loss banner when leaks exist
+    document.getElementById('leaks-box').classList.add('has-leaks');
+    // Calculate total $ exposed to leaks
+    let totalLossDollars = 0;
+    leaks.forEach(l => {
+      // Extract $ amounts from impact text (e.g. "Potential $45.00 loss")
+      const matches = (l.impact || '').match(/\$([0-9,]+(?:\.\d+)?)/g);
+      if (matches) matches.forEach(m => { totalLossDollars += parseFloat(m.replace(/[$,]/g, '')); });
+    });
+    const totalsEl = document.getElementById('leaks-totals');
+    if (totalsEl) {
+      if (totalLossDollars > 0) {
+        totalsEl.textContent = '⚠️ POTENTIAL LOSS THIS WEEK: $' + totalLossDollars.toFixed(2);
+        totalsEl.classList.add('show');
+      } else {
+        totalsEl.classList.remove('show');
+      }
+    }
   } else {
     document.getElementById('leaks-box').style.display = 'block';
+    document.getElementById('leaks-box').classList.remove('has-leaks');
+    const totalsEl = document.getElementById('leaks-totals');
+    if (totalsEl) totalsEl.classList.remove('show');
     document.getElementById('leaks-count').textContent = '';
     document.getElementById('leaks-list').innerHTML = '<div id="leaks-clean">✅ NO LEAKS THIS WEEK</div>';
   }
