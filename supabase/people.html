@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Records — LALH Services</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8a84b">
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23f4d374"/><stop offset="1" stop-color="%23c8a84b"/></linearGradient></defs><path d="M50 5 L92 50 L50 95 L8 50 Z" fill="%230d1a30" stroke="url(%23g)" stroke-width="3"/><path d="M32 32 L32 68 L52 68 L52 62 L38 62 L38 32 Z" fill="url(%23g)"/></svg>'>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy-950: #060d1a;
+    --navy-900: #0d1a30;
+    --navy-800: #142748;
+    --navy-700: #1e3a63;
+    --gold-300: #f4d374;
+    --gold-500: #c8a84b;
+    --emerald: #34d399;
+    --coral: #ff6b5e;
+    --amber: #fbbf24;
+    --text-muted: rgba(255,255,255,0.55);
+  }
+  body {
+    background: radial-gradient(ellipse at top, var(--navy-800), var(--navy-950));
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 80px;
+  }
+  .container { max-width: 820px; margin: 0 auto; }
+  a.back { display: inline-block; margin-bottom: 20px; color: var(--gold-300); text-decoration: none; font-size: 12px; letter-spacing: 0.1em; }
+
+  .hero {
+    background: linear-gradient(135deg, rgba(200,168,75,0.08), rgba(30,58,99,0.3));
+    border: 1px solid rgba(200,168,75,0.15);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+  .hero-eyebrow { font-size: 10px; letter-spacing: 0.25em; color: var(--gold-500); font-weight: 700; margin-bottom: 6px; }
+  h1 { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--gold-300); font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+
+  .toolbar {
+    display: flex; gap: 10px; margin-bottom: 20px; align-items: center;
+    flex-wrap: wrap;
+  }
+  .search-box {
+    flex: 1;
+    min-width: 180px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .search-box:focus { outline: none; border-color: var(--gold-500); }
+  .filter-tabs { display: flex; gap: 4px; }
+  .filter-tab {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .filter-tab.active { background: rgba(200,168,75,0.15); border-color: var(--gold-500); color: var(--gold-300); }
+  .btn-add {
+    background: linear-gradient(135deg, var(--gold-300), var(--gold-500));
+    color: var(--navy-950);
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-add:hover { filter: brightness(1.1); }
+
+  .person-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+  .person-card:hover { border-color: rgba(200,168,75,0.3); }
+  .person-card.inactive { opacity: 0.55; }
+
+  .person-head {
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 14px;
+    align-items: center;
+    cursor: pointer;
+  }
+  .person-head:hover { background: rgba(200,168,75,0.03); }
+  .person-name {
+    font-weight: 700; font-size: 15px;
+  }
+  .person-meta {
+    font-size: 11px; color: var(--text-muted); margin-top: 3px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--emerald);
+    flex-shrink: 0;
+  }
+  .status-dot.inactive { background: rgba(255,255,255,0.2); }
+  .expand-icon { color: rgba(255,255,255,0.4); font-size: 10px; transition: transform 0.2s; }
+  .person-card.open .expand-icon { transform: rotate(180deg); }
+
+  .person-body {
+    display: none;
+    padding: 0 18px 18px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  .person-card.open .person-body { display: block; }
+
+  .section {
+    margin-top: 16px;
+  }
+  .section-label {
+    font-size: 10px;
+    color: var(--gold-500);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 2px; height: 11px;
+    background: var(--gold-500);
+    border-radius: 1px;
+  }
+
+  .fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+  }
+  .fields.single { grid-template-columns: 1fr; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field label {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .field input, .field textarea, .field select {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    width: 100%;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: none;
+    border-color: var(--gold-500);
+    background: rgba(0,0,0,0.4);
+  }
+  .field textarea { min-height: 60px; resize: vertical; font-family: inherit; }
+  .field .url-row { display: flex; gap: 6px; }
+  .field .url-row input { flex: 1; }
+  .url-btn {
+    background: rgba(200,168,75,0.15);
+    border: 1px solid rgba(200,168,75,0.3);
+    color: var(--gold-300);
+    border-radius: 8px;
+    padding: 0 14px;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    font-family: inherit;
+  }
+  .url-btn:hover { background: rgba(200,168,75,0.25); }
+  .url-btn.disabled { opacity: 0.4; pointer-events: none; }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold-300), var(--gold-500));
+    color: var(--navy-950);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.75);
+  }
+  .btn-danger {
+    background: rgba(255,107,94,0.1);
+    border-color: rgba(255,107,94,0.3);
+    color: var(--coral);
+  }
+  .btn-success {
+    background: rgba(52,211,153,0.1);
+    border-color: rgba(52,211,153,0.3);
+    color: var(--emerald);
+  }
+  .btn:hover { filter: brightness(1.1); }
+
+  .save-badge {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--emerald);
+    opacity: 0;
+    transition: opacity 0.3s;
+    align-self: center;
+  }
+  .save-badge.show { opacity: 1; }
+
+  .empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 40px 20px;
+    font-size: 13px;
+  }
+
+  /* Modal */
+  #modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 10000;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  #modal.show { opacity: 1; }
+  .modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(6,13,26,0.8);
+    backdrop-filter: blur(4px);
+  }
+  .modal-card {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: linear-gradient(180deg, var(--navy-800), var(--navy-900));
+    border: 1px solid rgba(200,168,75,0.3);
+    border-radius: 16px;
+    padding: 24px;
+    width: min(92vw, 360px);
+    transition: transform 0.2s;
+  }
+  #modal.show .modal-card { transform: translate(-50%, -50%) scale(1); }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--gold-300); margin-bottom: 10px; font-weight: 700; }
+  .modal-msg { color: rgba(255,255,255,0.75); font-size: 13px; margin-bottom: 20px; }
+
+  @media (max-width: 640px) {
+    .fields { grid-template-columns: 1fr; }
+    .toolbar { gap: 8px; }
+    .search-box { font-size: 12px; }
+  }
+
+  #home-fab {
+    position: fixed; bottom: 16px; right: 16px; z-index: 9998;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(200,168,75,0.85); color: #060d1a; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-decoration: none;
+    opacity: 0.55; transition: all 0.2s;
+  }
+  #home-fab:hover { opacity: 1; transform: scale(1.1); }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <a href="./" class="back">← Back</a>
+
+  <div class="hero">
+    <div class="hero-eyebrow">TEAM RECORDS · ADMIN ONLY</div>
+    <h1>Team Records</h1>
+    <div class="hero-sub">Contact info, emergency contacts, compliance records</div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" class="search-box" id="search" placeholder="Search name, email, phone...">
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="active">Active</button>
+      <button class="filter-tab" data-filter="inactive">Inactive</button>
+      <button class="filter-tab" data-filter="all">All</button>
+    </div>
+    <button class="btn-add" id="btn-add">+ Add Person</button>
+  </div>
+
+  <div id="people-list"><div class="empty">Loading...</div></div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="modal">
+  <div class="modal-backdrop" onclick="modalCancel()"></div>
+  <div class="modal-card">
+    <div class="modal-title" id="modal-title">Confirm</div>
+    <div class="modal-msg" id="modal-msg"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button class="btn btn-secondary" onclick="modalCancel()">Cancel</button>
+      <button class="btn btn-danger" id="modal-ok" onclick="modalOk()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<a href="./" id="home-fab" title="Home">🏠</a>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const STORAGE_KEY = 'team_records';
+
+let sb;
+let people = [];
+let currentFilter = 'active';
+let searchTerm = '';
+let modalResolve = null;
+
+// ── Modal ──
+function askConfirm(title, msg, okLabel = 'Confirm', danger = true) {
+  return new Promise(res => {
+    modalResolve = res;
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-msg').textContent = msg;
+    const okBtn = document.getElementById('modal-ok');
+    okBtn.textContent = okLabel;
+    okBtn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+    document.getElementById('modal').style.display = 'block';
+    setTimeout(() => document.getElementById('modal').classList.add('show'), 10);
+  });
+}
+function modalOk() { if (modalResolve) modalResolve(true); closeModal(); }
+function modalCancel() { if (modalResolve) modalResolve(false); closeModal(); }
+function closeModal() {
+  const m = document.getElementById('modal');
+  m.classList.remove('show');
+  setTimeout(() => { m.style.display = 'none'; modalResolve = null; }, 200);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('modal').style.display === 'block') modalCancel();
+});
+
+// ── Data load/save ──
+async function loadPeople() {
+  const { data, error } = await sb.from('roster_data').select('value').eq('key', STORAGE_KEY).maybeSingle();
+  if (error) {
+    console.error('Load error:', error);
+    document.getElementById('people-list').innerHTML = '<div class="empty">Error loading: ' + error.message + '</div>';
+    return;
+  }
+  people = data && data.value ? JSON.parse(data.value) : [];
+  render();
+}
+
+async function savePeople() {
+  const payload = JSON.stringify(people);
+  const { error } = await sb.from('roster_data').upsert({ key: STORAGE_KEY, value: payload }, { onConflict: 'key' });
+  if (error) console.error('Save error:', error);
+  return !error;
+}
+
+function newPerson() {
+  const maxId = people.reduce((m, p) => Math.max(m, p.id || 0), 0);
+  return {
+    id: maxId + 1,
+    name: '',
+    fullName: '',
+    mobile: '',
+    email: '',
+    address: '',
+    dob: '',
+    kinName: '',
+    kinPhone: '',
+    kinRelation: '',
+    whiteCardNo: '',
+    whiteCardExpiry: '',
+    visaStatus: '',
+    visaExpiry: '',
+    startDate: '',
+    idProofUrl: '',
+    whiteCardUrl: '',
+    notes: '',
+    inactive: false,
+    createdAt: new Date().toISOString()
+  };
+}
+
+// ── Render ──
+function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function render() {
+  const list = document.getElementById('people-list');
+  const term = searchTerm.toLowerCase().trim();
+
+  const filtered = people.filter(p => {
+    if (currentFilter === 'active' && p.inactive) return false;
+    if (currentFilter === 'inactive' && !p.inactive) return false;
+    if (!term) return true;
+    const hay = [p.name, p.fullName, p.email, p.mobile, p.address].join(' ').toLowerCase();
+    return hay.includes(term);
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty">' + (people.length === 0 ? 'No team records yet. Click + Add Person to start.' : 'No matches.') + '</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => `
+    <div class="person-card ${p.inactive?'inactive':''}" data-id="${p.id}" id="card-${p.id}">
+      <div class="person-head" onclick="toggleCard(${p.id})">
+        <div>
+          <div class="person-name">${esc(p.name || p.fullName || '(no name)')}</div>
+          <div class="person-meta">${esc(p.mobile || '')}${p.mobile && p.email ? ' · ' : ''}${esc(p.email || '')}</div>
+        </div>
+        <div class="status-dot ${p.inactive?'inactive':''}" title="${p.inactive?'Inactive':'Active'}"></div>
+        <div class="expand-icon">▼</div>
+      </div>
+
+      <div class="person-body">
+        <div class="section">
+          <div class="section-label">Basic Info</div>
+          <div class="fields">
+            <div class="field"><label>Preferred Name</label><input value="${esc(p.name)}" oninput="updateField(${p.id},'name',this.value)"></div>
+            <div class="field"><label>Full Legal Name</label><input value="${esc(p.fullName)}" oninput="updateField(${p.id},'fullName',this.value)"></div>
+            <div class="field"><label>Mobile</label><input type="tel" value="${esc(p.mobile)}" oninput="updateField(${p.id},'mobile',this.value)"></div>
+            <div class="field"><label>Email</label><input type="email" value="${esc(p.email)}" oninput="updateField(${p.id},'email',this.value)"></div>
+            <div class="field"><label>Date of Birth</label><input type="date" value="${esc(p.dob)}" oninput="updateField(${p.id},'dob',this.value)"></div>
+            <div class="field"><label>Start Date</label><input type="date" value="${esc(p.startDate)}" oninput="updateField(${p.id},'startDate',this.value)"></div>
+          </div>
+          <div class="fields single" style="margin-top:10px;">
+            <div class="field"><label>Address</label><input value="${esc(p.address)}" oninput="updateField(${p.id},'address',this.value)"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Emergency Contact</div>
+          <div class="fields">
+            <div class="field"><label>Name</label><input value="${esc(p.kinName)}" oninput="updateField(${p.id},'kinName',this.value)"></div>
+            <div class="field"><label>Phone</label><input type="tel" value="${esc(p.kinPhone)}" oninput="updateField(${p.id},'kinPhone',this.value)"></div>
+            <div class="field"><label>Relation</label><input value="${esc(p.kinRelation)}" placeholder="e.g. Brother, Spouse" oninput="updateField(${p.id},'kinRelation',this.value)"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Compliance</div>
+          <div class="fields">
+            <div class="field"><label>White Card No</label><input value="${esc(p.whiteCardNo)}" oninput="updateField(${p.id},'whiteCardNo',this.value)"></div>
+            <div class="field"><label>White Card Expiry</label><input type="date" value="${esc(p.whiteCardExpiry)}" oninput="updateField(${p.id},'whiteCardExpiry',this.value)"></div>
+            <div class="field"><label>Visa Status</label><input value="${esc(p.visaStatus)}" placeholder="e.g. 485, PR, Citizen" oninput="updateField(${p.id},'visaStatus',this.value)"></div>
+            <div class="field"><label>Visa Expiry</label><input type="date" value="${esc(p.visaExpiry)}" oninput="updateField(${p.id},'visaExpiry',this.value)"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Document Links</div>
+          <div class="fields single">
+            <div class="field">
+              <label>ID Proof URL (driver's license, passport)</label>
+              <div class="url-row">
+                <input type="url" value="${esc(p.idProofUrl)}" placeholder="https://..." oninput="updateField(${p.id},'idProofUrl',this.value)">
+                <a href="${esc(p.idProofUrl || '#')}" target="_blank" class="url-btn ${!p.idProofUrl?'disabled':''}">Open</a>
+              </div>
+            </div>
+            <div class="field">
+              <label>White Card Photo URL</label>
+              <div class="url-row">
+                <input type="url" value="${esc(p.whiteCardUrl)}" placeholder="https://..." oninput="updateField(${p.id},'whiteCardUrl',this.value)">
+                <a href="${esc(p.whiteCardUrl || '#')}" target="_blank" class="url-btn ${!p.whiteCardUrl?'disabled':''}">Open</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Notes</div>
+          <div class="fields single">
+            <div class="field"><textarea placeholder="Any other notes..." oninput="updateField(${p.id},'notes',this.value)">${esc(p.notes)}</textarea></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          ${p.inactive
+            ? `<button class="btn btn-success" onclick="toggleActive(${p.id})">↩ Reactivate</button>`
+            : `<button class="btn btn-secondary" onclick="toggleActive(${p.id})">Mark Inactive</button>`
+          }
+          <button class="btn btn-danger" onclick="deletePerson(${p.id})">Delete</button>
+          <div class="save-badge" id="save-${p.id}">✓ Saved</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  if (card) card.classList.toggle('open');
+}
+
+// ── Edit handlers ──
+let saveTimers = {};
+function updateField(id, field, value) {
+  const p = people.find(x => x.id === id);
+  if (!p) return;
+  p[field] = value;
+  // Debounced save per person
+  clearTimeout(saveTimers[id]);
+  saveTimers[id] = setTimeout(async () => {
+    const ok = await savePeople();
+    if (ok) {
+      const badge = document.getElementById('save-' + id);
+      if (badge) {
+        badge.classList.add('show');
+        setTimeout(() => badge.classList.remove('show'), 1500);
+      }
+      // Update the header name live
+      const card = document.getElementById('card-' + id);
+      if (card && field === 'name') {
+        const nameEl = card.querySelector('.person-name');
+        if (nameEl) nameEl.textContent = p.name || p.fullName || '(no name)';
+      }
+      if (card && (field === 'mobile' || field === 'email')) {
+        const metaEl = card.querySelector('.person-meta');
+        if (metaEl) metaEl.textContent = (p.mobile||'') + (p.mobile && p.email ? ' · ' : '') + (p.email||'');
+      }
+    }
+  }, 500);
+}
+
+async function toggleActive(id) {
+  const p = people.find(x => x.id === id);
+  if (!p) return;
+  const nowInactive = !p.inactive;
+  const confirmed = await askConfirm(
+    nowInactive ? 'Mark as Inactive?' : 'Reactivate?',
+    nowInactive
+      ? `${p.name || p.fullName} will be hidden from the active list. Historical data stays intact.`
+      : `${p.name || p.fullName} will be shown as active again.`,
+    nowInactive ? 'Mark Inactive' : 'Reactivate',
+    nowInactive
+  );
+  if (!confirmed) return;
+  p.inactive = nowInactive;
+  await savePeople();
+  render();
+}
+
+async function deletePerson(id) {
+  const p = people.find(x => x.id === id);
+  if (!p) return;
+  const confirmed = await askConfirm(
+    'Delete permanently?',
+    `${p.name || p.fullName || '(no name)'} will be removed from Team Records. This cannot be undone. If they ever worked for you, consider "Mark Inactive" instead to keep records.`,
+    'Delete',
+    true
+  );
+  if (!confirmed) return;
+  people = people.filter(x => x.id !== id);
+  await savePeople();
+  render();
+}
+
+async function addPerson() {
+  const p = newPerson();
+  people.push(p);
+  await savePeople();
+  render();
+  // Auto-open the new card
+  setTimeout(() => {
+    const card = document.getElementById('card-' + p.id);
+    if (card) {
+      card.classList.add('open');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const firstInput = card.querySelector('input');
+      if (firstInput) firstInput.focus();
+    }
+  }, 50);
+}
+
+// ── Wire up controls ──
+document.getElementById('search').addEventListener('input', (e) => {
+  searchTerm = e.target.value;
+  render();
+});
+document.querySelectorAll('.filter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentFilter = tab.dataset.filter;
+    render();
+  });
+});
+document.getElementById('btn-add').addEventListener('click', addPerson);
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', () => {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  loadPeople();
+});
+</script>
+</body>
+</html>
