@@ -514,6 +514,8 @@ function render() {
         </div>
 
         <div class="actions">
+          <button class="btn btn-primary" onclick="copyContact(${p.id})">📋 Copy Contact</button>
+          <button class="btn btn-secondary" onclick="copyFullDetails(${p.id})">📋 Copy Full Details</button>
           ${p.inactive
             ? `<button class="btn btn-success" onclick="toggleActive(${p.id})">↩ Reactivate</button>`
             : `<button class="btn btn-secondary" onclick="toggleActive(${p.id})">Mark Inactive</button>`
@@ -609,6 +611,108 @@ async function addPerson() {
       if (firstInput) firstInput.focus();
     }
   }, 50);
+}
+
+// ── Copy to clipboard ──
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+async function copyToClipboard(text, label) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('✓ ' + label + ' copied');
+  } catch(e) {
+    // Fallback: textarea trick
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showToast('✓ ' + label + ' copied'); }
+    catch(e2) { showToast('⚠ Copy failed — please copy manually'); }
+    document.body.removeChild(ta);
+  }
+}
+
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--navy-800),var(--navy-900));border:1px solid rgba(52,211,153,0.4);color:var(--emerald);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:10001;opacity:0;transition:opacity 0.2s;box-shadow:0 10px 30px rgba(0,0,0,0.5);';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(window._toastT);
+  window._toastT = setTimeout(() => { t.style.opacity = '0'; }, 2000);
+}
+
+function copyContact(id) {
+  const p = people.find(x => x.id === id);
+  if (!p) return;
+  const name = p.name || p.fullName || '(no name)';
+  const lines = [name];
+  if (p.mobile) lines.push('Mobile: ' + p.mobile);
+  if (p.email) lines.push('Email: ' + p.email);
+  copyToClipboard(lines.join('\n'), 'Contact');
+}
+
+function copyFullDetails(id) {
+  const p = people.find(x => x.id === id);
+  if (!p) return;
+  const name = p.name || p.fullName || '(no name)';
+  const lines = [];
+  lines.push('━━━━━━━━━━━━━━━━━━━━━');
+  lines.push(name.toUpperCase());
+  if (p.fullName && p.fullName !== p.name) lines.push('(' + p.fullName + ')');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('');
+
+  // Basic info
+  if (p.mobile) lines.push('📱 Mobile: ' + p.mobile);
+  if (p.email) lines.push('✉️ Email: ' + p.email);
+  if (p.address) lines.push('🏠 Address: ' + p.address);
+  if (p.dob) lines.push('🎂 DOB: ' + fmtDate(p.dob));
+  if (p.startDate) lines.push('📅 Started: ' + fmtDate(p.startDate));
+
+  // Emergency contact
+  if (p.kinName || p.kinPhone || p.kinRelation) {
+    lines.push('');
+    lines.push('EMERGENCY CONTACT');
+    if (p.kinName) lines.push('Name: ' + p.kinName);
+    if (p.kinRelation) lines.push('Relation: ' + p.kinRelation);
+    if (p.kinPhone) lines.push('Phone: ' + p.kinPhone);
+  }
+
+  // Compliance
+  if (p.whiteCardNo || p.whiteCardExpiry || p.visaStatus || p.visaExpiry) {
+    lines.push('');
+    lines.push('COMPLIANCE');
+    if (p.whiteCardNo) lines.push('White Card: ' + p.whiteCardNo + (p.whiteCardExpiry ? ' (exp ' + fmtDate(p.whiteCardExpiry) + ')' : ''));
+    if (p.visaStatus) lines.push('Visa: ' + p.visaStatus + (p.visaExpiry ? ' (exp ' + fmtDate(p.visaExpiry) + ')' : ''));
+  }
+
+  // Document links
+  if (p.idProofUrl || p.whiteCardUrl) {
+    lines.push('');
+    lines.push('DOCUMENTS');
+    if (p.idProofUrl) lines.push('ID Proof: ' + p.idProofUrl);
+    if (p.whiteCardUrl) lines.push('White Card Photo: ' + p.whiteCardUrl);
+  }
+
+  // Notes
+  if (p.notes) {
+    lines.push('');
+    lines.push('NOTES');
+    lines.push(p.notes);
+  }
+
+  copyToClipboard(lines.join('\n'), 'Full details');
 }
 
 // ── Wire up controls ──
