@@ -1,14 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#c8a84b">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="LALH">
-<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23f4d374'/><stop offset='1' stop-color='%23c8a84b'/></linearGradient></defs><rect width='512' height='512' rx='96' fill='%230d1a30'/><path d='M256 40 L472 256 L256 472 L40 256 Z' fill='none' stroke='url(%23g)' stroke-width='8'/><path d='M170 170 L170 342 L262 342 L262 315 L200 315 L200 170 Z' fill='url(%23g)'/></svg>">
-
-<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23f4d374"/><stop offset="1" stop-color="%23c8a84b"/></linearGradient></defs><path d="M50 5 L92 50 L50 95 L8 50 Z" fill="%230d1a30" stroke="url(%23g)" stroke-width="3"/><path d="M32 32 L32 68 L52 68 L52 62 L38 62 L38 32 Z" fill="url(%23g)"/><path d="M68 32 Q56 32 56 40 Q56 46 63 47 Q70 48 70 53 Q70 60 56 60 L56 66 Q72 66 72 53 Q72 47 65 46 Q58 45 58 40 Q58 36 66 36 L68 36 Z" fill="url(%23g)"/></svg>'>
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -210,30 +202,7 @@
     background: linear-gradient(135deg, rgba(255,107,94,0.08), rgba(200,168,75,0.04));
     border: 1px solid rgba(255,107,94,0.25); border-radius: 14px;
     padding: 18px 18px; margin-bottom: 22px;
-    position: relative;
   }
-  #leaks-box.has-leaks {
-    border-color: rgba(255,107,94,0.6);
-    box-shadow: 0 0 0 1px rgba(255,107,94,0.2), 0 0 20px rgba(255,107,94,0.08);
-    animation: pulseLeak 2.5s ease-in-out infinite;
-  }
-  @keyframes pulseLeak {
-    0%, 100% { box-shadow: 0 0 0 1px rgba(255,107,94,0.2), 0 0 20px rgba(255,107,94,0.08); }
-    50% { box-shadow: 0 0 0 1px rgba(255,107,94,0.4), 0 0 30px rgba(255,107,94,0.15); }
-  }
-  #leaks-totals {
-    background: rgba(255,107,94,0.08);
-    border: 1px dashed rgba(255,107,94,0.3);
-    border-radius: 8px;
-    padding: 8px 12px;
-    margin-bottom: 12px;
-    font-size: 12px;
-    color: var(--coral);
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 700;
-    display: none;
-  }
-  #leaks-totals.show { display: block; }
   #leaks-title { font-family: var(--head); font-size: 14px; font-weight: 800; color: var(--red); margin-bottom: 12px; }
   .leak-item {
     padding: 11px 12px; margin-bottom: 8px;
@@ -325,243 +294,10 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   #refresh-note { text-align: center; font-size: 9px; color: var(--text3); margin-top: 24px; letter-spacing: 0.08em; }
-
-  /* Premium dashboard hero */
-  .dash-hero {
-    position: relative;
-    background: linear-gradient(135deg, rgba(200,168,75,0.08) 0%, rgba(30,58,99,0.4) 100%);
-    border: 1px solid rgba(200,168,75,0.25);
-    border-radius: 20px;
-    padding: 32px 28px 28px;
-    margin: 0 0 24px;
-    overflow: hidden;
-  }
-  .dash-hero-inner { position: relative; z-index: 2; }
-  .dash-hero::after {
-    content: '';
-    position: absolute;
-    top: -50%; right: -20%;
-    width: 500px; height: 500px;
-    background: radial-gradient(circle, rgba(200,168,75,0.12), transparent 70%);
-    z-index: 1;
-    pointer-events: none;
-  }
-  .dash-eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: #c8a84b;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .dash-eyebrow::before {
-    content: '';
-    width: 6px; height: 6px;
-    background: #34d399;
-    border-radius: 50%;
-    box-shadow: 0 0 10px #34d399;
-    animation: dashPulse 2s infinite;
-  }
-  @keyframes dashPulse {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-  .dash-title {
-    font-size: 40px;
-    font-weight: 900;
-    letter-spacing: -1.5px;
-    background: linear-gradient(180deg, #fff 0%, #f4d374 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    line-height: 1;
-    margin-bottom: 8px;
-  }
-  .dash-subtitle {
-    color: rgba(255,255,255,0.55);
-    font-size: 13px;
-    letter-spacing: 0.05em;
-    margin-bottom: 20px;
-  }
-  .dash-week-nav {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-top: 14px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-  .dash-week-nav button {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    color: rgba(255,255,255,0.7) !important;
-    padding: 8px 14px !important;
-    border-radius: 8px !important;
-    font-size: 12px !important;
-    font-family: inherit !important;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .dash-week-nav button:hover {
-    border-color: rgba(200,168,75,0.5) !important;
-    color: #f4d374 !important;
-  }
-  .dash-week-label {
-    flex: 1;
-    text-align: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    color: #f4d374;
-    letter-spacing: 0.1em;
-    font-weight: 600;
-  }
-  /* Cleanup old back button and heading */
-  body { padding-top: 20px !important; }
-
-  /* Enhanced dashboard styling — world class polish */
-  .container { max-width: 1080px !important; padding: 0 20px 60px !important; }
-
-  /* Section headers upgrade */
-  h2, h3 {
-    font-family: 'Playfair Display', 'Inter', serif;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    margin-top: 32px !important;
-    margin-bottom: 16px !important;
-    position: relative;
-    padding-left: 16px;
-  }
-  h2::before, h3::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0.15em;
-    bottom: 0.15em;
-    width: 4px;
-    background: linear-gradient(180deg, #f4d374, #c8a84b);
-    border-radius: 2px;
-  }
-
-  /* Card upgrades */
-  .stat-card, .metric-card, [class*="card"] {
-    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.15)) !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
-    border-radius: 14px !important;
-    transition: all 0.2s !important;
-  }
-  .stat-card:hover, .metric-card:hover {
-    border-color: rgba(200,168,75,0.2) !important;
-    transform: translateY(-2px);
-  }
-
-  /* Better tables */
-  table {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    background: rgba(0,0,0,0.15) !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
-  }
-  th {
-    background: linear-gradient(180deg, rgba(200,168,75,0.15), rgba(200,168,75,0.05)) !important;
-    color: #f4d374 !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 10px !important;
-    letter-spacing: 0.15em !important;
-    text-transform: uppercase !important;
-    padding: 12px !important;
-    border-bottom: 1px solid rgba(200,168,75,0.2) !important;
-  }
-  td {
-    padding: 10px 12px !important;
-    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
-    font-size: 13px !important;
-  }
-  tr:last-child td { border-bottom: 0 !important; }
-  tr:hover td { background: rgba(200,168,75,0.03) !important; }
-
-  /* Number emphasis */
-  .money, [class*="amount"], [class*="profit"] {
-    font-family: 'JetBrains Mono', monospace !important;
-    font-weight: 700 !important;
-  }
-
-  /* Print / subtle grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(200,168,75,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(200,168,75,0.03) 1px, transparent 1px);
-    background-size: 60px 60px;
-    pointer-events: none;
-    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-    z-index: 0;
-  }
-  .container { position: relative; z-index: 1; }
-
-  .dash-hero-simple {
-    background: linear-gradient(135deg, rgba(200,168,75,0.05), rgba(30,58,99,0.2));
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px;
-    padding: 12px 16px;
-    margin-bottom: 20px;
-  }
-  .dash-hero-simple .dash-week-nav {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-    border-top: 0 !important;
-  }
-/* MOBILE SWEEP */
-  @media (max-width: 640px) {
-    body { padding: 12px 10px 60px; }
-    .container { padding: 0; }
-    h1, h2, h3 { font-size: 18px !important; }
-    table { font-size: 11px; }
-    th, td { padding: 6px 4px !important; }
-    .week-nav { padding: 10px 12px; gap: 8px; }
-    .week-nav button { padding: 6px 10px; font-size: 11px; }
-    .week-label { font-size: 11px; }
-    /* Allow tables to scroll horizontally rather than squash */
-    .table-wrap, .scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script>
-// Context-aware Home button — route staff back to staff.html, admin to admin index
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  // Set flag if came from staff
-  if (params.get('staff') === '1') {
-    sessionStorage.setItem('lalh_user_type', 'staff');
-  }
-  // Check flag and redirect home button
-  const userType = sessionStorage.getItem('lalh_user_type');
-  if (userType === 'staff') {
-    document.addEventListener('DOMContentLoaded', () => {
-      const homeBtn = document.getElementById('home-fab');
-      if (homeBtn) homeBtn.href = 'staff.html';
-      // Also any Back links
-      document.querySelectorAll('a.back').forEach(a => {
-        if (a.getAttribute('href') === './') a.href = 'staff.html';
-      });
-    });
-  }
-})();
-</script>
-
 </head>
 <body>
-</div>
-
-
 
 <div id="header">
   <h1>LALH <span>/ DASHBOARD</span></h1>
@@ -588,7 +324,6 @@
       </div>
     </div>
     <div id="leaks-box" style="display:none">
-    <div id="leaks-totals"></div>
       <div id="leaks-title">⚠ WEEK LEAKS <span id="leaks-count" style="font-size:11px;color:var(--text3);"></span></div>
       <div id="leaks-list"></div>
     </div>
@@ -611,79 +346,12 @@
 </div>
 
 <script>
-// ══════════════════════════════════════════
-// SUPABASE CONNECTION
-// ══════════════════════════════════════════
-const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-async function cloudGetMany(keys) {
-  try {
-    const { data, error } = await sb.from('roster_data').select('key, value').in('key', keys);
-    if (error) throw error;
-    const result = {};
-    keys.forEach(k => { result[k] = null; });
-    (data || []).forEach(r => { result[r.key] = r.value; });
-    return result;
-  } catch (e) {
-    console.log('cloudGetMany error:', e);
-    return {};
-  }
-}
-
-
-// ── Realtime sync: reload dashboard when data changes ──
-let _realtimeChannel = null;
-let _reloadTimer = null;
-
-function initRealtime() {
-  if (_realtimeChannel) return;
-  try {
-    _realtimeChannel = sb
-      .channel('roster_data_dashboard')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'roster_data' },
-        (payload) => {
-          const changedKey = payload.new?.key || payload.old?.key;
-          if (!changedKey || changedKey.startsWith('backup_')) return;
-          console.log('Realtime: change detected in', changedKey);
-          // Debounce: wait 2 seconds after last change before reloading
-          clearTimeout(_reloadTimer);
-          _reloadTimer = setTimeout(() => load(), 2000);
-        }
-      )
-      .subscribe((status) => {
-        console.log('Dashboard realtime status:', status);
-      });
-  } catch (e) {
-    console.log('Realtime init failed:', e);
-  }
-}
-
-async function cloudGet(key) {
-  try {
-    const { data, error } = await sb.from('roster_data').select('value').eq('key', key).maybeSingle();
-    if (error) throw error;
-    return data ? data.value : null;
-  } catch (e) {
-    console.log('cloudGet error:', key, e);
-    return null;
-  }
-}
-
+const API_URL = 'https://script.google.com/macros/s/AKfycbyV8B4gewTmHsRUyi8J-gxpaMpcB_VlLX_16BpAQX5xmr2IlAGE1LfgN2uYX02OSaio/exec';
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const DAY_FULL = {Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday',Sat:'Saturday',Sun:'Sunday'};
 let offset = 0;
 
-function money(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
-function signed(n) { return (n >= 0 ? '+' : '−') + '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
-function moneyShort(n) {
-  const v = Math.round(n);
-  return '$' + String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-
+// ── Week helpers (identical logic to jobs/wages files) ──
 function weekDates(off) {
   const now = new Date(), d = now.getDay();
   const mon = new Date(now);
@@ -710,23 +378,68 @@ function calcH(from, to) {
 function norm(name) {
   return (name || '').toLowerCase().trim().replace(/\s+/g, ' ');
 }
+// Fuzzy match a typed worker name to a staff member
 function matchStaff(typed, people) {
   const t = norm(typed);
   if (!t) return null;
+  // Exact match on full name or first name
   for (const p of people) {
     const full = norm(p.name);
     const first = full.split(' ')[0];
     if (t === full || t === first) return p;
   }
+  // Starts-with / contains match (handles kartik vs karik etc.)
   for (const p of people) {
     const first = norm(p.name).split(' ')[0];
     if (first.length >= 3 && (t.startsWith(first.slice(0, 4)) || first.startsWith(t.slice(0, 4)))) return p;
   }
+  // Levenshtein-lite: same first 3 chars
   for (const p of people) {
     const first = norm(p.name).split(' ')[0];
     if (t.slice(0, 3) === first.slice(0, 3)) return p;
   }
   return null;
+}
+
+
+async function cloudGetMany(keys, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const r = await fetch(API_URL + '?action=getMany&keys=' + keys.map(encodeURIComponent).join(','), { redirect: 'follow' });
+      if (r.ok) {
+        const t = await r.text();
+        // Verify it's JSON not HTML (rate limit page)
+        if (t.startsWith('{')) {
+          const d = JSON.parse(t);
+          return d.data || {};
+        }
+      }
+    } catch (e) {}
+    await new Promise(res => setTimeout(res, 1000));
+  }
+  return {};
+}
+
+async function cloudGet(key, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const r = await fetch(API_URL + '?action=get&key=' + encodeURIComponent(key), { redirect: 'follow' });
+      if (r.ok) {
+        const d = await r.json();
+        return d.value || null;
+      }
+    } catch (e) {}
+    // Wait 500ms before retrying
+    await new Promise(res => setTimeout(res, 500));
+  }
+  return null;
+}
+
+function money(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function signed(n) { return (n >= 0 ? '+' : '−') + '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function moneyShort(n) {
+  const v = Math.round(n);
+  return '$' + String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 async function load() {
@@ -749,22 +462,13 @@ async function load() {
   const rosterRaw = batch['roster_wk_' + wk];
   const ratesRaw = batch['roster_rates_' + wk];
   const globalRaw = batch['roster_global'];
-  // Try per-week roster snapshot first (fallback to global for weeks without snapshot)
-  const snapshotRaw = await cloudGet('roster_snapshot_' + wk);
 
   const jobsGlobal = gRaw ? JSON.parse(gRaw) : { rows: [] };
   const cells = jobsRaw ? JSON.parse(jobsRaw) : {};
   const jobRate = jobsRateRaw ? parseFloat(jobsRateRaw) : 45;
   const schedule = rosterRaw ? JSON.parse(rosterRaw) : {};
   const global = globalRaw ? JSON.parse(globalRaw) : { people: [] };
-  let people = global.people || [];
-  // Override with weekly snapshot if it exists
-  if (snapshotRaw) {
-    try {
-      const snap = JSON.parse(snapshotRaw);
-      if (Array.isArray(snap) && snap.length > 0) people = snap;
-    } catch(e) {}
-  }
+  const people = global.people || [];
 
   // Apply per-week rates
   if (ratesRaw) {
@@ -1040,11 +744,11 @@ async function load() {
   // LEAK: Wage hours significantly higher than job hours (billing leak)
   Object.entries(personWeek).forEach(([pid, data]) => {
     const gap = data.wageHrs - data.jobHrs;
-    if (gap >= 1 && data.wageHrs > 0 && data.jobHrs > 0) {
+    if (gap >= 3 && data.wageHrs > 0 && data.jobHrs > 0) {
       const potentialLoss = gap * jobRate;
       const breakdown = buildDayBreakdown(data.days, 'billing');
       leaks.push({
-        severity: gap >= 4 ? 'high' : (gap >= 2 ? 'medium' : 'low'),
+        severity: gap >= 8 ? 'high' : 'medium',
         title: '💰 BILLING LEAK — ' + data.name,
         detail: `Total: Jobs <b>${data.jobHrs.toFixed(1)}h</b> · Wage <b>${data.wageHrs.toFixed(1)}h</b> · Missing <b>${gap.toFixed(1)}h</b> from jobs<br>Paid for work not billed to client${breakdown}`,
         impact: `Potential lost revenue: ${money(potentialLoss)}`
@@ -1052,10 +756,10 @@ async function load() {
     }
     // LEAK: Job hours higher than wage (missed timesheet)
     const timesheetGap = data.jobHrs - data.wageHrs;
-    if (timesheetGap >= 1 && data.wageHrs > 0) {
+    if (timesheetGap >= 3 && data.wageHrs > 0) {
       const breakdown = buildDayBreakdown(data.days, 'timesheet');
       leaks.push({
-        severity: timesheetGap >= 4 ? 'high' : (timesheetGap >= 2 ? 'medium' : 'low'),
+        severity: timesheetGap >= 8 ? 'high' : 'medium',
         title: '📋 TIMESHEET LEAK — ' + data.name,
         detail: `Total: Jobs <b>${data.jobHrs.toFixed(1)}h</b> · Wage <b>${data.wageHrs.toFixed(1)}h</b> · Missing <b>${timesheetGap.toFixed(1)}h</b> from wages<br>Worked more than recorded on wages${breakdown}`,
         impact: `Missing ${timesheetGap.toFixed(1)}h of wage record`
@@ -1064,9 +768,9 @@ async function load() {
   });
 
   // LEAK: Extras gap negative (fuel leak)
-  if (wkExtrasGap < -5) {
+  if (wkExtrasGap < -20) {
     leaks.push({
-      severity: Math.abs(wkExtrasGap) > 50 ? 'high' : (Math.abs(wkExtrasGap) > 20 ? 'medium' : 'low'),
+      severity: Math.abs(wkExtrasGap) > 100 ? 'high' : 'medium',
       title: '⛽ EXTRAS LEAK',
       detail: `Reimbursed to staff exceeds what you charged the client for extras (parking, materials, fuel)`,
       impact: `Uncovered cost: ${money(Math.abs(wkExtrasGap))}`
@@ -1101,7 +805,7 @@ async function load() {
       }
     });
   });
-  dayLosses.slice(0, 10).forEach(dl => {
+  dayLosses.slice(0, 5).forEach(dl => {
     leaks.push({
       severity: 'low',
       title: '⏱ TIME OVER — ' + dl.name + ' · ' + dl.day,
@@ -1121,29 +825,8 @@ async function load() {
         <div class="leak-detail">${l.detail}</div>
         <div class="leak-impact ${l.severity}">${l.impact}</div>
       </div>`).join('');
-    // Add pulsing animation + total loss banner when leaks exist
-    document.getElementById('leaks-box').classList.add('has-leaks');
-    // Calculate total $ exposed to leaks
-    let totalLossDollars = 0;
-    leaks.forEach(l => {
-      // Extract $ amounts from impact text (e.g. "Potential $45.00 loss")
-      const matches = (l.impact || '').match(/\$([0-9,]+(?:\.\d+)?)/g);
-      if (matches) matches.forEach(m => { totalLossDollars += parseFloat(m.replace(/[$,]/g, '')); });
-    });
-    const totalsEl = document.getElementById('leaks-totals');
-    if (totalsEl) {
-      if (totalLossDollars > 0) {
-        totalsEl.textContent = '⚠️ POTENTIAL LOSS THIS WEEK: $' + totalLossDollars.toFixed(2);
-        totalsEl.classList.add('show');
-      } else {
-        totalsEl.classList.remove('show');
-      }
-    }
   } else {
     document.getElementById('leaks-box').style.display = 'block';
-    document.getElementById('leaks-box').classList.remove('has-leaks');
-    const totalsEl = document.getElementById('leaks-totals');
-    if (totalsEl) totalsEl.classList.remove('show');
     document.getElementById('leaks-count').textContent = '';
     document.getElementById('leaks-list').innerHTML = '<div id="leaks-clean">✅ NO LEAKS THIS WEEK</div>';
   }
@@ -1294,10 +977,7 @@ async function load() {
   }
 
   // ── Week hero ──
-  // Labour-only profit — strips out extras gap, so profit reflects just labour arbitrage
-  const wkProfitRaw = wkCharged - wkPaid; // includes extras both sides
-  const wkProfit = wkProfitRaw - wkExtrasGap; // remove the extras gap from profit
-  const wkLabourCharged = wkCharged; // kept for margin calc (unchanged)
+  const wkProfit = wkCharged - wkPaid; // already includes extras both sides
   const margin = wkCharged > 0 ? Math.round((wkProfit / wkCharged) * 100) : 0;
   const exGapEl = document.getElementById('h-exgap');
   exGapEl.textContent = (wkExtrasGap >= 0 ? '+' : '−') + moneyShort(Math.abs(wkExtrasGap)).slice(1).replace(/^/, '$');
@@ -1561,198 +1241,5 @@ async function downloadPDF() {
 }
 
 </script>
-
-<script>
-// Elevate dashboard header dynamically after DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(function() {
-    // Find week navigation buttons
-    const btns = document.querySelectorAll('button');
-    let prevBtn, nextBtn, wkLabel;
-    btns.forEach(b => {
-      const txt = (b.textContent || '').trim();
-      if (txt === '← Prev' || txt === '‹ Prev' || txt.includes('Prev')) prevBtn = b;
-      if (txt === 'Next →' || txt === 'Next ›' || txt.includes('Next')) nextBtn = b;
-    });
-    // Find week label
-    const allEls = document.querySelectorAll('h1, h2, .week-label, [id*="week"]');
-    for (const el of allEls) {
-      if (el.textContent.match(/W\d+|Week/) && !wkLabel) wkLabel = el;
-    }
-
-    // Simple header — just week nav in a lightweight container
-    const hero = document.createElement('div');
-    hero.className = 'dash-hero-simple';
-    hero.innerHTML = `
-      <div class="dash-week-nav" id="new-week-nav"></div>
-    `;
-    const container = document.querySelector('.container') || document.body.firstElementChild;
-    if (container) container.insertBefore(hero, container.firstChild);
-
-    // Move week nav buttons + label into hero
-    const newNav = document.getElementById('new-week-nav');
-    if (newNav && prevBtn && nextBtn) {
-      // Clone buttons preserving their handlers by moving them
-      newNav.appendChild(prevBtn);
-      const lblSpan = document.createElement('div');
-      lblSpan.className = 'dash-week-label';
-      lblSpan.id = 'dash-week-label-mirror';
-      lblSpan.textContent = wkLabel ? wkLabel.textContent : '';
-      newNav.appendChild(lblSpan);
-      newNav.appendChild(nextBtn);
-
-      // Keep mirror updated
-      if (wkLabel) {
-        const observer = new MutationObserver(() => {
-          lblSpan.textContent = wkLabel.textContent;
-        });
-        observer.observe(wkLabel, { childList: true, characterData: true, subtree: true });
-      }
-    }
-
-    // Hide original h1 if it duplicates
-    const origH1 = document.querySelector('body > h1, .container > h1:not(.dash-title)');
-    if (origH1 && origH1.textContent.toLowerCase().includes('dashboard')) origH1.style.display = 'none';
-  }, 300);
-});
-</script>
-
-
-<style>
-  #home-fab {
-    position: fixed;
-    bottom: 16px; right: 16px;
-    z-index: 9998;
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    background: rgba(200,168,75,0.85);
-    color: #060d1a;
-    font-size: 14px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    text-decoration: none;
-    transition: all 0.2s;
-    opacity: 0.55;
-  }
-  #home-fab:hover {
-    opacity: 1;
-    transform: scale(1.1);
-  }
-  #home-fab:active { transform: scale(0.9); }
-  @media (max-width: 640px) {
-    #home-fab { bottom: 14px; right: 14px; width: 36px; height: 36px; font-size: 13px; }
-  }
-
-  /* Enhanced dashboard styling — world class polish */
-  .container { max-width: 1080px !important; padding: 0 20px 60px !important; }
-
-  /* Section headers upgrade */
-  h2, h3 {
-    font-family: 'Playfair Display', 'Inter', serif;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    margin-top: 32px !important;
-    margin-bottom: 16px !important;
-    position: relative;
-    padding-left: 16px;
-  }
-  h2::before, h3::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0.15em;
-    bottom: 0.15em;
-    width: 4px;
-    background: linear-gradient(180deg, #f4d374, #c8a84b);
-    border-radius: 2px;
-  }
-
-  /* Card upgrades */
-  .stat-card, .metric-card, [class*="card"] {
-    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.15)) !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
-    border-radius: 14px !important;
-    transition: all 0.2s !important;
-  }
-  .stat-card:hover, .metric-card:hover {
-    border-color: rgba(200,168,75,0.2) !important;
-    transform: translateY(-2px);
-  }
-
-  /* Better tables */
-  table {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    background: rgba(0,0,0,0.15) !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
-  }
-  th {
-    background: linear-gradient(180deg, rgba(200,168,75,0.15), rgba(200,168,75,0.05)) !important;
-    color: #f4d374 !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 10px !important;
-    letter-spacing: 0.15em !important;
-    text-transform: uppercase !important;
-    padding: 12px !important;
-    border-bottom: 1px solid rgba(200,168,75,0.2) !important;
-  }
-  td {
-    padding: 10px 12px !important;
-    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
-    font-size: 13px !important;
-  }
-  tr:last-child td { border-bottom: 0 !important; }
-  tr:hover td { background: rgba(200,168,75,0.03) !important; }
-
-  /* Number emphasis */
-  .money, [class*="amount"], [class*="profit"] {
-    font-family: 'JetBrains Mono', monospace !important;
-    font-weight: 700 !important;
-  }
-
-  /* Print / subtle grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(200,168,75,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(200,168,75,0.03) 1px, transparent 1px);
-    background-size: 60px 60px;
-    pointer-events: none;
-    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-    z-index: 0;
-  }
-  .container { position: relative; z-index: 1; }
-
-  .dash-hero-simple {
-    background: linear-gradient(135deg, rgba(200,168,75,0.05), rgba(30,58,99,0.2));
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px;
-    padding: 12px 16px;
-    margin-bottom: 20px;
-  }
-  .dash-hero-simple .dash-week-nav {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-    border-top: 0 !important;
-  }
-/* MOBILE SWEEP */
-  @media (max-width: 640px) {
-    body { padding: 12px 10px 60px; }
-    .container { padding: 0; }
-    h1, h2, h3 { font-size: 18px !important; }
-    table { font-size: 11px; }
-    th, td { padding: 6px 4px !important; }
-    .week-nav { padding: 10px 12px; gap: 8px; }
-    .week-nav button { padding: 6px 10px; font-size: 11px; }
-    .week-label { font-size: 11px; }
-    /* Allow tables to scroll horizontally rather than squash */
-    .table-wrap, .scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  }
-</style>
-<a href="./" id="home-fab" title="Back to Home">🏠</a>
-
 </body>
 </html>
