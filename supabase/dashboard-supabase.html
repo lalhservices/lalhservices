@@ -1294,7 +1294,10 @@ async function load() {
   }
 
   // ── Week hero ──
-  const wkProfit = wkCharged - wkPaid; // already includes extras both sides
+  // Labour-only profit — strips out extras gap, so profit reflects just labour arbitrage
+  const wkProfitRaw = wkCharged - wkPaid; // includes extras both sides
+  const wkProfit = wkProfitRaw - wkExtrasGap; // remove the extras gap from profit
+  const wkLabourCharged = wkCharged; // kept for margin calc (unchanged)
   const margin = wkCharged > 0 ? Math.round((wkProfit / wkCharged) * 100) : 0;
   const exGapEl = document.getElementById('h-exgap');
   exGapEl.textContent = (wkExtrasGap >= 0 ? '+' : '−') + moneyShort(Math.abs(wkExtrasGap)).slice(1).replace(/^/, '$');
