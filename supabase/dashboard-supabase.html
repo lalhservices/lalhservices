@@ -929,8 +929,9 @@ async function load() {
       unmatchedHtml = `<div class="unmatched-note">⚠ Not on staff list: ${items} — charged but no wage matched</div>`;
     }
 
-    // True profit includes extras gap
-    const dayProfit = (dayCharged - dayPaid) + exGap;
+    // Labour-only profit (extras shown separately)
+    const dayProfit = dayCharged - dayPaid;  // excludes extras gap
+    const dayProfitWithExtras = dayProfit + exGap;  // for the "with extras" display
     const daySavedAmt = daySavedHrs * jobRate;
     wkCharged += dayCharged + exCharged;
     wkPaid += dayPaid + exPaid;
@@ -976,7 +977,7 @@ async function load() {
             <span class="df-item">Charged <b>${money(dayCharged + exCharged)}</b></span>
             <span class="df-item">Paid <b>${money(dayPaid + exPaid)}</b></span>
             ${savedFootHtml}
-            <span class="df-item ${profitCls}">Profit <b>${dayProfit >= 0 ? '+' : '−'}${money(Math.abs(dayProfit))}</b></span>
+            <span class="df-item ${profitCls}">Profit <b>${dayProfit >= 0 ? '+' : '−'}${money(Math.abs(dayProfit))}</b></span>${Math.abs(exGap) >= 0.01 ? `<span class="df-item" style="color:var(--gold)">+ Gap <b style="color:var(--gold)">${exGap >= 0 ? '+' : '−'}${money(Math.abs(exGap))}</b> = <b style="color:${dayProfitWithExtras >= 0 ? 'var(--emerald)' : 'var(--coral)'}">${dayProfitWithExtras >= 0 ? '+' : '−'}${money(Math.abs(dayProfitWithExtras))}</b></span>` : ''}
           </div>
         </div>
       </div>`;
