@@ -1606,11 +1606,18 @@ async function cloudLoadState() {
         const loaded = JSON.parse(wk);
         // Guard: check if this week's data is identical to previous week (copy bug)
         const prevWk = await cloudGet('jt2_wk_' + weekKey(-1));
-        if (prevWk && JSON.stringify(loaded) === JSON.stringify(JSON.parse(prevWk))) {
-          console.log('W19 guard: current week identical to previous — treating as empty');
+        const prevWkStr = prevWk ? JSON.stringify(JSON.parse(prevWk)) : null;
+        const loadedStr = JSON.stringify(loaded);
+        if (prevWkStr && loadedStr === prevWkStr && G.currentOffset === 0) {
+          console.warn('W19 guard FIRED: current week identical to previous — treating as empty and purging bad row');
           cells = {};
+          // Also delete the bad row from Supabase so it doesn't come back
+          try { await cloudDelete('jt2_wk_' + weekKey(0)); } catch(e) {}
+          _lastHash = '';
         } else {
           cells = loaded;
+          // Remember prev-week hash for guard-during-save
+          _prevWeekSnapshot = prevWkStr;
         }
         console.log('Cells loaded, keys:', Object.keys(cells).length);
       } catch(e) {
@@ -1638,6 +1645,7 @@ async function cloudLoadState() {
 }
 
 let _lastHash = '';
+let _prevWeekSnapshot = null;
 let _isSaving = false;
 let _lastTyped = 0;
 document.addEventListener('input', () => { _lastTyped = Date.now(); });
@@ -1704,6 +1712,21 @@ async function cloudScheduleSave() {
         const gToSave = { rows: G.rows, nextRow: G.nextRow, globalRate: G.globalRate, currentOffset: 0 };
         await cloudSet('jt2_global', JSON.stringify(gToSave));
         const val = JSON.stringify(snapshotCells);
+        // Guard: refuse to save if about to write current week with previous week's exact data (duplication bug)
+        if (snapshotOffset === 0 && _prevWeekSnapshot && val === _prevWeekSnapshot) {
+          console.warn('Save BLOCKED: current week data identical to previous week — refusing to save duplicate');
+          _isSaving = false;
+          return;
+        }
+        // Guard: date boundary — verify snapshot's week key still matches today's current week
+        if (snapshotOffset === 0) {
+          const todaysKey = 'jt2_wk_' + weekKey(0);
+          if (snapshotWkKey !== todaysKey) {
+            console.warn('JOBS save BLOCKED: date boundary crossed. Snapshot was', snapshotWkKey, 'but today is', todaysKey);
+            _isSaving = false;
+            return;
+          }
+        }
         // Never save empty over existing — only for same-week snapshot
         if (Object.keys(snapshotCells).length === 0 && _lastHash && _lastHash !== '{}' && _lastHash !== '' && snapshotOffset === G.currentOffset) {
           console.log('Save skipped — cells empty but sheet has data');
