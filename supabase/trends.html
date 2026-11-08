@@ -377,14 +377,17 @@ async function loadAll() {
 
     const totalRev = charged + parkingClient + matClient;
     const totalCost = wages + parkingStaff + matStaff + fuelStaff;
-    const profit = totalRev - totalCost;
+    // Labour-only profit (excludes extras gap for consistency with dashboard)
+    const extrasGap = (parkingClient + matClient) - (parkingStaff + matStaff + fuelStaff);
+    const profitRaw = totalRev - totalCost;
+    const profit = profitRaw - extrasGap;  // strips out extras gap
     const margin = totalRev > 0 ? (profit / totalRev) * 100 : 0;
 
     return {
       wk,
       charged, totalRev,
       wages, totalCost,
-      profit, margin, hours,
+      profit, margin, hours, extrasGap,
       parkingClient, matClient,
       parkingStaff, matStaff, fuelStaff
     };
