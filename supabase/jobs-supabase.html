@@ -769,7 +769,7 @@ function doConfirm(){
 }
 
 // ── Render ──
-function render(){renderHead();renderBody();renderFooter();}
+function render(){renderHead();renderBody();renderFooter();updateHiddenNotice();}
 
 function renderHead(){
   const dates=dayDates(G.currentOffset);
@@ -785,7 +785,7 @@ function renderHead(){
 function renderBody(){
   const rowColors = COLORS;
   let h='';
-  G.rows.forEach((rid,ri)=>{
+  G.rows.filter(rid => !(cells._hidden || []).includes(rid)).forEach((rid,ri)=>{
     const color = rowColors[ri % rowColors.length];
     const th=rowHrs(rid), tw=rowWages(rid), te=rowExtras(rid), gt=rowGrand(rid);
     h+=`<tr class="job-row"><td style="width:0;padding:0;border:none;"></td>`;
@@ -970,10 +970,102 @@ function addJob(){
   render();cloudScheduleSave();
 }
 
-function removeRow(rid){
-  G.rows=G.rows.filter(r=>r!==rid);
-  DAYS.forEach(d=>delete cells[ck(rid,d)]);
-  render();cloudScheduleSave();
+
+// Unhide rows hidden on current week
+
+// Show/hide the "N rows hidden this week" notice
+function updateHiddenNotice() {
+  let notice = document.getElementById('hidden-rows-notice');
+  const count = (cells._hidden || []).length;
+  if (count > 0) {
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = 'hidden-rows-notice';
+      notice.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin:0 0 10px 0;padding:6px 12px;background:rgba(52,211,153,0.1);border:1px dashed rgba(52,211,153,0.35);border-radius:8px;font-size:11px;color:#34d399;font-family:JetBrains Mono,monospace;cursor:pointer;';
+      notice.onclick = () => {
+        if (confirm('Unhide all ' + (cells._hidden || []).length + ' rows hidden on this week?')) unhideRows();
+      };
+      const wkLabel = document.getElementById('week-label');
+      if (wkLabel && wkLabel.parentElement) {
+        wkLabel.parentElement.insertAdjacentElement('afterend', notice);
+      } else {
+        document.body.insertAdjacentElement('afterbegin', notice);
+      }
+    }
+    notice.innerHTML = '👁 ' + count + ' row' + (count>1?'s':'') + ' hidden this week — click to unhide';
+  } else if (notice) {
+    notice.remove();
+  }
+}
+
+function unhideRows() {
+  if (!cells._hidden || cells._hidden.length === 0) return;
+  delete cells._hidden;
+  render();
+  cloudScheduleSave();
+}
+
+async function removeRow(rid){
+  // Check if row has data in current week
+  const hasCurrentData = DAYS.some(d => {
+    const cell = cells[ck(rid,d)];
+    return cell && (cell.jobName || (cell.workers && cell.workers.length > 0) || cell.parking || cell.materials);
+  });
+  // Show safer modal: "Clear this week only" vs "Delete entirely (removes from all weeks)"
+  const choice = await askRowDeleteConfirm(rid, hasCurrentData);
+  if (!choice) return;  // cancelled
+  if (choice === 'current') {
+    // Only clear current week's cells, keep row in G.rows so historical data stays visible
+    DAYS.forEach(d => delete cells[ck(rid,d)]);
+    render();
+    cloudScheduleSave();
+  } else if (choice === 'all') {
+    // Full delete: remove from G.rows (historical data stays in storage but invisible)
+    G.rows = G.rows.filter(r => r !== rid);
+    DAYS.forEach(d => delete cells[ck(rid,d)]);
+    render();
+    cloudScheduleSave();
+  }
+}
+
+// Confirmation modal for row deletion with two safety options
+function askRowDeleteConfirm(rid, hasCurrentData) {
+  return new Promise(resolve => {
+    // Remove any existing modal
+    const existing = document.getElementById('row-del-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'row-del-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(6,13,26,0.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+      <div style="background:linear-gradient(180deg,#142748,#0d1a30);border:1px solid rgba(200,168,75,0.3);border-radius:16px;padding:24px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+        <div style="font-family:'Playfair Display',serif;font-size:20px;color:#f4d374;margin-bottom:10px;font-weight:700;">Delete Row?</div>
+        <div style="color:rgba(255,255,255,0.75);font-size:13px;line-height:1.5;margin-bottom:20px;">
+          Choose how to delete this row:
+        </div>
+        <div style="display:grid;gap:10px;">
+          <button id="del-current" style="padding:12px 14px;border-radius:10px;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.4);color:#f4d374;cursor:pointer;font-family:inherit;text-align:left;">
+            <div style="font-weight:700;font-size:13px;">Clear this week only</div>
+            <div style="font-size:11px;color:rgba(244,211,116,0.7);margin-top:3px;">Safe — past weeks keep this row's history</div>
+          </button>
+          <button id="del-all" style="padding:12px 14px;border-radius:10px;background:rgba(255,107,94,0.1);border:1px solid rgba(255,107,94,0.3);color:#ff6b5e;cursor:pointer;font-family:inherit;text-align:left;">
+            <div style="font-weight:700;font-size:13px;">Delete entirely</div>
+            <div style="font-size:11px;color:rgba(255,107,94,0.7);margin-top:3px;">Removes row from all weeks (past data stays in storage but becomes invisible)</div>
+          </button>
+          <button id="del-cancel" style="padding:10px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);cursor:pointer;font-family:inherit;margin-top:4px;">Cancel</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('del-current').onclick = () => { modal.remove(); resolve('current'); };
+    document.getElementById('del-all').onclick = () => { modal.remove(); resolve('all'); };
+    document.getElementById('del-cancel').onclick = () => { modal.remove(); resolve(null); };
+    modal.onclick = (e) => { if (e.target === modal) { modal.remove(); resolve(null); } };
+    document.addEventListener('keydown', function esc(ev) {
+      if (ev.key === 'Escape') { modal.remove(); resolve(null); document.removeEventListener('keydown', esc); }
+    });
+  });
 }
 
 function setGlobalRate(value){
