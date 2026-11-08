@@ -1151,6 +1151,7 @@ async function load() {
 
   // ── Job Profitability (per day) ──
   const jobsByDay = []; // [{day, dateStr, jobs:[{name,hrs,revenue,cost,profit,margin}], dayTotals}]
+  const jobAlerts = []; // per-job and per-day loss/thin-margin alerts
 
   DAYS.forEach((day, di) => {
     const workerJobsToday = {};
@@ -1212,8 +1213,82 @@ async function load() {
       const daySavedHrs = Math.round(daySavedHrsRaw * 2) / 2;
       const daySavedAmt = daySavedHrs * jobRate;
       jobsByDay.push({ day, dateStr, jobs: jobList, dayHrs, dayWageHrs, daySavedHrs, daySavedAmt, dayRev, dayCost, dayProfit, dayMargin });
+
+      // ── Per-job alerts ──
+      jobList.forEach(j => {
+        if (j.profit < 0) {
+          // Losing money on this job
+          jobAlerts.push({
+            severity: 'high',
+            title: '🔴 LOSING MONEY — ' + j.name,
+            detail: `${DAY_FULL[day]} ${dateStr} · Revenue <b>${money(j.revenue)}</b> · Cost <b>${money(j.cost)}</b> · <b style="color:var(--coral)">Loss ${money(Math.abs(j.profit))}</b>`,
+            impact: `Job costs ${money(Math.abs(j.profit))} more than it brings in`
+          });
+        } else if (j.margin < 10 && j.revenue >= 50) {
+          // Thin margin — under 10%
+          jobAlerts.push({
+            severity: 'medium',
+            title: '⚠️ THIN MARGIN — ' + j.name,
+            detail: `${DAY_FULL[day]} ${dateStr} · Revenue <b>${money(j.revenue)}</b> · Cost <b>${money(j.cost)}</b> · <b style="color:var(--amber)">Profit only ${money(j.profit)} (${j.margin}%)</b>`,
+            impact: `Margin is ${j.margin}% — review bill rate or pay rate`
+          });
+        }
+      });
+
+      // ── Per-day alerts ──
+      if (dayProfit < 0 && dayRev > 0) {
+        jobAlerts.push({
+          severity: 'high',
+          title: '🔴 DAY IN THE RED — ' + DAY_FULL[day] + ' ' + dateStr,
+          detail: `Revenue <b>${money(dayRev)}</b> · Cost <b>${money(dayCost)}</b> · <b style="color:var(--coral)">Loss ${money(Math.abs(dayProfit))}</b>`,
+          impact: `Whole day lost ${money(Math.abs(dayProfit))}`
+        });
+      } else if (dayMargin < 10 && dayRev >= 200) {
+        jobAlerts.push({
+          severity: 'medium',
+          title: '⚠️ THIN DAY MARGIN — ' + DAY_FULL[day] + ' ' + dateStr,
+          detail: `Revenue <b>${money(dayRev)}</b> · Cost <b>${money(dayCost)}</b> · <b style="color:var(--amber)">Profit ${money(dayProfit)} (${dayMargin}%)</b>`,
+          impact: `Day margin ${dayMargin}% — low`
+        });
+      }
     }
   });
+
+  // Append per-job and per-day alerts to the leaks box (if any exist)
+  if (jobAlerts.length) {
+    const leaksList = document.getElementById('leaks-list');
+    if (leaksList) {
+      const alertsHtml = jobAlerts.map(a => `
+        <div class="leak-item ${a.severity}">
+          <div class="leak-head ${a.severity}">${a.title}</div>
+          <div class="leak-detail">${a.detail}</div>
+          <div class="leak-impact ${a.severity}">${a.impact}</div>
+        </div>`).join('');
+      // If leaks box is hidden (no original leaks), show it now
+      const leaksBox = document.getElementById('leaks-box');
+      if (leaksBox && leaksBox.style.display === 'none') leaksBox.style.display = 'block';
+      // If leaks-list currently says "NO LEAKS", replace. Otherwise append.
+      if (leaksList.innerHTML.includes('leaks-clean') || leaksList.innerHTML.trim() === '') {
+        leaksList.innerHTML = alertsHtml;
+      } else {
+        leaksList.innerHTML += alertsHtml;
+      }
+      // Trigger the pulsing animation
+      if (leaksBox) leaksBox.classList.add('has-leaks');
+      // Add total $ to banner
+      let totalAlertDollars = 0;
+      jobAlerts.forEach(a => {
+        const m = (a.impact || '').match(/\$([0-9,]+(?:\.\d+)?)/);
+        if (m) totalAlertDollars += parseFloat(m[1].replace(/,/g, ''));
+      });
+      const totalsEl = document.getElementById('leaks-totals');
+      if (totalsEl && totalAlertDollars > 0) {
+        const existing = totalsEl.textContent;
+        totalsEl.textContent = (existing ? existing + ' · ' : '') + '⚠️ JOB/DAY LOSSES: $' + totalAlertDollars.toFixed(2);
+        totalsEl.classList.add('show');
+      }
+    }
+  }
 
   if (jobsByDay.length) {
     document.getElementById('job-profit').style.display = 'block';
