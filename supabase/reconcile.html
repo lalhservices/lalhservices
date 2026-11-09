@@ -368,9 +368,9 @@ async function load() {
   currentData = map[`reconcile_${wk}`] ? JSON.parse(map[`reconcile_${wk}`]) : {};
   populateFields(currentData);
 
-  // Compute system totals
-  const system = computeSystem(wk, map);
-  renderCompare(system);
+  // Compute system totals and cache them for in-session use
+  systemCache = computeSystem(wk, map);
+  renderCompare(systemCache);
 }
 
 function computeSystem(wk, map) {
@@ -506,7 +506,11 @@ function populateFields(d) {
   document.getElementById('f-notes').value = d.notes || '';
 }
 
+// Cached system totals for current week — avoids refetching during typing
+let systemCache = { invoiceInclGst: 0, wages: 0 };
+
 function save() {
+  // Update in-memory currentData from form fields (no DOM changes to inputs)
   currentData = {
     invoiceNo: document.getElementById('f-inv-no').value,
     invoiceAmount: document.getElementById('f-inv-amt').value,
@@ -519,6 +523,10 @@ function save() {
     lastUpdated: new Date().toISOString()
   };
 
+  // Re-render comparison IMMEDIATELY (no fetch — uses cached system totals)
+  renderCompare(systemCache);
+
+  // Debounced background save to Supabase (doesn't touch any inputs)
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     const payload = JSON.stringify(currentData);
@@ -527,14 +535,10 @@ function save() {
       { onConflict: 'key' }
     );
     if (error) { console.error('Save error:', error); return; }
-
     const badge = document.getElementById('save-badge');
     badge.classList.add('show');
     setTimeout(() => badge.classList.remove('show'), 1500);
-
-    // Re-render comparison after save
-    await load();
-  }, 500);
+  }, 800);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
