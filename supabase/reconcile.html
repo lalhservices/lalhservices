@@ -243,24 +243,16 @@
     font-family: 'JetBrains Mono', monospace;
     display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
   }
-  .overdue-line .days-overdue {
-    color: var(--coral); font-weight: 700;
-  }
+  .overdue-line .days-overdue { color: var(--coral); font-weight: 700; }
   .overdue-line a {
     color: var(--gold-300); text-decoration: none; font-size: 10px;
     letter-spacing: 0.08em; text-transform: uppercase;
   }
   .overdue-line a:hover { text-decoration: underline; }
 
-  /* Quick-copy button inside input */
-  .input-with-copy {
-    position: relative;
-    display: flex;
-    gap: 6px;
-  }
-  .input-with-copy input {
-    flex: 1;
-  }
+  /* Quick-copy button */
+  .input-with-copy { display: flex; gap: 6px; }
+  .input-with-copy input { flex: 1; }
   .copy-btn {
     background: rgba(200,168,75,0.12);
     border: 1px solid rgba(200,168,75,0.3);
@@ -273,12 +265,10 @@
     letter-spacing: 0.08em;
     font-weight: 700;
     white-space: nowrap;
-    transition: all 0.15s;
   }
   .copy-btn:hover { background: rgba(200,168,75,0.22); border-color: var(--gold-500); }
-  .copy-btn:active { transform: scale(0.95); }
 
-  /* History view */
+  /* History */
   .history-section {
     background: rgba(255,255,255,0.025);
     border: 1px solid rgba(255,255,255,0.08);
@@ -288,8 +278,7 @@
   }
   .history-header {
     display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer;
-    user-select: none;
+    cursor: pointer; user-select: none;
   }
   .history-title {
     font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
@@ -305,14 +294,11 @@
     transition: transform 0.2s;
   }
   .history-section.open .history-chevron { transform: rotate(180deg); }
-  .history-list {
-    display: none;
-    margin-top: 16px;
-  }
+  .history-list { display: none; margin-top: 16px; }
   .history-section.open .history-list { display: block; }
   .history-row {
     display: grid;
-    grid-template-columns: 70px 1fr 90px;
+    grid-template-columns: 70px 1fr 100px;
     gap: 10px;
     padding: 10px 0;
     border-top: 1px solid rgba(255,255,255,0.05);
@@ -325,7 +311,6 @@
   .history-wk {
     font-family: 'JetBrains Mono', monospace;
     color: var(--gold-300); font-weight: 700;
-    letter-spacing: 0.05em;
   }
   .history-info {
     color: rgba(255,255,255,0.65);
@@ -343,7 +328,6 @@
   .history-status.mismatch { background: rgba(255,107,94,0.12); color: var(--coral); }
   .history-status.pending { background: rgba(251,191,36,0.1); color: var(--amber); }
   .history-status.unpaid { background: rgba(255,107,94,0.1); color: var(--coral); }
-
 </style>
 </head>
 <body>
@@ -357,7 +341,6 @@
     <div class="hero-sub">Cross-check what the system calculated vs what you actually sent/paid</div>
   </div>
 
-  <!-- Overdue invoice alert -->
   <div class="overdue-alert" id="overdue-alert">
     <div class="overdue-title">⚠️ Overdue Invoices</div>
     <div id="overdue-list"></div>
@@ -399,19 +382,19 @@
       <div class="field"><label>Amount Sent (incl GST)</label>
         <div class="input-with-copy">
           <input type="number" step="0.01" id="f-inv-amt" placeholder="0.00" oninput="save()">
-          <button type="button" class="copy-btn" onclick="copyFromSystem('invoice')" title="Copy system amount">↙ SYSTEM</button>
+          <button type="button" class="copy-btn" onclick="copyFromSystem('invoice')">↙ SYSTEM</button>
         </div>
       </div>
       <div class="field"><label>Date Sent</label>
         <div class="input-with-copy">
           <input type="date" id="f-inv-date" oninput="save()">
-          <button type="button" class="copy-btn" onclick="setToday('f-inv-date')" title="Set to today">TODAY</button>
+          <button type="button" class="copy-btn" onclick="setToday('f-inv-date')">TODAY</button>
         </div>
       </div>
       <div class="field"><label>Date Paid by Client</label>
         <div class="input-with-copy">
           <input type="date" id="f-inv-paid-date" oninput="save()">
-          <button type="button" class="copy-btn" onclick="setToday('f-inv-paid-date')" title="Set to today">TODAY</button>
+          <button type="button" class="copy-btn" onclick="setToday('f-inv-paid-date')">TODAY</button>
         </div>
       </div>
     </div>
@@ -433,13 +416,13 @@
       <div class="field"><label>Total Wages Paid</label>
         <div class="input-with-copy">
           <input type="number" step="0.01" id="f-wage-amt" placeholder="0.00" oninput="save()">
-          <button type="button" class="copy-btn" onclick="copyFromSystem('wages')" title="Copy system amount">↙ SYSTEM</button>
+          <button type="button" class="copy-btn" onclick="copyFromSystem('wages')">↙ SYSTEM</button>
         </div>
       </div>
       <div class="field"><label>Date Wages Paid</label>
         <div class="input-with-copy">
           <input type="date" id="f-wage-date" oninput="save()">
-          <button type="button" class="copy-btn" onclick="setToday('f-wage-date')" title="Set to today">TODAY</button>
+          <button type="button" class="copy-btn" onclick="setToday('f-wage-date')">TODAY</button>
         </div>
       </div>
     </div>
@@ -453,7 +436,6 @@
     </div>
     <div style="margin-top:12px;"><span class="save-badge" id="save-badge">✓ Saved</span></div>
   </div>
-  <!-- History view -->
   <div class="history-section open" id="history-section">
     <div class="history-header" onclick="document.getElementById('history-section').classList.toggle('open')">
       <div class="history-title">Past Weeks · Last 12</div>
@@ -706,14 +688,27 @@ function save() {
 }
 
 
+// ── Robust date parsing — accepts YYYY-MM-DD only ──
+function parseInvDate(s) {
+  if (!s || typeof s !== 'string') return null;
+  // Expect YYYY-MM-DD from HTML date input
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const yr = parseInt(m[1]);
+  const mo = parseInt(m[2]) - 1;
+  const d = parseInt(m[3]);
+  if (yr < 2020 || yr > 2100) return null; // sanity bounds
+  if (mo < 0 || mo > 11) return null;
+  if (d < 1 || d > 31) return null;
+  return new Date(yr, mo, d);
+}
+
 // ── Quick-copy helpers ──
 function copyFromSystem(type) {
   if (type === 'invoice') {
-    const val = systemCache.invoiceInclGst.toFixed(2);
-    document.getElementById('f-inv-amt').value = val;
+    document.getElementById('f-inv-amt').value = systemCache.invoiceInclGst.toFixed(2);
   } else if (type === 'wages') {
-    const val = systemCache.wages.toFixed(2);
-    document.getElementById('f-wage-amt').value = val;
+    document.getElementById('f-wage-amt').value = systemCache.wages.toFixed(2);
   }
   save();
   flashToast('✓ Copied from system');
@@ -741,12 +736,12 @@ function flashToast(msg) {
   window._toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 1500);
 }
 
-// ── Load all reconcile history + check overdue ──
-let allReconcile = {}; // { wk: { ...data } }
+// ── Load all reconcile data for overdue + history ──
+let allReconcile = {};
 
 async function loadAllReconcile() {
   const { data, error } = await sb.from('roster_data').select('key, value').like('key', 'reconcile_%');
-  if (error) { console.error('Load history error:', error); return; }
+  if (error) { console.error('History load error:', error); return; }
   allReconcile = {};
   (data || []).forEach(r => {
     const wk = r.key.replace('reconcile_', '');
@@ -762,18 +757,18 @@ function checkOverdue() {
   const overdue = [];
   Object.keys(allReconcile).forEach(wk => {
     const d = allReconcile[wk];
-    if (d.invoiceDate && !d.invoicePaidDate) {
-      const sent = new Date(d.invoiceDate);
-      const daysSince = Math.floor((today - sent) / 86400000);
-      if (daysSince > 14) {
-        overdue.push({
-          wk,
-          invNo: d.invoiceNo || '?',
-          amount: d.invoiceAmount || '',
-          sentDate: d.invoiceDate,
-          daysSince
-        });
-      }
+    if (!d.invoiceDate || d.invoicePaidDate) return;
+    const sent = parseInvDate(d.invoiceDate);
+    if (!sent) return; // skip if date can't be parsed safely
+    const daysSince = Math.floor((today - sent) / 86400000);
+    // Sanity: must be positive and within a reasonable business window
+    if (daysSince > 14 && daysSince < 365) {
+      overdue.push({
+        wk,
+        invNo: d.invoiceNo || '?',
+        amount: d.invoiceAmount || '',
+        daysSince
+      });
     }
   });
   const alertEl = document.getElementById('overdue-alert');
@@ -782,7 +777,6 @@ function checkOverdue() {
     alertEl.classList.remove('show');
     return;
   }
-  // Sort by most overdue first
   overdue.sort((a,b) => b.daysSince - a.daysSince);
   listEl.innerHTML = overdue.map(o => {
     const amt = o.amount ? ' · ' + money(parseFloat(o.amount)) : '';
@@ -795,14 +789,9 @@ function checkOverdue() {
 }
 
 function jumpToWeek(wk) {
-  // Compute offset from current week to the target
-  const currentOffset = offset;
-  const currentWkKey = currentWk;
-  if (wk === currentWkKey) return;
-  // Step by step: search offsets ±26 weeks to find the match
+  if (wk === currentWk) return;
   for (let o = -52; o <= 10; o++) {
-    const testKey = weekKey(o);
-    if (testKey === wk) {
+    if (weekKey(o) === wk) {
       offset = o;
       load();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -815,7 +804,7 @@ function renderHistory() {
   const listEl = document.getElementById('history-list');
   const keys = Object.keys(allReconcile).sort().reverse().slice(0, 12);
   if (!keys.length) {
-    listEl.innerHTML = '<div style="padding:20px 0;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;">No history yet — start reconciling to build it.</div>';
+    listEl.innerHTML = '<div style="padding:20px 0;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;">No history yet.</div>';
     return;
   }
   listEl.innerHTML = keys.map(wk => {
@@ -827,20 +816,20 @@ function renderHistory() {
 
     let statusText, statusCls;
     if (!bothFilled) {
-      statusText = 'PENDING';
-      statusCls = 'pending';
+      statusText = 'PENDING'; statusCls = 'pending';
     } else if (!isPaid) {
-      statusText = 'UNPAID';
-      statusCls = 'unpaid';
+      statusText = 'UNPAID'; statusCls = 'unpaid';
     } else {
-      statusText = '✓ RECONCILED';
-      statusCls = 'matched';
+      statusText = '✓ DONE'; statusCls = 'matched';
     }
 
     const info = [];
     if (d.invoiceAmount) info.push('Inv ' + money(invAmt));
     if (d.wagesAmount) info.push('Wages ' + money(wageAmt));
-    if (d.invoicePaidDate) info.push('Paid ' + d.invoicePaidDate.slice(5).replace('-','/'));
+    if (d.invoicePaidDate) {
+      const paid = parseInvDate(d.invoicePaidDate);
+      if (paid) info.push('Paid ' + d.invoicePaidDate.slice(5).replace('-','/'));
+    }
     const infoStr = info.length ? info.join(' · ') : '(no data)';
 
     return `<div class="history-row" onclick="jumpToWeek('${wk}')">
