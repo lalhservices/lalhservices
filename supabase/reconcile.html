@@ -96,9 +96,9 @@
   .person-row { border-top: 1px solid var(--border2); }
   .person-cell { padding: 8px 14px; vertical-align: middle; background: var(--surface); }
   .person-inner { display: flex; align-items: center; gap: 8px; }
-  .person-bar { width: 3px; height: 38px; border-radius: 2px; flex-shrink: 0; }
+  .person-bar { width: 5px; height: 44px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
   .person-fields { flex: 1; min-width: 0; }
-  .person-name-input { font-size: 13px; font-weight: 700; color: var(--text); width: 100%; }
+  .person-name-input { font-size: 13px; font-weight: 800; color: var(--text); width: 100%; letter-spacing: 0.2px; }
   .person-rate-row { display: flex; align-items: center; gap: 3px; margin-top: 4px; }
   .rate-sym { color: var(--text3); font-size: 10px; flex-shrink: 0; }
   .rate-input { font-size: 11px; font-weight: 600; width: 42px; border-bottom: 1px solid var(--border2); }
@@ -713,10 +713,10 @@ function renderBody() {
     const pid=p.id, tw=totalWages(pid), tp=totalPark(pid), gt=grandTot(pid), th=totalHrs(pid);
     h += `<tr class="person-row">
       <td class="person-cell">
-        <div class="person-inner">
-          <div class="person-bar" style="background:${p.color}"></div>
+        <div class="person-inner" style="background:linear-gradient(90deg, ${p.color}15, transparent 60%); border-left: 4px solid ${p.color}; padding-left: 10px; margin-left: -10px; border-radius: 4px;">
+          <div class="person-bar" style="background:${p.color};color:${p.color};"></div>
           <div class="person-fields">
-            <input class="person-name-input" value="${esc(p.name)}" oninput="setPerson(${pid},'name',this.value)">
+            <input class="person-name-input" style="border-bottom: 2px solid ${p.color}60;" value="${esc(p.name)}" oninput="setPerson(${pid},'name',this.value)">
             <div class="person-rate-row">
               <span class="rate-sym">$</span>
               <input class="rate-input" style="color:${p.color}" type="number" min="0" step="0.5" value="${p.rate}" oninput="setPerson(${pid},'rate',this.value)">
