@@ -520,12 +520,12 @@
   <div class="hero">
     <div class="hero-eyebrow">Smart Lookup · Reply Helper</div>
     <h1>Email → Jobs<br>in One Paste</h1>
-    <div class="hero-sub">Paste any email mentioning job names. The system connects the dots and gives you a reply-ready summary.</div>
+    <div class="hero-sub">Paste the email with dates like "29/10" or "1 Nov" — each date pairs with the job name next to it, and you get only that day's entries back.</div>
   </div>
 
   <div class="section">
     <div class="section-label">Paste the email</div>
-    <textarea id="email-text" placeholder="Paste the whole email — misspellings, extra words, and short names all handled. e.g. &quot;can u confirm times for my phone chermside and zambrero kenmore last week&quot;"></textarea>
+    <textarea id="email-text" placeholder="Paste the email. Dates make it sharp.&#10;e.g. &quot;Zambrero Kenmore 29/10 and my phone chermside 1/11, can u confirm?&quot;&#10;Or without dates: &quot;times for chermside jobs last week&quot;"></textarea>
     <div class="controls">
       <button class="btn btn-primary" onclick="lookup()">
         <span>🔍 Find Jobs</span>
@@ -797,6 +797,104 @@ function filterByDate(jobs, maxWeeksBack) {
   });
 }
 
+// ─────────── DATE PARSING ───────────
+function parseDates(text) {
+  const results = [];
+  const now = new Date();
+  const futureLimit = new Date(now);
+  futureLimit.setDate(now.getDate() + 7); // Allow ~1 week into future
+
+  // Numeric: DD/MM, DD/MM/YY, DD-MM, D.M, DD/MM/YYYY
+  const re1 = /\b(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?\b/g;
+  let m;
+  while ((m = re1.exec(text)) !== null) {
+    let day = parseInt(m[1]);
+    let month = parseInt(m[2]);
+    let year = m[3] ? parseInt(m[3]) : null;
+
+    // Validate — Australian format is DD/MM
+    if (month > 12 && day <= 12) [day, month] = [month, day];
+    if (month < 1 || month > 12 || day < 1 || day > 31) continue;
+
+    if (year === null) year = now.getFullYear();
+    if (year < 100) year += 2000;
+
+    let date = new Date(year, month - 1, day);
+    if (date > futureLimit) date = new Date(year - 1, month - 1, day);
+
+    results.push({ date, startIdx: m.index, endIdx: m.index + m[0].length, raw: m[0] });
+  }
+
+  // Named months: "29 Oct", "29th October", "Oct 29th"
+  const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const monPat = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+  const reA = new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+${monPat}\\b`, 'gi');
+  const reB = new RegExp(`\\b${monPat}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`, 'gi');
+
+  [reA, reB].forEach((re, i) => {
+    while ((m = re.exec(text)) !== null) {
+      let day, monStr;
+      if (i === 0) { day = parseInt(m[1]); monStr = m[2].toLowerCase().slice(0,3); }
+      else { day = parseInt(m[2]); monStr = m[1].toLowerCase().slice(0,3); }
+      const month = months.indexOf(monStr) + 1;
+      if (!month || day < 1 || day > 31) continue;
+
+      let year = now.getFullYear();
+      let date = new Date(year, month - 1, day);
+      if (date > futureLimit) date = new Date(year - 1, month - 1, day);
+
+      results.push({ date, startIdx: m.index, endIdx: m.index + m[0].length, raw: m[0] });
+    }
+  });
+
+  // Sort, dedupe overlapping
+  results.sort((a,b) => a.startIdx - b.startIdx);
+  const final = [];
+  results.forEach(r => {
+    if (!final.length || r.startIdx >= final[final.length-1].endIdx) final.push(r);
+  });
+  return final;
+}
+
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() &&
+         a.getMonth() === b.getMonth() &&
+         a.getDate() === b.getDate();
+}
+
+function entryDate(j) {
+  const mon = weekToDates(j.wk);
+  const dayIdx = DAYS.indexOf(j.day);
+  const d = new Date(mon);
+  d.setDate(mon.getDate() + dayIdx);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+// Try to find the best matching job name in a snippet of text, from a candidate list
+function findBestJobMatch(snippet, candidates) {
+  if (!snippet || !snippet.trim() || !candidates.length) return null;
+  const expanded = expandText(snippet);
+  const scored = candidates.map(name => ({
+    name,
+    score: scoreMatch(name, snippet, expanded)
+  })).filter(s => s.score > 25).sort((a,b) => b.score - a.score);
+  return scored.length ? scored[0].name : null;
+}
+
+// Pair each parsed date with its surrounding text
+function pairDatesWithText(email, parsedDates) {
+  const pairs = [];
+  parsedDates.forEach((d, i) => {
+    const prevEnd = i > 0 ? parsedDates[i-1].endIdx : 0;
+    const nextStart = i < parsedDates.length - 1 ? parsedDates[i+1].startIdx : email.length;
+    const beforeText = email.slice(prevEnd, d.startIdx).trim();
+    const afterText = email.slice(d.endIdx, nextStart).trim();
+    pairs.push({ date: d.date, raw: d.raw, beforeText, afterText });
+  });
+  return pairs;
+}
+
 function lookup() {
   const emailText = document.getElementById('email-text').value.trim();
   if (!emailText) {
@@ -804,21 +902,70 @@ function lookup() {
     return;
   }
 
+  const parsedDates = parseDates(emailText);
+
+  // ───── DATE-AWARE MODE: email contains dates ─────
+  if (parsedDates.length > 0) {
+    const pairs = pairDatesWithText(emailText, parsedDates);
+    const matches = []; // { date, jobName, entries, searchText, unmatchedReason }
+
+    pairs.forEach(p => {
+      // Only consider jobs that ACTUALLY exist on this date
+      const entriesOnDate = allJobs.filter(j => sameDay(entryDate(j), p.date));
+
+      if (!entriesOnDate.length) {
+        matches.push({ date: p.date, jobName: null, entries: [], searchText: p.beforeText || p.afterText, reason: 'no_jobs_on_date' });
+        return;
+      }
+
+      // Candidate job names on this date
+      const dateJobNames = Array.from(new Set(entriesOnDate.map(j => j.jobName)));
+
+      // If only one job on that date and we found a date near some job text, auto-match
+      // (single job that day, no ambiguity)
+      if (dateJobNames.length === 1 && (p.beforeText || p.afterText)) {
+        const bestName = dateJobNames[0];
+        const entries = entriesOnDate.filter(j => j.jobName === bestName);
+        matches.push({ date: p.date, jobName: bestName, entries });
+        return;
+      }
+
+      // Try text before date first (common email pattern: "Job Name DD/MM")
+      let bestName = findBestJobMatch(p.beforeText, dateJobNames);
+
+      // Then try text after date
+      if (!bestName) bestName = findBestJobMatch(p.afterText, dateJobNames);
+
+      // Last resort: combine both snippets
+      if (!bestName) bestName = findBestJobMatch(p.beforeText + ' ' + p.afterText, dateJobNames);
+
+      if (bestName) {
+        const entries = entriesOnDate.filter(j => j.jobName === bestName);
+        matches.push({ date: p.date, jobName: bestName, entries });
+      } else {
+        matches.push({ date: p.date, jobName: null, entries: [], searchText: p.beforeText || p.afterText, candidates: dateJobNames, reason: 'no_name_match' });
+      }
+    });
+
+    renderDateAwareResults(matches);
+    return;
+  }
+
+  // ───── FUZZY-ONLY MODE: no dates in email ─────
   const expandedEmail = expandText(emailText);
   const scored = uniqueJobNames.map(name => ({
     name,
     score: scoreMatch(name, emailText, expandedEmail)
-  })).filter(s => s.score > 40).sort((a,b) => b.score - a.score);
+  })).filter(s => s.score > 50).sort((a,b) => b.score - a.score);
 
-  // If too many results, take top N by score
   const matchedNames = scored.slice(0, 15).map(s => s.name);
 
   const matchedEl = document.getElementById('matched-jobs');
   if (!matchedNames.length) {
     matchedEl.innerHTML = `<div class="no-match">
       <b>No matches found.</b> Try:<br>
+      • Adding dates like "29/10" or "1 Nov" — the system is much sharper with dates<br>
       • Using more complete words (e.g. "chermside" instead of just "cherm")<br>
-      • Including the location (suburb name helps a lot)<br>
       • Pasting more surrounding context from the email
     </div>`;
     document.getElementById('results-section').style.display = 'none';
@@ -827,15 +974,13 @@ function lookup() {
   }
 
   matchedEl.innerHTML = `<div class="matched-wrap">
-    <div class="matched-label">Matched ${matchedNames.length} job name${matchedNames.length>1?'s':''}</div>
+    <div class="matched-label">Matched ${matchedNames.length} job name${matchedNames.length>1?'s':''} (no dates in email — showing all recent entries)</div>
     <div>${matchedNames.map((n, i) => `<span class="matched-badge" style="animation-delay:${i*0.04}s">${esc(n)}</span>`).join('')}</div>
   </div>`;
 
-  // Find all entries for matched jobs
   const matchedJobs = allJobs.filter(j => matchedNames.includes(j.jobName));
   const filtered = filterByDate(matchedJobs, weeksRange);
 
-  // Group by job name
   const grouped = {};
   filtered.forEach(j => {
     if (!grouped[j.jobName]) grouped[j.jobName] = [];
@@ -844,6 +989,89 @@ function lookup() {
 
   renderResults(grouped);
   renderOutput(grouped);
+}
+
+function renderDateAwareResults(matches) {
+  const matchedEl = document.getElementById('matched-jobs');
+  const found = matches.filter(m => m.jobName);
+  const unmatched = matches.filter(m => !m.jobName);
+
+  const fmtDate = (d) => d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
+  const fmtDateLong = (d) => d.toLocaleDateString('en-AU', { weekday:'short', day:'numeric', month:'short' });
+
+  if (!found.length) {
+    let html = `<div class="no-match">
+      <b>Found ${matches.length} date${matches.length>1?'s':''} in your email but couldn't pin them to jobs.</b><br><br>
+      ${matches.map(m => {
+        if (m.reason === 'no_jobs_on_date') {
+          return `• <b>${fmtDate(m.date)}</b> — no jobs recorded that day`;
+        }
+        return `• <b>${fmtDate(m.date)}</b> — searched for "${esc(m.searchText || '').slice(0,40)}" but nothing matched (jobs on that day: ${esc((m.candidates||[]).join(', '))})`;
+      }).join('<br>')}
+    </div>`;
+    matchedEl.innerHTML = html;
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('output-section').style.display = 'none';
+    return;
+  }
+
+  let html = `<div class="matched-wrap">
+    <div class="matched-label">${found.length} date → job match${found.length>1?'es':''}</div>
+    <div>${found.map((m, i) => `<span class="matched-badge" style="animation-delay:${i*0.04}s">${fmtDate(m.date)} → ${esc(m.jobName)}</span>`).join('')}</div>`;
+
+  if (unmatched.length) {
+    html += `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed rgba(255,107,94,0.3);font-size:11px;color:var(--coral);">
+      <b>Could not match:</b> ${unmatched.map(m => `${fmtDate(m.date)} (${m.reason === 'no_jobs_on_date' ? 'no jobs that day' : 'name not recognized'})`).join(' · ')}
+    </div>`;
+  }
+  html += '</div>';
+  matchedEl.innerHTML = html;
+
+  // Render cards (one per date+job)
+  const resultsEl = document.getElementById('results');
+  resultsEl.innerHTML = found.map((m, idx) => {
+    const html2 = m.entries.map(j => {
+      const timeWindows = groupTimeWindows(j.workers);
+      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
+      const extras = [];
+      if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
+      if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
+      return `<div class="job-entry">
+        <span class="entry-hrs">${j.totalHrs.toFixed(1)}h</span> ·
+        <span class="entry-times">${esc(timeWindows)}</span>
+        ${workerNames ? '<div class="entry-workers">👥 ' + esc(workerNames) + '</div>' : ''}
+        ${extras.length ? '<div class="entry-extras">+ ' + extras.join(' · ') + '</div>' : ''}
+      </div>`;
+    }).join('');
+    return `<div class="job-card" style="animation-delay:${idx*0.06}s">
+      <div class="job-title">
+        ${esc(m.jobName)}
+        <span class="job-title-count">${fmtDateLong(m.date)}</span>
+      </div>
+      ${html2}
+    </div>`;
+  }).join('');
+  document.getElementById('results-section').style.display = 'block';
+
+  // Formatted output
+  const lines = [];
+  found.forEach(m => {
+    lines.push(m.jobName.toUpperCase());
+    m.entries.forEach(j => {
+      const tw = groupTimeWindows(j.workers);
+      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
+      let line = `  ${fmtDateLong(m.date)} · ${j.totalHrs.toFixed(1)}h · ${tw}`;
+      if (workerNames) line += ` (${workerNames})`;
+      const extras = [];
+      if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
+      if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
+      if (extras.length) line += '\n    + ' + extras.join(' · ');
+      lines.push(line);
+    });
+    lines.push('');
+  });
+  document.getElementById('formatted-output').textContent = lines.join('\n').trim();
+  document.getElementById('output-section').style.display = 'block';
 }
 
 function esc(s) { return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
