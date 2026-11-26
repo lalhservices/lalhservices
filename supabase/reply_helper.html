@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reply Helper — LALH Services</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8a84b">
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23f4d374"/><stop offset="1" stop-color="%23c8a84b"/></linearGradient></defs><path d="M50 5 L92 50 L50 95 L8 50 Z" fill="%230d1a30" stroke="url(%23g)" stroke-width="3"/><path d="M32 32 L32 68 L52 68 L52 62 L38 62 L38 32 Z" fill="url(%23g)"/></svg>'>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy-950: #060d1a;
+    --navy-900: #0d1a30;
+    --navy-800: #142748;
+    --navy-700: #1e3a63;
+    --gold-300: #f4d374;
+    --gold-500: #c8a84b;
+    --emerald: #34d399;
+    --coral: #ff6b5e;
+    --amber: #fbbf24;
+    --text-muted: rgba(255,255,255,0.55);
+  }
+  body {
+    background: radial-gradient(ellipse at top, var(--navy-800), var(--navy-950));
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 80px;
+  }
+  .container { max-width: 820px; margin: 0 auto; }
+  a.back { display: inline-block; margin-bottom: 20px; color: var(--gold-300); text-decoration: none; font-size: 12px; letter-spacing: 0.1em; }
+  .hero {
+    background: linear-gradient(135deg, rgba(200,168,75,0.08), rgba(30,58,99,0.3));
+    border: 1px solid rgba(200,168,75,0.15);
+    border-radius: 16px;
+    padding: 22px 26px;
+    margin-bottom: 22px;
+  }
+  .hero-eyebrow { font-size: 10px; letter-spacing: 0.25em; color: var(--gold-500); font-weight: 700; margin-bottom: 6px; }
+  h1 { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--gold-300); font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+
+  .section {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+  .section-label {
+    font-size: 10px; color: var(--gold-500);
+    letter-spacing: 0.22em; text-transform: uppercase;
+    font-weight: 700; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::before {
+    content: ''; display: block; width: 3px; height: 14px;
+    background: var(--gold-500); border-radius: 2px;
+  }
+
+  textarea, input[type="text"] {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    width: 100%;
+    line-height: 1.5;
+  }
+  textarea { min-height: 180px; resize: vertical; }
+  textarea:focus, input:focus {
+    outline: none;
+    border-color: var(--gold-500);
+    background: rgba(0,0,0,0.4);
+  }
+
+  .controls {
+    display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .btn {
+    padding: 11px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    letter-spacing: 0.04em;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold-300), var(--gold-500));
+    color: var(--navy-950);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.75);
+  }
+  .btn-emerald {
+    background: rgba(52,211,153,0.15);
+    border-color: rgba(52,211,153,0.4);
+    color: var(--emerald);
+  }
+  .btn:hover { filter: brightness(1.1); }
+
+  .range-tabs { display: flex; gap: 4px; }
+  .range-tab {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .range-tab.active {
+    background: rgba(200,168,75,0.15);
+    border-color: var(--gold-500);
+    color: var(--gold-300);
+  }
+
+  .matched-badge {
+    display: inline-block;
+    background: rgba(52,211,153,0.15);
+    border: 1px solid rgba(52,211,153,0.4);
+    color: var(--emerald);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 4px 4px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .matched-badge .count {
+    opacity: 0.6;
+    margin-left: 4px;
+  }
+
+  .job-block {
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--gold-500);
+  }
+  .job-title {
+    font-weight: 700; color: var(--gold-300);
+    font-size: 14px; letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .job-entry {
+    padding: 6px 0;
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+    font-family: 'JetBrains Mono', monospace;
+    border-top: 1px dashed rgba(255,255,255,0.06);
+  }
+  .job-entry:first-of-type { border-top: 0; }
+
+  pre.formatted-output {
+    background: rgba(0,0,0,0.35);
+    border: 1px dashed rgba(200,168,75,0.3);
+    border-radius: 10px;
+    padding: 16px;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.6;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 30px 20px;
+    font-size: 13px;
+  }
+
+  #home-fab {
+    position: fixed; bottom: 16px; right: 16px; z-index: 9998;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(200,168,75,0.85); color: #060d1a; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-decoration: none;
+    opacity: 0.55; transition: all 0.2s;
+  }
+  #home-fab:hover { opacity: 1; transform: scale(1.1); }
+
+  @media (max-width: 640px) {
+    .controls { gap: 8px; }
+    .btn { padding: 10px 14px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <a href="./" class="back">← Back</a>
+  <div class="hero">
+    <div class="hero-eyebrow">REPLY HELPER</div>
+    <h1>Look Up Jobs for Email Reply</h1>
+    <div class="hero-sub">Paste email → system finds mentioned jobs → copy formatted reply</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Paste the email</div>
+    <textarea id="email-text" placeholder="Paste the email here. Example:&#10;&#10;Hi Aman, can you confirm the timings for Cotton and GYG last week? Also need to know Country Road hours. Thanks."></textarea>
+    <div class="controls">
+      <button class="btn btn-primary" onclick="lookup()">🔍 Look Up Jobs</button>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+      <div style="flex:1"></div>
+      <div class="range-tabs">
+        <button class="range-tab" data-weeks="4">4w</button>
+        <button class="range-tab active" data-weeks="8">8w</button>
+        <button class="range-tab" data-weeks="13">13w</button>
+        <button class="range-tab" data-weeks="26">26w</button>
+        <button class="range-tab" data-weeks="999">All</button>
+      </div>
+    </div>
+    <div id="matched-jobs" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="section" id="results-section" style="display:none;">
+    <div class="section-label">Found jobs</div>
+    <div id="results"></div>
+  </div>
+
+  <div class="section" id="output-section" style="display:none;">
+    <div class="section-label">Ready to copy</div>
+    <pre class="formatted-output" id="formatted-output"></pre>
+    <div class="controls">
+      <button class="btn btn-emerald" onclick="copyOutput()">📋 Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<a href="./" id="home-fab" title="Home">🏠</a>
+
+<script>
+const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_FULL = { Mon:'Mon', Tue:'Tue', Wed:'Wed', Thu:'Thu', Fri:'Fri', Sat:'Sat', Sun:'Sun' };
+
+let sb;
+let allJobs = []; // flat list of every job entry across all weeks
+let allJobNames = new Set();
+let weeksRange = 8;
+
+function calcH(from, to) {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(':').map(Number);
+  const [th, tm] = to.split(':').map(Number);
+  let m = (th*60+tm) - (fh*60+fm);
+  if (m < 0) m += 1440;
+  return m / 60;
+}
+
+function toTime12(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const period = h >= 12 ? 'pm' : 'am';
+  const h12 = ((h + 11) % 12) + 1;
+  return h12 + (m > 0 ? ':' + String(m).padStart(2,'0') : '') + period;
+}
+
+function weekToDates(wk) {
+  const [year, wkPart] = wk.split('-W');
+  const yr = parseInt(year);
+  const wn = parseInt(wkPart);
+  const jan4 = new Date(yr, 0, 4);
+  const jan4Day = jan4.getDay() || 7;
+  const week1Mon = new Date(jan4);
+  week1Mon.setDate(jan4.getDate() - jan4Day + 1);
+  const mon = new Date(week1Mon);
+  mon.setDate(week1Mon.getDate() + (wn - 1) * 7);
+  return mon;
+}
+
+function formatJobDate(wk, day) {
+  const dayIdx = DAYS.indexOf(day);
+  const mon = weekToDates(wk);
+  const d = new Date(mon);
+  d.setDate(mon.getDate() + dayIdx);
+  return day + ' ' + d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
+}
+
+async function loadAllJobs() {
+  const { data, error } = await sb.from('roster_data').select('key, value').like('key', 'jt2_wk_%');
+  if (error) { console.error('Load error:', error); return; }
+
+  // Also get the global job rows list
+  const { data: g } = await sb.from('roster_data').select('value').eq('key', 'jt2_global').maybeSingle();
+  const jobsGlobal = g ? JSON.parse(g.value) : { rows: [] };
+  const rows = jobsGlobal.rows || [];
+
+  // Parse all week data
+  (data || []).forEach(r => {
+    const wk = r.key.replace('jt2_wk_', '');
+    const cells = JSON.parse(r.value || '{}');
+    const hidden = cells._hidden || [];
+    const rate = 45; // default — actual rate stored in jt2_rate_
+
+    rows.forEach(rid => {
+      if (hidden.includes(rid)) return;
+      DAYS.forEach(day => {
+        const cell = cells[rid + '|' + day];
+        if (!cell || !cell.jobName) return;
+        const workers = (cell.workers || []).filter(w => w.from && w.to);
+        let totalHrs = 0;
+        workers.forEach(w => { totalHrs += calcH(w.from, w.to); });
+        if (totalHrs === 0 && !cell.parking && !cell.materials) return;
+
+        allJobs.push({
+          wk, day, jobName: cell.jobName,
+          workers, totalHrs,
+          parking: parseFloat(cell.parking || 0) || 0,
+          materials: parseFloat(cell.materials || 0) || 0
+        });
+        allJobNames.add(cell.jobName);
+      });
+    });
+  });
+
+  console.log(`Loaded ${allJobs.length} job entries, ${allJobNames.size} unique names`);
+}
+
+function normalize(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function findMatchedNames(emailText) {
+  const normEmail = normalize(emailText);
+  if (!normEmail) return [];
+  const matched = new Map(); // name -> original
+  allJobNames.forEach(originalName => {
+    const normName = normalize(originalName);
+    if (!normName || normName.length < 3) return;
+    // Try multiple matching strategies
+    // 1. Full name appears in email
+    if (normEmail.includes(normName)) {
+      matched.set(normName, originalName);
+      return;
+    }
+    // 2. Each word of job name (3+ chars) appears
+    const words = normName.split(' ').filter(w => w.length >= 3);
+    if (words.length > 0 && words.every(w => normEmail.includes(w))) {
+      matched.set(normName, originalName);
+      return;
+    }
+    // 3. First significant word appears (for short/common names)
+    const firstWord = normName.split(' ')[0];
+    if (firstWord.length >= 4 && normEmail.includes(firstWord)) {
+      matched.set(normName, originalName);
+    }
+  });
+  return Array.from(matched.values());
+}
+
+function filterByDate(jobs, maxWeeksBack) {
+  if (maxWeeksBack >= 999) return jobs;
+  const now = new Date();
+  const d = now.getDay();
+  const thisMonday = new Date(now);
+  thisMonday.setDate(now.getDate() - d + (d === 0 ? -6 : 1));
+  thisMonday.setHours(0,0,0,0);
+  const cutoff = new Date(thisMonday);
+  cutoff.setDate(thisMonday.getDate() - maxWeeksBack * 7);
+  return jobs.filter(j => {
+    const jobDate = weekToDates(j.wk);
+    return jobDate >= cutoff;
+  });
+}
+
+function lookup() {
+  const emailText = document.getElementById('email-text').value.trim();
+  if (!emailText) {
+    alert('Paste an email first.');
+    return;
+  }
+
+  // Find matched job names
+  const matchedNames = findMatchedNames(emailText);
+  const matchedEl = document.getElementById('matched-jobs');
+  if (!matchedNames.length) {
+    matchedEl.innerHTML = '<div style="padding:10px;color:var(--coral);font-size:12px;">No known job names detected in the text. Try spelling them more clearly or add more context.</div>';
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('output-section').style.display = 'none';
+    return;
+  }
+
+  matchedEl.innerHTML = '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;">Matched job names</div>' +
+    matchedNames.map(n => `<span class="matched-badge">${esc(n)}</span>`).join('');
+
+  // Filter all jobs matching those names in the date range
+  const normNames = matchedNames.map(n => normalize(n));
+  const matchedJobs = allJobs.filter(j => normNames.includes(normalize(j.jobName)));
+  const filtered = filterByDate(matchedJobs, weeksRange);
+
+  // Group by job name
+  const grouped = {};
+  filtered.forEach(j => {
+    const key = j.jobName;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(j);
+  });
+
+  renderResults(grouped);
+  renderOutput(grouped);
+}
+
+function esc(s) { return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function renderResults(grouped) {
+  const el = document.getElementById('results');
+  const keys = Object.keys(grouped);
+  if (!keys.length) {
+    el.innerHTML = '<div class="empty">No matching jobs found in the selected date range.</div>';
+    document.getElementById('results-section').style.display = 'block';
+    document.getElementById('output-section').style.display = 'none';
+    return;
+  }
+  el.innerHTML = keys.map(name => {
+    const entries = grouped[name].sort((a,b) => {
+      if (a.wk !== b.wk) return b.wk.localeCompare(a.wk);
+      return DAYS.indexOf(b.day) - DAYS.indexOf(a.day);
+    });
+    const html = entries.map(j => {
+      const date = formatJobDate(j.wk, j.day);
+      const timeWindows = groupTimeWindows(j.workers);
+      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
+      return `<div class="job-entry">
+        <b style="color:#fff">${esc(date)}</b> · ${j.totalHrs.toFixed(1)}h ·
+        <span style="color:var(--gold-300)">${esc(timeWindows)}</span>
+        ${workerNames ? '<br><span style="color:rgba(255,255,255,0.5);font-size:11px;">' + esc(workerNames) + '</span>' : ''}
+      </div>`;
+    }).join('');
+    return `<div class="job-block">
+      <div class="job-title">${esc(name)}</div>
+      ${html}
+    </div>`;
+  }).join('');
+  document.getElementById('results-section').style.display = 'block';
+}
+
+function groupTimeWindows(workers) {
+  if (!workers.length) return '';
+  const groups = {};
+  workers.forEach(w => {
+    const key = w.from + '|' + w.to;
+    if (!groups[key]) groups[key] = { from: w.from, to: w.to, count: 0 };
+    groups[key].count++;
+  });
+  return Object.values(groups)
+    .sort((a,b) => a.from.localeCompare(b.from))
+    .map(g => toTime12(g.from) + '–' + toTime12(g.to) + (g.count > 1 ? ' ×' + g.count : ''))
+    .join(', ');
+}
+
+function renderOutput(grouped) {
+  const keys = Object.keys(grouped);
+  if (!keys.length) {
+    document.getElementById('output-section').style.display = 'none';
+    return;
+  }
+  const lines = [];
+  keys.forEach(name => {
+    const entries = grouped[name].sort((a,b) => {
+      if (a.wk !== b.wk) return b.wk.localeCompare(a.wk);
+      return DAYS.indexOf(b.day) - DAYS.indexOf(a.day);
+    });
+    lines.push(name.toUpperCase());
+    entries.forEach(j => {
+      const date = formatJobDate(j.wk, j.day);
+      const tw = groupTimeWindows(j.workers);
+      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
+      let line = `  ${date} · ${j.totalHrs.toFixed(1)}h · ${tw}`;
+      if (workerNames) line += ` (${workerNames})`;
+      // Extras on separate indented line
+      const extras = [];
+      if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
+      if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
+      if (extras.length) line += '\n    + ' + extras.join(' · ');
+      lines.push(line);
+    });
+    lines.push('');
+  });
+  document.getElementById('formatted-output').textContent = lines.join('\n').trim();
+  document.getElementById('output-section').style.display = 'block';
+}
+
+async function copyOutput() {
+  const text = document.getElementById('formatted-output').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  } catch(e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Copied!');
+  }
+}
+
+function clearAll() {
+  document.getElementById('email-text').value = '';
+  document.getElementById('matched-jobs').innerHTML = '';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('output-section').style.display = 'none';
+}
+
+// Range tabs
+document.querySelectorAll('.range-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.range-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    weeksRange = parseInt(tab.dataset.weeks);
+    // Re-run lookup if there's already text
+    if (document.getElementById('email-text').value.trim()) lookup();
+  });
+});
+
+window.addEventListener('DOMContentLoaded', async () => {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  await loadAllJobs();
+});
+</script>
+</body>
+</html>
