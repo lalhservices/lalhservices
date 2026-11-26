@@ -462,6 +462,14 @@
           </div>
         </a>
 
+        <a class="btn btn-primary" href="reply_helper.html" style="margin-top:8px;background:linear-gradient(135deg, #1e3a63, #0d1a30);border-color:#fbbf24;">
+          <div class="btn-icon">✉️</div>
+          <div class="btn-content">
+            <div class="btn-title" style="color:#fbbf24;">Reply Helper</div>
+            <div class="btn-sub">Paste email · Get job times for reply</div>
+          </div>
+        </a>
+
         <div class="btn-row" style="margin-top:8px;">
           <a class="btn btn-view" href="job_search.html">
             <div class="btn-badge view">TOOL</div>
@@ -513,7 +521,7 @@
       err.textContent = '× Wrong password';
       input.value = ''; input.focus();
       setTimeout(() => err.textContent = '', 2500);
-    } 
+    }
   };
   document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('pw-input');
