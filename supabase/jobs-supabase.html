@@ -907,7 +907,8 @@ function setW(rid,day,wi,field,value){
         // Update time inputs directly in DOM to avoid full re-render (preserves name input focus)
         const row = document.querySelector('[data-wkey="'+rid+'_'+day+'_'+wi+'"]');
         if (row) {
-          const parent = row.closest('.worker-row') || row.parentElement;
+          // The time inputs live inside .worker-entry (sibling of .worker-name-wrap)
+          const parent = row.closest('.worker-entry');
           if (parent) {
             const timeInputs = parent.querySelectorAll('.worker-time-inp');
             if (timeInputs[0]) { timeInputs[0].value = toDisp(first.from); timeInputs[0].classList.add('filled'); }
