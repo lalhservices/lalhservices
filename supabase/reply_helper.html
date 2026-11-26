@@ -7,217 +7,529 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#c8a84b">
 <link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23f4d374"/><stop offset="1" stop-color="%23c8a84b"/></linearGradient></defs><path d="M50 5 L92 50 L50 95 L8 50 Z" fill="%230d1a30" stroke="url(%23g)" stroke-width="3"/><path d="M32 32 L32 68 L52 68 L52 62 L38 62 L38 32 Z" fill="url(%23g)"/></svg>'>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --navy-950: #060d1a;
-    --navy-900: #0d1a30;
+    --navy-950: #040810;
+    --navy-900: #0a1428;
     --navy-800: #142748;
     --navy-700: #1e3a63;
+    --gold-200: #ffe5a8;
     --gold-300: #f4d374;
     --gold-500: #c8a84b;
+    --gold-700: #8b6e1f;
     --emerald: #34d399;
     --coral: #ff6b5e;
     --amber: #fbbf24;
     --text-muted: rgba(255,255,255,0.55);
+    --text-dim: rgba(255,255,255,0.35);
+    --glass: rgba(255,255,255,0.035);
+    --glass-border: rgba(255,255,255,0.08);
   }
   body {
-    background: radial-gradient(ellipse at top, var(--navy-800), var(--navy-950));
+    background: var(--navy-950);
     color: #fff;
     font-family: 'Inter', sans-serif;
     min-height: 100vh;
-    padding: 20px 16px 80px;
+    padding: 28px 16px 100px;
+    position: relative;
+    overflow-x: hidden;
   }
-  .container { max-width: 820px; margin: 0 auto; }
-  a.back { display: inline-block; margin-bottom: 20px; color: var(--gold-300); text-decoration: none; font-size: 12px; letter-spacing: 0.1em; }
-  .hero {
-    background: linear-gradient(135deg, rgba(200,168,75,0.08), rgba(30,58,99,0.3));
-    border: 1px solid rgba(200,168,75,0.15);
-    border-radius: 16px;
-    padding: 22px 26px;
-    margin-bottom: 22px;
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 10% 0%, rgba(200,168,75,0.12), transparent 50%),
+      radial-gradient(ellipse at 90% 30%, rgba(30,58,99,0.3), transparent 60%),
+      radial-gradient(ellipse at 50% 100%, rgba(200,168,75,0.05), transparent 70%);
+    z-index: 0;
+    pointer-events: none;
   }
-  .hero-eyebrow { font-size: 10px; letter-spacing: 0.25em; color: var(--gold-500); font-weight: 700; margin-bottom: 6px; }
-  h1 { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--gold-300); font-weight: 700; letter-spacing: -0.5px; }
-  .hero-sub { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,168,75,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,168,75,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    z-index: 0;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 85%);
+  }
 
-  .section {
-    background: rgba(255,255,255,0.025);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px;
-    padding: 20px 22px;
-    margin-bottom: 16px;
+  .container { max-width: 840px; margin: 0 auto; position: relative; z-index: 1; }
+
+  a.back {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-bottom: 24px;
+    color: var(--gold-300);
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 600;
+    transition: all 0.2s;
   }
+  a.back:hover { color: var(--gold-200); transform: translateX(-2px); }
+
+  /* Premium hero */
+  .hero {
+    background: linear-gradient(135deg, rgba(200,168,75,0.08), rgba(30,58,99,0.3) 60%, rgba(200,168,75,0.05));
+    border: 1px solid rgba(200,168,75,0.18);
+    border-radius: 20px;
+    padding: 32px 36px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(200,168,75,0.12), transparent 70%);
+    transform: translate(30%, -30%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 10px; letter-spacing: 0.3em;
+    color: var(--gold-500); font-weight: 800;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .hero-eyebrow::before {
+    content: ''; display: block;
+    width: 24px; height: 1px;
+    background: linear-gradient(90deg, var(--gold-500), transparent);
+  }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--gold-200), var(--gold-300) 40%, var(--gold-500));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+    line-height: 1.1;
+  }
+  .hero-sub {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  /* Section card */
+  .section {
+    background: var(--glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 24px 28px;
+    margin-bottom: 18px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25),
+                inset 0 1px 0 rgba(255,255,255,0.03);
+    transition: border-color 0.2s;
+  }
+  .section:hover { border-color: rgba(255,255,255,0.12); }
+
   .section-label {
     font-size: 10px; color: var(--gold-500);
-    letter-spacing: 0.22em; text-transform: uppercase;
-    font-weight: 700; margin-bottom: 14px;
-    display: flex; align-items: center; gap: 10px;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    font-weight: 800; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 12px;
   }
   .section-label::before {
-    content: ''; display: block; width: 3px; height: 14px;
-    background: var(--gold-500); border-radius: 2px;
+    content: ''; display: block;
+    width: 28px; height: 2px;
+    background: linear-gradient(90deg, var(--gold-500), rgba(200,168,75,0.2));
+    border-radius: 1px;
   }
 
+  /* Inputs */
   textarea, input[type="text"] {
-    background: rgba(0,0,0,0.25);
+    background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px;
-    padding: 12px 14px;
+    border-radius: 12px;
+    padding: 14px 16px;
     color: #fff;
     font-family: inherit;
     font-size: 14px;
     width: 100%;
-    line-height: 1.5;
+    line-height: 1.6;
+    transition: all 0.2s;
+    box-shadow: inset 0 1px 0 rgba(0,0,0,0.25);
   }
-  textarea { min-height: 180px; resize: vertical; }
+  textarea { min-height: 160px; resize: vertical; }
   textarea:focus, input:focus {
     outline: none;
     border-color: var(--gold-500);
-    background: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.5);
+    box-shadow: 0 0 0 3px rgba(200,168,75,0.15),
+                inset 0 1px 0 rgba(0,0,0,0.25);
   }
+  textarea::placeholder, input::placeholder { color: var(--text-dim); font-style: italic; }
 
   .controls {
-    display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;
+    display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;
     align-items: center;
   }
   .btn {
-    padding: 11px 20px;
-    border-radius: 10px;
+    padding: 12px 22px;
+    border-radius: 12px;
     font-size: 13px;
     font-weight: 700;
     font-family: inherit;
     cursor: pointer;
     border: 1px solid transparent;
     letter-spacing: 0.04em;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 8px;
+    position: relative;
   }
   .btn-primary {
-    background: linear-gradient(135deg, var(--gold-300), var(--gold-500));
+    background: linear-gradient(135deg, var(--gold-200), var(--gold-500));
     color: var(--navy-950);
+    box-shadow: 0 8px 20px rgba(200,168,75,0.25),
+                inset 0 1px 0 rgba(255,255,255,0.4);
   }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(200,168,75,0.35),
+                inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .btn-primary:active { transform: translateY(0); }
   .btn-secondary {
     background: rgba(255,255,255,0.05);
-    border-color: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.12);
     color: rgba(255,255,255,0.75);
   }
-  .btn-emerald {
-    background: rgba(52,211,153,0.15);
-    border-color: rgba(52,211,153,0.4);
-    color: var(--emerald);
+  .btn-secondary:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.2);
   }
-  .btn:hover { filter: brightness(1.1); }
+  .btn-emerald {
+    background: linear-gradient(135deg, rgba(52,211,153,0.2), rgba(52,211,153,0.1));
+    border-color: rgba(52,211,153,0.5);
+    color: var(--emerald);
+    box-shadow: 0 6px 16px rgba(52,211,153,0.15);
+  }
+  .btn-emerald:hover {
+    background: linear-gradient(135deg, rgba(52,211,153,0.3), rgba(52,211,153,0.15));
+    transform: translateY(-1px);
+  }
 
-  .range-tabs { display: flex; gap: 4px; }
+  /* Range tabs */
+  .range-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+  }
   .range-tab {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.7);
-    padding: 8px 12px;
+    background: transparent;
+    border: 0;
+    color: var(--text-muted);
+    padding: 7px 11px;
     border-radius: 8px;
     font-size: 11px;
+    font-weight: 700;
     cursor: pointer;
     font-family: inherit;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
   }
+  .range-tab:hover { color: #fff; }
   .range-tab.active {
-    background: rgba(200,168,75,0.15);
-    border-color: var(--gold-500);
-    color: var(--gold-300);
+    background: linear-gradient(135deg, rgba(200,168,75,0.25), rgba(200,168,75,0.1));
+    color: var(--gold-200);
+    box-shadow: inset 0 0 0 1px rgba(200,168,75,0.4);
   }
 
-  .matched-badge {
-    display: inline-block;
-    background: rgba(52,211,153,0.15);
-    border: 1px solid rgba(52,211,153,0.4);
-    color: var(--emerald);
-    padding: 3px 10px;
+  /* Matched badges */
+  .matched-wrap {
+    margin-top: 16px;
+    padding: 14px;
+    background: rgba(52,211,153,0.04);
+    border: 1px dashed rgba(52,211,153,0.3);
     border-radius: 12px;
+  }
+  .matched-label {
+    font-size: 10px;
+    color: var(--emerald);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 800;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .matched-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(52,211,153,0.15), rgba(52,211,153,0.05));
+    border: 1px solid rgba(52,211,153,0.35);
+    color: var(--emerald);
+    padding: 6px 12px;
+    border-radius: 16px;
     font-size: 11px;
     font-weight: 700;
     margin: 4px 4px 0 0;
     font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.03em;
+    transition: all 0.2s;
+    animation: fadeInUp 0.3s ease backwards;
   }
-  .matched-badge .count {
-    opacity: 0.6;
-    margin-left: 4px;
+  .matched-badge::before {
+    content: '✓';
+    font-size: 10px;
+    opacity: 0.8;
   }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .no-match {
+    padding: 14px 18px;
+    background: rgba(255,107,94,0.08);
+    border: 1px dashed rgba(255,107,94,0.3);
+    border-radius: 12px;
+    color: var(--coral);
+    font-size: 13px;
+    margin-top: 14px;
+    line-height: 1.5;
+  }
+  .no-match b { color: #fff; }
 
-  .job-block {
-    background: rgba(0,0,0,0.2);
-    border-radius: 10px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    border-left: 3px solid var(--gold-500);
+  /* Job cards in results */
+  .job-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.35s ease backwards;
+  }
+  .job-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--gold-300), var(--gold-500));
+    border-radius: 0 2px 2px 0;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
   }
   .job-title {
-    font-weight: 700; color: var(--gold-300);
-    font-size: 14px; letter-spacing: 0.05em;
+    font-weight: 800; color: var(--gold-300);
+    font-size: 13px; letter-spacing: 0.1em;
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .job-title-count {
+    background: rgba(200,168,75,0.12);
+    border: 1px solid rgba(200,168,75,0.25);
+    color: var(--gold-300);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
   }
   .job-entry {
-    padding: 6px 0;
-    font-size: 12px;
-    color: rgba(255,255,255,0.85);
-    font-family: 'JetBrains Mono', monospace;
+    padding: 10px 0;
+    font-size: 13px;
+    color: rgba(255,255,255,0.88);
     border-top: 1px dashed rgba(255,255,255,0.06);
+    line-height: 1.5;
   }
   .job-entry:first-of-type { border-top: 0; }
+  .entry-date {
+    font-weight: 700; color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    margin-right: 6px;
+  }
+  .entry-hrs {
+    color: var(--gold-300);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .entry-times {
+    color: var(--gold-200);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .entry-workers {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 3px;
+    letter-spacing: 0.02em;
+  }
+  .entry-extras {
+    color: var(--emerald);
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 3px;
+    font-family: 'JetBrains Mono', monospace;
+  }
 
+  /* Output */
+  .output-wrap {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(200,168,75,0.25);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .output-wrap::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-500), transparent);
+    opacity: 0.4;
+  }
   pre.formatted-output {
-    background: rgba(0,0,0,0.35);
-    border: 1px dashed rgba(200,168,75,0.3);
-    border-radius: 10px;
-    padding: 16px;
     color: #fff;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     white-space: pre-wrap;
     word-wrap: break-word;
-    line-height: 1.6;
-    max-height: 400px;
+    line-height: 1.75;
+    max-height: 420px;
     overflow-y: auto;
+    padding: 4px;
+  }
+  pre.formatted-output::-webkit-scrollbar {
+    width: 6px;
+  }
+  pre.formatted-output::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.3);
+    border-radius: 3px;
+  }
+  pre.formatted-output::-webkit-scrollbar-thumb {
+    background: rgba(200,168,75,0.3);
+    border-radius: 3px;
   }
 
   .empty {
     text-align: center;
     color: var(--text-muted);
-    padding: 30px 20px;
+    padding: 36px 20px;
     font-size: 13px;
+    font-style: italic;
   }
+
+  /* Loading state */
+  .loading-dots {
+    display: inline-flex; gap: 4px;
+  }
+  .loading-dots span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--navy-950);
+    animation: pulseDot 1.4s infinite ease-in-out;
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulseDot {
+    0%, 60%, 100% { opacity: 0.3; transform: scale(0.85); }
+    30% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 32px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: linear-gradient(135deg, var(--navy-800), var(--navy-900));
+    border: 1px solid rgba(52,211,153,0.5);
+    color: var(--emerald);
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    z-index: 10001;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    letter-spacing: 0.05em;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   #home-fab {
-    position: fixed; bottom: 16px; right: 16px; z-index: 9998;
-    width: 38px; height: 38px; border-radius: 50%;
-    background: rgba(200,168,75,0.85); color: #060d1a; font-size: 14px;
+    position: fixed; bottom: 20px; right: 20px; z-index: 9998;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-200), var(--gold-500));
+    color: var(--navy-950);
+    font-size: 16px;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-decoration: none;
-    opacity: 0.55; transition: all 0.2s;
+    box-shadow: 0 8px 24px rgba(200,168,75,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.4);
+    text-decoration: none;
+    opacity: 0.8;
+    transition: all 0.2s;
   }
-  #home-fab:hover { opacity: 1; transform: scale(1.1); }
+  #home-fab:hover {
+    opacity: 1;
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 12px 30px rgba(200,168,75,0.5);
+  }
 
   @media (max-width: 640px) {
+    body { padding: 16px 12px 80px; }
+    h1 { font-size: 26px; }
+    .hero { padding: 24px 22px; border-radius: 16px; }
+    .section { padding: 18px 20px; border-radius: 14px; }
     .controls { gap: 8px; }
-    .btn { padding: 10px 14px; font-size: 12px; }
+    .btn { padding: 10px 16px; font-size: 12px; }
+    .range-tab { padding: 6px 9px; font-size: 10px; }
   }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <a href="./" class="back">← Back</a>
+  <a href="./" class="back">← Back to Home</a>
+
   <div class="hero">
-    <div class="hero-eyebrow">REPLY HELPER</div>
-    <h1>Look Up Jobs for Email Reply</h1>
-    <div class="hero-sub">Paste email → system finds mentioned jobs → copy formatted reply</div>
+    <div class="hero-eyebrow">Smart Lookup · Reply Helper</div>
+    <h1>Email → Jobs<br>in One Paste</h1>
+    <div class="hero-sub">Paste any email mentioning job names. The system connects the dots and gives you a reply-ready summary.</div>
   </div>
 
   <div class="section">
     <div class="section-label">Paste the email</div>
-    <textarea id="email-text" placeholder="Paste the email here. Example:&#10;&#10;Hi Aman, can you confirm the timings for Cotton and GYG last week? Also need to know Country Road hours. Thanks."></textarea>
+    <textarea id="email-text" placeholder="Paste the whole email — misspellings, extra words, and short names all handled. e.g. &quot;can u confirm times for my phone chermside and zambrero kenmore last week&quot;"></textarea>
     <div class="controls">
-      <button class="btn btn-primary" onclick="lookup()">🔍 Look Up Jobs</button>
+      <button class="btn btn-primary" onclick="lookup()">
+        <span>🔍 Find Jobs</span>
+      </button>
       <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
       <div style="flex:1"></div>
       <div class="range-tabs">
@@ -228,35 +540,69 @@
         <button class="range-tab" data-weeks="999">All</button>
       </div>
     </div>
-    <div id="matched-jobs" style="margin-top:12px;"></div>
+    <div id="matched-jobs"></div>
   </div>
 
   <div class="section" id="results-section" style="display:none;">
-    <div class="section-label">Found jobs</div>
+    <div class="section-label">Matched Jobs</div>
     <div id="results"></div>
   </div>
 
   <div class="section" id="output-section" style="display:none;">
-    <div class="section-label">Ready to copy</div>
-    <pre class="formatted-output" id="formatted-output"></pre>
+    <div class="section-label">Reply-Ready Summary</div>
+    <div class="output-wrap">
+      <pre class="formatted-output" id="formatted-output"></pre>
+    </div>
     <div class="controls">
-      <button class="btn btn-emerald" onclick="copyOutput()">📋 Copy to Clipboard</button>
+      <button class="btn btn-emerald" onclick="copyOutput()">
+        <span>📋 Copy to Clipboard</span>
+      </button>
     </div>
   </div>
 </div>
 
+<div id="toast"></div>
 <a href="./" id="home-fab" title="Home">🏠</a>
 
 <script>
 const SUPABASE_URL = 'https://abbfjjtyitftthwkwybl.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_9PE5YF-QfY4i2cf-G2Is1w_Xq9BvaoG';
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const DAY_FULL = { Mon:'Mon', Tue:'Tue', Wed:'Wed', Thu:'Thu', Fri:'Fri', Sat:'Sat', Sun:'Sun' };
 
 let sb;
-let allJobs = []; // flat list of every job entry across all weeks
-let allJobNames = new Set();
+let allJobs = [];
+let uniqueJobNames = [];
 let weeksRange = 8;
+
+// Common word substitutions for smarter matching
+const SUBSTITUTIONS = [
+  ['fone', 'phone'],
+  ['phone', 'fone'],
+  ['street', 'st'],
+  ['st', 'street'],
+  ['road', 'rd'],
+  ['rd', 'road'],
+  ['avenue', 'ave'],
+  ['ave', 'avenue'],
+  ['center', 'centre'],
+  ['centre', 'center'],
+  ['seven eleven', '711'],
+  ['711', '7/11'],
+  ['7/11', '711'],
+  ['and', '&'],
+  ['&', 'and']
+];
+
+// Stop words to ignore
+const STOP_WORDS = new Set([
+  'the','and','or','of','at','in','on','a','an','to','for','by','with','from',
+  'can','you','please','hi','hey','hello','thanks','thank','regards','kind',
+  'sir','madam','best','good','morning','afternoon','evening','us','me','my',
+  'we','our','your','his','her','their','is','are','was','were','be','been',
+  'last','week','today','yesterday','tomorrow','timing','timings','time','times',
+  'hours','hour','confirm','need','also','that','this','which','what','when',
+  'where','why','how'
+]);
 
 function calcH(from, to) {
   if (!from || !to) return 0;
@@ -296,21 +642,120 @@ function formatJobDate(wk, day) {
   return day + ' ' + d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
 }
 
+// Normalize text: lowercase, strip punctuation, collapse spaces
+function normalize(s) {
+  return (s || '').toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Expand text with common substitutions (returns a set of variations)
+function expandText(s) {
+  const base = normalize(s);
+  const set = new Set([base]);
+  SUBSTITUTIONS.forEach(([from, to]) => {
+    if (base.includes(from)) {
+      set.add(base.replace(new RegExp('\\b' + from + '\\b', 'g'), to));
+    }
+  });
+  return Array.from(set).join(' ');
+}
+
+// Extract significant tokens (3+ chars, not stop words)
+function tokens(s) {
+  return normalize(s).split(' ').filter(w => w.length >= 3 && !STOP_WORDS.has(w));
+}
+
+// Levenshtein-style fuzzy match for a single word
+function fuzzyMatch(a, b) {
+  if (a === b) return 1;
+  if (a.length < 3 || b.length < 3) return 0;
+  // Substring match
+  if (a.includes(b) || b.includes(a)) return 0.9;
+  // Shared prefix/suffix
+  let prefix = 0;
+  while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix++;
+  if (prefix >= 4) return 0.85;
+  // Character overlap (quick jaccard on bigrams)
+  const bigrams = (s) => {
+    const r = new Set();
+    for (let i = 0; i < s.length - 1; i++) r.add(s.slice(i, i+2));
+    return r;
+  };
+  const ba = bigrams(a), bb = bigrams(b);
+  let shared = 0;
+  ba.forEach(g => { if (bb.has(g)) shared++; });
+  const sim = shared / Math.max(ba.size, bb.size, 1);
+  return sim > 0.55 ? sim : 0;
+}
+
+// Score how well emailText matches a jobName
+function scoreMatch(jobName, emailText, expandedEmail) {
+  const jobTokens = tokens(jobName);
+  if (!jobTokens.length) return 0;
+
+  const emailLower = normalize(emailText);
+
+  // Perfect substring match
+  const normJob = normalize(jobName);
+  if (emailLower.includes(normJob) || expandedEmail.includes(normJob)) return 100;
+
+  // Token-level matching with fuzzy
+  let totalScore = 0;
+  let matchedTokens = 0;
+  jobTokens.forEach(jt => {
+    const emailWords = expandedEmail.split(' ');
+    let best = 0;
+    emailWords.forEach(ew => {
+      const score = fuzzyMatch(jt, ew);
+      if (score > best) best = score;
+    });
+    if (best > 0.7) {
+      matchedTokens++;
+      totalScore += best;
+    }
+  });
+
+  if (matchedTokens === 0) return 0;
+
+  // Score = average token score × coverage ratio
+  const coverage = matchedTokens / jobTokens.length;
+  const avgScore = totalScore / matchedTokens;
+
+  // Need at least 50% coverage to count
+  if (coverage < 0.5 && jobTokens.length > 1) return 0;
+
+  // Specific location keywords give bonus
+  const locationWords = ['chermside','brisbane','kenmore','newstead','teneriffe','bardon','indooroopilly','morayfield','westend','cbd','southbank','stafford','ascot','bulimba','toowong','paddington','westend','mtgravatt','northlakes','capalaba','garden','city'];
+  let hasLocation = false;
+  jobTokens.forEach(jt => {
+    if (locationWords.some(l => jt.includes(l) || l.includes(jt))) {
+      const inEmail = expandedEmail.split(' ').some(ew => fuzzyMatch(jt, ew) > 0.7);
+      if (inEmail) hasLocation = true;
+    }
+  });
+
+  let finalScore = avgScore * coverage * 100;
+  if (hasLocation) finalScore += 15;
+
+  return finalScore;
+}
+
 async function loadAllJobs() {
   const { data, error } = await sb.from('roster_data').select('key, value').like('key', 'jt2_wk_%');
   if (error) { console.error('Load error:', error); return; }
 
-  // Also get the global job rows list
   const { data: g } = await sb.from('roster_data').select('value').eq('key', 'jt2_global').maybeSingle();
   const jobsGlobal = g ? JSON.parse(g.value) : { rows: [] };
   const rows = jobsGlobal.rows || [];
 
-  // Parse all week data
+  const nameSet = new Set();
+
   (data || []).forEach(r => {
     const wk = r.key.replace('jt2_wk_', '');
     const cells = JSON.parse(r.value || '{}');
     const hidden = cells._hidden || [];
-    const rate = 45; // default — actual rate stored in jt2_rate_
 
     rows.forEach(rid => {
       if (hidden.includes(rid)) return;
@@ -328,44 +773,13 @@ async function loadAllJobs() {
           parking: parseFloat(cell.parking || 0) || 0,
           materials: parseFloat(cell.materials || 0) || 0
         });
-        allJobNames.add(cell.jobName);
+        nameSet.add(cell.jobName);
       });
     });
   });
 
-  console.log(`Loaded ${allJobs.length} job entries, ${allJobNames.size} unique names`);
-}
-
-function normalize(s) {
-  return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
-}
-
-function findMatchedNames(emailText) {
-  const normEmail = normalize(emailText);
-  if (!normEmail) return [];
-  const matched = new Map(); // name -> original
-  allJobNames.forEach(originalName => {
-    const normName = normalize(originalName);
-    if (!normName || normName.length < 3) return;
-    // Try multiple matching strategies
-    // 1. Full name appears in email
-    if (normEmail.includes(normName)) {
-      matched.set(normName, originalName);
-      return;
-    }
-    // 2. Each word of job name (3+ chars) appears
-    const words = normName.split(' ').filter(w => w.length >= 3);
-    if (words.length > 0 && words.every(w => normEmail.includes(w))) {
-      matched.set(normName, originalName);
-      return;
-    }
-    // 3. First significant word appears (for short/common names)
-    const firstWord = normName.split(' ')[0];
-    if (firstWord.length >= 4 && normEmail.includes(firstWord)) {
-      matched.set(normName, originalName);
-    }
-  });
-  return Array.from(matched.values());
+  uniqueJobNames = Array.from(nameSet);
+  console.log(`Loaded ${allJobs.length} entries, ${uniqueJobNames.length} unique job names`);
 }
 
 function filterByDate(jobs, maxWeeksBack) {
@@ -386,34 +800,46 @@ function filterByDate(jobs, maxWeeksBack) {
 function lookup() {
   const emailText = document.getElementById('email-text').value.trim();
   if (!emailText) {
-    alert('Paste an email first.');
+    showToast('Paste an email first');
     return;
   }
 
-  // Find matched job names
-  const matchedNames = findMatchedNames(emailText);
+  const expandedEmail = expandText(emailText);
+  const scored = uniqueJobNames.map(name => ({
+    name,
+    score: scoreMatch(name, emailText, expandedEmail)
+  })).filter(s => s.score > 40).sort((a,b) => b.score - a.score);
+
+  // If too many results, take top N by score
+  const matchedNames = scored.slice(0, 15).map(s => s.name);
+
   const matchedEl = document.getElementById('matched-jobs');
   if (!matchedNames.length) {
-    matchedEl.innerHTML = '<div style="padding:10px;color:var(--coral);font-size:12px;">No known job names detected in the text. Try spelling them more clearly or add more context.</div>';
+    matchedEl.innerHTML = `<div class="no-match">
+      <b>No matches found.</b> Try:<br>
+      • Using more complete words (e.g. "chermside" instead of just "cherm")<br>
+      • Including the location (suburb name helps a lot)<br>
+      • Pasting more surrounding context from the email
+    </div>`;
     document.getElementById('results-section').style.display = 'none';
     document.getElementById('output-section').style.display = 'none';
     return;
   }
 
-  matchedEl.innerHTML = '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;">Matched job names</div>' +
-    matchedNames.map(n => `<span class="matched-badge">${esc(n)}</span>`).join('');
+  matchedEl.innerHTML = `<div class="matched-wrap">
+    <div class="matched-label">Matched ${matchedNames.length} job name${matchedNames.length>1?'s':''}</div>
+    <div>${matchedNames.map((n, i) => `<span class="matched-badge" style="animation-delay:${i*0.04}s">${esc(n)}</span>`).join('')}</div>
+  </div>`;
 
-  // Filter all jobs matching those names in the date range
-  const normNames = matchedNames.map(n => normalize(n));
-  const matchedJobs = allJobs.filter(j => normNames.includes(normalize(j.jobName)));
+  // Find all entries for matched jobs
+  const matchedJobs = allJobs.filter(j => matchedNames.includes(j.jobName));
   const filtered = filterByDate(matchedJobs, weeksRange);
 
   // Group by job name
   const grouped = {};
   filtered.forEach(j => {
-    const key = j.jobName;
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(j);
+    if (!grouped[j.jobName]) grouped[j.jobName] = [];
+    grouped[j.jobName].push(j);
   });
 
   renderResults(grouped);
@@ -421,38 +847,6 @@ function lookup() {
 }
 
 function esc(s) { return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-function renderResults(grouped) {
-  const el = document.getElementById('results');
-  const keys = Object.keys(grouped);
-  if (!keys.length) {
-    el.innerHTML = '<div class="empty">No matching jobs found in the selected date range.</div>';
-    document.getElementById('results-section').style.display = 'block';
-    document.getElementById('output-section').style.display = 'none';
-    return;
-  }
-  el.innerHTML = keys.map(name => {
-    const entries = grouped[name].sort((a,b) => {
-      if (a.wk !== b.wk) return b.wk.localeCompare(a.wk);
-      return DAYS.indexOf(b.day) - DAYS.indexOf(a.day);
-    });
-    const html = entries.map(j => {
-      const date = formatJobDate(j.wk, j.day);
-      const timeWindows = groupTimeWindows(j.workers);
-      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
-      return `<div class="job-entry">
-        <b style="color:#fff">${esc(date)}</b> · ${j.totalHrs.toFixed(1)}h ·
-        <span style="color:var(--gold-300)">${esc(timeWindows)}</span>
-        ${workerNames ? '<br><span style="color:rgba(255,255,255,0.5);font-size:11px;">' + esc(workerNames) + '</span>' : ''}
-      </div>`;
-    }).join('');
-    return `<div class="job-block">
-      <div class="job-title">${esc(name)}</div>
-      ${html}
-    </div>`;
-  }).join('');
-  document.getElementById('results-section').style.display = 'block';
-}
 
 function groupTimeWindows(workers) {
   if (!workers.length) return '';
@@ -466,6 +860,46 @@ function groupTimeWindows(workers) {
     .sort((a,b) => a.from.localeCompare(b.from))
     .map(g => toTime12(g.from) + '–' + toTime12(g.to) + (g.count > 1 ? ' ×' + g.count : ''))
     .join(', ');
+}
+
+function renderResults(grouped) {
+  const el = document.getElementById('results');
+  const keys = Object.keys(grouped);
+  if (!keys.length) {
+    el.innerHTML = '<div class="empty">No matching jobs found in the selected date range.<br>Try a wider range above.</div>';
+    document.getElementById('results-section').style.display = 'block';
+    document.getElementById('output-section').style.display = 'none';
+    return;
+  }
+  el.innerHTML = keys.map((name, idx) => {
+    const entries = grouped[name].sort((a,b) => {
+      if (a.wk !== b.wk) return b.wk.localeCompare(a.wk);
+      return DAYS.indexOf(b.day) - DAYS.indexOf(a.day);
+    });
+    const html = entries.map(j => {
+      const date = formatJobDate(j.wk, j.day);
+      const timeWindows = groupTimeWindows(j.workers);
+      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
+      const extras = [];
+      if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
+      if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
+      return `<div class="job-entry">
+        <span class="entry-date">${esc(date)}</span>
+        <span class="entry-hrs">${j.totalHrs.toFixed(1)}h</span> ·
+        <span class="entry-times">${esc(timeWindows)}</span>
+        ${workerNames ? '<div class="entry-workers">👥 ' + esc(workerNames) + '</div>' : ''}
+        ${extras.length ? '<div class="entry-extras">+ ' + extras.join(' · ') + '</div>' : ''}
+      </div>`;
+    }).join('');
+    return `<div class="job-card" style="animation-delay:${idx*0.06}s">
+      <div class="job-title">
+        ${esc(name)}
+        <span class="job-title-count">${entries.length} entr${entries.length>1?'ies':'y'}</span>
+      </div>
+      ${html}
+    </div>`;
+  }).join('');
+  document.getElementById('results-section').style.display = 'block';
 }
 
 function renderOutput(grouped) {
@@ -487,7 +921,6 @@ function renderOutput(grouped) {
       const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
       let line = `  ${date} · ${j.totalHrs.toFixed(1)}h · ${tw}`;
       if (workerNames) line += ` (${workerNames})`;
-      // Extras on separate indented line
       const extras = [];
       if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
       if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
@@ -504,10 +937,7 @@ async function copyOutput() {
   const text = document.getElementById('formatted-output').textContent;
   try {
     await navigator.clipboard.writeText(text);
-    const btn = event.target;
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copied!';
-    setTimeout(() => { btn.textContent = orig; }, 1500);
+    showToast('✓ Copied to clipboard');
   } catch(e) {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -516,7 +946,7 @@ async function copyOutput() {
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    alert('Copied!');
+    showToast('✓ Copied');
   }
 }
 
@@ -525,6 +955,15 @@ function clearAll() {
   document.getElementById('matched-jobs').innerHTML = '';
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('output-section').style.display = 'none';
+  document.getElementById('email-text').focus();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
 }
 
 // Range tabs
@@ -533,9 +972,16 @@ document.querySelectorAll('.range-tab').forEach(tab => {
     document.querySelectorAll('.range-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     weeksRange = parseInt(tab.dataset.weeks);
-    // Re-run lookup if there's already text
     if (document.getElementById('email-text').value.trim()) lookup();
   });
+});
+
+// Keyboard shortcut: Ctrl/Cmd + Enter to trigger lookup
+document.getElementById('email-text').addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    lookup();
+  }
 });
 
 window.addEventListener('DOMContentLoaded', async () => {
