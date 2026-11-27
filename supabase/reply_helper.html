@@ -667,17 +667,44 @@ function tokens(s) {
   return normalize(s).split(' ').filter(w => w.length >= 3 && !STOP_WORDS.has(w));
 }
 
-// Levenshtein-style fuzzy match for a single word
+// True Levenshtein distance
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = Array(n + 1).fill(0).map((_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    let prev = i - 1;
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const temp = dp[j];
+      dp[j] = Math.min(
+        dp[j] + 1,         // deletion
+        dp[j-1] + 1,       // insertion
+        prev + (a[i-1] === b[j-1] ? 0 : 1)  // substitution
+      );
+      prev = temp;
+    }
+  }
+  return dp[n];
+}
+
+// Fuzzy match two single words, returns 0-1 score
 function fuzzyMatch(a, b) {
   if (a === b) return 1;
   if (a.length < 3 || b.length < 3) return 0;
   // Substring match
-  if (a.includes(b) || b.includes(a)) return 0.9;
-  // Shared prefix/suffix
+  if (a.includes(b) || b.includes(a)) return 0.95;
+  // Shared prefix (strong signal for misspellings at end)
   let prefix = 0;
   while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix++;
-  if (prefix >= 4) return 0.85;
-  // Character overlap (quick jaccard on bigrams)
+  if (prefix >= 4) return 0.9;
+  // Levenshtein with length-based threshold
+  const maxLen = Math.max(a.length, b.length);
+  const maxEdits = maxLen <= 4 ? 1 : (maxLen <= 7 ? 2 : (maxLen <= 10 ? 3 : 4));
+  const dist = levenshtein(a, b);
+  if (dist <= maxEdits) return 1 - dist / maxLen;
+  // Bigram backup for order-insensitive matches
   const bigrams = (s) => {
     const r = new Set();
     for (let i = 0; i < s.length - 1; i++) r.add(s.slice(i, i+2));
@@ -687,7 +714,7 @@ function fuzzyMatch(a, b) {
   let shared = 0;
   ba.forEach(g => { if (bb.has(g)) shared++; });
   const sim = shared / Math.max(ba.size, bb.size, 1);
-  return sim > 0.55 ? sim : 0;
+  return sim >= 0.5 ? sim * 0.8 : 0;
 }
 
 // Score how well emailText matches a jobName
@@ -947,6 +974,53 @@ function lookup() {
       }
     });
 
+    // ───── DATE CARRY-OVER ─────
+    // If "29 Oct Zembero and 30 Oct" → both dates = Zembero
+    // For each unmatched date, inherit from nearest matched date (prev first, then next)
+    matches.forEach((m, i) => {
+      if (m.jobName) return; // already matched
+      // Look back
+      let inheritedName = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (matches[j].jobName) { inheritedName = matches[j].jobName; break; }
+      }
+      // Look forward if no previous match
+      if (!inheritedName) {
+        for (let j = i + 1; j < matches.length; j++) {
+          if (matches[j].jobName) { inheritedName = matches[j].jobName; break; }
+        }
+      }
+      if (!inheritedName) return;
+
+      // Try strict: same job name exists on this date
+      let inheritedEntries = allJobs.filter(e => sameDay(entryDate(e), m.date) && e.jobName === inheritedName);
+
+      // If not strict match, try fuzzy match against similar job names on this date
+      if (!inheritedEntries.length) {
+        const candidates = Array.from(new Set(allJobs.filter(e => sameDay(entryDate(e), m.date)).map(e => e.jobName)));
+        const fuzzyName = findBestJobMatch(inheritedName, candidates);
+        if (fuzzyName) {
+          inheritedEntries = allJobs.filter(e => sameDay(entryDate(e), m.date) && e.jobName === fuzzyName);
+          if (inheritedEntries.length) {
+            m.jobName = fuzzyName;
+            m.entries = inheritedEntries;
+            m.inherited = true;
+            m.inheritedFrom = inheritedName;
+            return;
+          }
+        }
+        // No entries at all → still show the inherited name but mark as "no data"
+        m.jobName = inheritedName;
+        m.entries = [];
+        m.inherited = true;
+        m.noDataOnDate = true;
+      } else {
+        m.jobName = inheritedName;
+        m.entries = inheritedEntries;
+        m.inherited = true;
+      }
+    });
+
     renderDateAwareResults(matches);
     return;
   }
@@ -1030,25 +1104,36 @@ function renderDateAwareResults(matches) {
   // Render cards (one per date+job)
   const resultsEl = document.getElementById('results');
   resultsEl.innerHTML = found.map((m, idx) => {
-    const html2 = m.entries.map(j => {
-      const timeWindows = groupTimeWindows(j.workers);
-      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
-      const extras = [];
-      if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
-      if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
+    const inheritedBadge = m.inherited
+      ? `<span style="font-size:9px;background:rgba(251,191,36,0.15);color:var(--amber);padding:2px 7px;border-radius:8px;border:1px solid rgba(251,191,36,0.3);font-weight:600;letter-spacing:0.05em;margin-left:6px;">INHERITED</span>` : '';
+
+    if (m.noDataOnDate) {
+      return `<div class="job-card" style="animation-delay:${idx*0.06}s;opacity:0.7">
+        <div class="job-title">
+          ${esc(m.jobName)} ${inheritedBadge}
+          <span class="job-title-count">${fmtDateLong(m.date)}</span>
+        </div>
+        <div class="job-entry" style="color:var(--coral);font-style:italic;">
+          No entries recorded for this job on this date
+        </div>
+      </div>`;
+    }
+
+    const entriesHtml = m.entries.map(j => {
+      const summary = entrySummaryLine(j);
+      const extras = extrasLine(j);
       return `<div class="job-entry">
-        <span class="entry-hrs">${j.totalHrs.toFixed(1)}h</span> ·
-        <span class="entry-times">${esc(timeWindows)}</span>
-        ${workerNames ? '<div class="entry-workers">👥 ' + esc(workerNames) + '</div>' : ''}
-        ${extras.length ? '<div class="entry-extras">+ ' + extras.join(' · ') + '</div>' : ''}
+        <div style="color:#fff;font-weight:600;">${esc(summary)}</div>
+        ${extras ? `<div class="entry-extras">${esc(extras)}</div>` : ''}
       </div>`;
     }).join('');
+
     return `<div class="job-card" style="animation-delay:${idx*0.06}s">
       <div class="job-title">
-        ${esc(m.jobName)}
+        ${esc(m.jobName)} ${inheritedBadge}
         <span class="job-title-count">${fmtDateLong(m.date)}</span>
       </div>
-      ${html2}
+      ${entriesHtml}
     </div>`;
   }).join('');
   document.getElementById('results-section').style.display = 'block';
@@ -1057,17 +1142,16 @@ function renderDateAwareResults(matches) {
   const lines = [];
   found.forEach(m => {
     lines.push(m.jobName.toUpperCase());
-    m.entries.forEach(j => {
-      const tw = groupTimeWindows(j.workers);
-      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
-      let line = `  ${fmtDateLong(m.date)} · ${j.totalHrs.toFixed(1)}h · ${tw}`;
-      if (workerNames) line += ` (${workerNames})`;
-      const extras = [];
-      if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
-      if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
-      if (extras.length) line += '\n    + ' + extras.join(' · ');
-      lines.push(line);
-    });
+    if (m.noDataOnDate) {
+      lines.push(`  ${fmtDateLong(m.date)} · no entries recorded`);
+    } else {
+      m.entries.forEach(j => {
+        let line = `  ${fmtDateLong(m.date)} · ${entrySummaryLine(j)}`;
+        const extras = extrasLine(j);
+        if (extras) line += '\n    ' + extras;
+        lines.push(line);
+      });
+    }
     lines.push('');
   });
   document.getElementById('formatted-output').textContent = lines.join('\n').trim();
@@ -1077,17 +1161,33 @@ function renderDateAwareResults(matches) {
 function esc(s) { return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function groupTimeWindows(workers) {
-  if (!workers.length) return '';
-  const groups = {};
+  if (!workers.length) return { times: '', count: 0, peopleLabel: '' };
+  // Collect unique time ranges (no counts shown)
+  const unique = new Map();
   workers.forEach(w => {
     const key = w.from + '|' + w.to;
-    if (!groups[key]) groups[key] = { from: w.from, to: w.to, count: 0 };
-    groups[key].count++;
+    if (!unique.has(key)) unique.set(key, { from: w.from, to: w.to });
   });
-  return Object.values(groups)
+  const times = Array.from(unique.values())
     .sort((a,b) => a.from.localeCompare(b.from))
-    .map(g => toTime12(g.from) + '–' + toTime12(g.to) + (g.count > 1 ? ' ×' + g.count : ''))
+    .map(g => toTime12(g.from) + '–' + toTime12(g.to))
     .join(', ');
+  const count = workers.length;
+  const peopleLabel = count === 1 ? '1 person' : count + ' people';
+  return { times, count, peopleLabel };
+}
+
+// Compose a single-line entry summary: "18.0hr · 12pm–6pm - 3 people"
+function entrySummaryLine(j) {
+  const tw = groupTimeWindows(j.workers);
+  return `${j.totalHrs.toFixed(1)}hr · ${tw.times} - ${tw.peopleLabel}`;
+}
+
+function extrasLine(j) {
+  const extras = [];
+  if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
+  if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
+  return extras.length ? '+ ' + extras.join(' · ') : '';
 }
 
 function renderResults(grouped) {
@@ -1106,17 +1206,12 @@ function renderResults(grouped) {
     });
     const html = entries.map(j => {
       const date = formatJobDate(j.wk, j.day);
-      const timeWindows = groupTimeWindows(j.workers);
-      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
-      const extras = [];
-      if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
-      if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
+      const summary = entrySummaryLine(j);
+      const extras = extrasLine(j);
       return `<div class="job-entry">
         <span class="entry-date">${esc(date)}</span>
-        <span class="entry-hrs">${j.totalHrs.toFixed(1)}h</span> ·
-        <span class="entry-times">${esc(timeWindows)}</span>
-        ${workerNames ? '<div class="entry-workers">👥 ' + esc(workerNames) + '</div>' : ''}
-        ${extras.length ? '<div class="entry-extras">+ ' + extras.join(' · ') + '</div>' : ''}
+        <span style="color:#fff;font-weight:600;">${esc(summary)}</span>
+        ${extras ? `<div class="entry-extras">${esc(extras)}</div>` : ''}
       </div>`;
     }).join('');
     return `<div class="job-card" style="animation-delay:${idx*0.06}s">
@@ -1145,14 +1240,9 @@ function renderOutput(grouped) {
     lines.push(name.toUpperCase());
     entries.forEach(j => {
       const date = formatJobDate(j.wk, j.day);
-      const tw = groupTimeWindows(j.workers);
-      const workerNames = j.workers.map(w => w.name).filter(Boolean).join(', ');
-      let line = `  ${date} · ${j.totalHrs.toFixed(1)}h · ${tw}`;
-      if (workerNames) line += ` (${workerNames})`;
-      const extras = [];
-      if (j.parking > 0) extras.push('Parking $' + j.parking.toFixed(2));
-      if (j.materials > 0) extras.push('Materials $' + j.materials.toFixed(2));
-      if (extras.length) line += '\n    + ' + extras.join(' · ');
+      let line = `  ${date} · ${entrySummaryLine(j)}`;
+      const extras = extrasLine(j);
+      if (extras) line += '\n    ' + extras;
       lines.push(line);
     });
     lines.push('');
