@@ -462,6 +462,101 @@
     30% { opacity: 1; transform: scale(1); }
   }
 
+  /* Tone tabs */
+  .tone-tab {
+    background: transparent;
+    border: 0;
+    color: var(--text-muted);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .tone-tab:hover { color: #fff; }
+  .tone-tab.active {
+    background: linear-gradient(135deg, rgba(52,211,153,0.2), rgba(52,211,153,0.08));
+    color: var(--emerald);
+    box-shadow: inset 0 0 0 1px rgba(52,211,153,0.4);
+  }
+
+  /* Summary stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, rgba(200,168,75,0.08), rgba(200,168,75,0.02));
+    border: 1px solid rgba(200,168,75,0.2);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    animation: fadeInUp 0.3s ease;
+  }
+  .stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .stat-chip-value {
+    color: var(--gold-300);
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+  .stat-divider {
+    width: 1px;
+    background: rgba(200,168,75,0.2);
+    margin: 0 2px;
+  }
+
+  /* Quick date chips */
+  .date-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .date-chip {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-muted);
+    padding: 5px 10px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .date-chip:hover {
+    background: rgba(200,168,75,0.12);
+    border-color: rgba(200,168,75,0.4);
+    color: var(--gold-300);
+  }
+
+  /* Intent badge */
+  .intent-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, rgba(251,191,36,0.08), rgba(251,191,36,0.02));
+    border: 1px dashed rgba(251,191,36,0.3);
+    border-radius: 10px;
+    font-size: 11px;
+    color: var(--amber);
+    margin-bottom: 12px;
+    font-weight: 600;
+    animation: fadeInUp 0.3s ease;
+  }
+
   /* Toast */
   #toast {
     position: fixed; bottom: 32px; left: 50%;
@@ -518,14 +613,25 @@
   <a href="./" class="back">← Back to Home</a>
 
   <div class="hero">
-    <div class="hero-eyebrow">Smart Lookup · Reply Helper</div>
-    <h1>Email → Jobs<br>in One Paste</h1>
-    <div class="hero-sub">Paste the email with dates like "29/10" or "1 Nov" — each date pairs with the job name next to it, and you get only that day's entries back.</div>
+    <div class="hero-eyebrow">AI-Powered · Reply Helper</div>
+    <h1>Email In →<br>Reply Out</h1>
+    <div class="hero-sub">Paste any client email with dates ("29/10", "1 Nov", "last Thursday", "yesterday"). Get a date-matched job summary, totals, and a ready-to-send email reply in your chosen tone.</div>
   </div>
 
   <div class="section">
     <div class="section-label">Paste the email</div>
-    <textarea id="email-text" placeholder="Paste the email. Dates make it sharp.&#10;e.g. &quot;Zambrero Kenmore 29/10 and my phone chermside 1/11, can u confirm?&quot;&#10;Or without dates: &quot;times for chermside jobs last week&quot;"></textarea>
+    <textarea id="email-text" placeholder="Paste the email. Dates make it sharp.&#10;e.g. &quot;Zambrero Kenmore 29/10 and my phone chermside 1/11, can u confirm?&quot;&#10;Or try natural language: &quot;grilld last Thursday&quot; or &quot;zembero yesterday&quot;"></textarea>
+    <div class="date-chips">
+      <span style="font-size:10px;color:var(--text-dim);letter-spacing:0.15em;text-transform:uppercase;font-weight:700;margin-right:4px;align-self:center;">Quick insert →</span>
+      <button class="date-chip" onclick="insertAtCursor('yesterday ')">yesterday</button>
+      <button class="date-chip" onclick="insertAtCursor('last Monday ')">last Mon</button>
+      <button class="date-chip" onclick="insertAtCursor('last Tuesday ')">last Tue</button>
+      <button class="date-chip" onclick="insertAtCursor('last Wednesday ')">last Wed</button>
+      <button class="date-chip" onclick="insertAtCursor('last Thursday ')">last Thu</button>
+      <button class="date-chip" onclick="insertAtCursor('last Friday ')">last Fri</button>
+      <button class="date-chip" onclick="insertAtCursor('last Saturday ')">last Sat</button>
+      <button class="date-chip" onclick="insertAtCursor('last Sunday ')">last Sun</button>
+    </div>
     <div class="controls">
       <button class="btn btn-primary" onclick="lookup()">
         <span>🔍 Find Jobs</span>
@@ -545,17 +651,41 @@
 
   <div class="section" id="results-section" style="display:none;">
     <div class="section-label">Matched Jobs</div>
+    <div id="intent-banner"></div>
+    <div id="stats-bar"></div>
     <div id="results"></div>
   </div>
 
   <div class="section" id="output-section" style="display:none;">
-    <div class="section-label">Reply-Ready Summary</div>
+    <div class="section-label">Raw Data Summary</div>
     <div class="output-wrap">
       <pre class="formatted-output" id="formatted-output"></pre>
     </div>
     <div class="controls">
       <button class="btn btn-emerald" onclick="copyOutput()">
-        <span>📋 Copy to Clipboard</span>
+        <span>📋 Copy Data</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="section" id="draft-section" style="display:none;">
+    <div class="section-label">
+      <span>✨ AI-Drafted Email Reply</span>
+    </div>
+    <div class="tone-tabs" style="display:flex;gap:4px;padding:3px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:10px;width:fit-content;margin-bottom:14px;">
+      <button class="tone-tab active" data-tone="formal">Formal</button>
+      <button class="tone-tab" data-tone="friendly">Friendly</button>
+      <button class="tone-tab" data-tone="brief">Brief</button>
+    </div>
+    <div class="output-wrap" style="border-color:rgba(52,211,153,0.3);">
+      <pre class="formatted-output" id="draft-output" style="color:#fff;"></pre>
+    </div>
+    <div class="controls">
+      <button class="btn btn-emerald" onclick="copyDraft()">
+        <span>📧 Copy Email Reply</span>
+      </button>
+      <button class="btn btn-secondary" onclick="openInMail()" title="Open in default mail app">
+        <span>✉️ Open in Mail</span>
       </button>
     </div>
   </div>
@@ -828,12 +958,65 @@ function filterByDate(jobs, maxWeeksBack) {
 function parseDates(text) {
   const results = [];
   const now = new Date();
+  now.setHours(0,0,0,0);
   const futureLimit = new Date(now);
-  futureLimit.setDate(now.getDate() + 7); // Allow ~1 week into future
+  futureLimit.setDate(now.getDate() + 7);
+
+  const WEEKDAYS = {
+    sunday:0, sun:0, monday:1, mon:1, tuesday:2, tue:2, tues:2, wednesday:3, wed:3,
+    thursday:4, thu:4, thurs:4, friday:5, fri:5, saturday:6, sat:6
+  };
+
+  // ── Natural language: "yesterday", "today"
+  const re_yesterday = /\byesterday\b/gi;
+  let m;
+  while ((m = re_yesterday.exec(text)) !== null) {
+    const d = new Date(now); d.setDate(now.getDate() - 1);
+    results.push({ date: d, startIdx: m.index, endIdx: m.index + m[0].length, raw: m[0] });
+  }
+  const re_today = /\btoday\b/gi;
+  while ((m = re_today.exec(text)) !== null) {
+    results.push({ date: new Date(now), startIdx: m.index, endIdx: m.index + m[0].length, raw: m[0] });
+  }
+
+  // ── "last Monday", "this Tuesday", "past Friday"
+  const wkPat = 'sunday|monday|tuesday|tues|wednesday|thursday|thurs|friday|saturday|sun|mon|tue|wed|thu|fri|sat';
+  const re_lastWk = new RegExp(`\\b(last|past|this)\\s+(${wkPat})\\b`, 'gi');
+  while ((m = re_lastWk.exec(text)) !== null) {
+    const wkDay = WEEKDAYS[m[2].toLowerCase()];
+    const today = now.getDay();
+    let diff = today - wkDay;
+    if (diff <= 0) diff += 7; // most recent past occurrence
+    const d = new Date(now); d.setDate(now.getDate() - diff);
+    results.push({ date: d, startIdx: m.index, endIdx: m.index + m[0].length, raw: m[0] });
+  }
+
+  // ── "N days ago", "N weeks ago"
+  const re_ago = /\b(\d{1,2})\s+(day|days|week|weeks)\s+ago\b/gi;
+  while ((m = re_ago.exec(text)) !== null) {
+    const n = parseInt(m[1]);
+    const mult = /week/i.test(m[2]) ? 7 : 1;
+    const d = new Date(now); d.setDate(now.getDate() - n * mult);
+    results.push({ date: d, startIdx: m.index, endIdx: m.index + m[0].length, raw: m[0] });
+  }
+
+  // ── Bare weekday ("Monday", "Thu") — interpret as most recent past
+  // Only if not already consumed by "last/this X" match
+  const re_bareWk = new RegExp(`\\b(${wkPat})\\b`, 'gi');
+  while ((m = re_bareWk.exec(text)) !== null) {
+    // Skip if already inside an existing match
+    const overlap = results.some(r => m.index >= r.startIdx && m.index < r.endIdx);
+    if (overlap) continue;
+    const wkDay = WEEKDAYS[m[1].toLowerCase()];
+    const today = now.getDay();
+    let diff = today - wkDay;
+    if (diff <= 0) diff += 7;
+    const d = new Date(now); d.setDate(now.getDate() - diff);
+    results.push({ date: d, startIdx: m.index, endIdx: m.index + m[0].length, raw: m[0] });
+  }
 
   // Numeric: DD/MM, DD/MM/YY, DD-MM, D.M, DD/MM/YYYY
   const re1 = /\b(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?\b/g;
-  let m;
   while ((m = re1.exec(text)) !== null) {
     let day = parseInt(m[1]);
     let month = parseInt(m[2]);
@@ -974,6 +1157,10 @@ function lookup() {
       }
     });
 
+    // Detect intent & render banner
+    currentIntents = detectIntent(emailText);
+    renderIntentBanner(currentIntents, emailText);
+
     // ───── DATE CARRY-OVER ─────
     // If "29 Oct Zembero and 30 Oct" → both dates = Zembero
     // For each unmatched date, inherit from nearest matched date (prev first, then next)
@@ -1026,6 +1213,8 @@ function lookup() {
   }
 
   // ───── FUZZY-ONLY MODE: no dates in email ─────
+  currentIntents = detectIntent(emailText);
+  renderIntentBanner(currentIntents, emailText);
   const expandedEmail = expandText(emailText);
   const scored = uniqueJobNames.map(name => ({
     name,
@@ -1063,6 +1252,10 @@ function lookup() {
 
   renderResults(grouped);
   renderOutput(grouped);
+  renderStatsBar(filtered);
+  currentMatches = [];
+  currentFuzzyGrouped = grouped;
+  renderDraft();
 }
 
 function renderDateAwareResults(matches) {
@@ -1156,6 +1349,13 @@ function renderDateAwareResults(matches) {
   });
   document.getElementById('formatted-output').textContent = lines.join('\n').trim();
   document.getElementById('output-section').style.display = 'block';
+
+  // Stats bar + AI draft
+  const allEntries = found.flatMap(m => m.entries);
+  renderStatsBar(allEntries);
+  currentMatches = found.filter(m => !m.noDataOnDate);
+  currentFuzzyGrouped = null;
+  renderDraft();
 }
 
 function esc(s) { return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -1271,8 +1471,14 @@ async function copyOutput() {
 function clearAll() {
   document.getElementById('email-text').value = '';
   document.getElementById('matched-jobs').innerHTML = '';
+  document.getElementById('intent-banner').innerHTML = '';
+  document.getElementById('stats-bar').innerHTML = '';
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('output-section').style.display = 'none';
+  document.getElementById('draft-section').style.display = 'none';
+  currentMatches = [];
+  currentFuzzyGrouped = null;
+  currentIntents = [];
   document.getElementById('email-text').focus();
 }
 
@@ -1282,6 +1488,227 @@ function showToast(msg) {
   t.classList.add('show');
   clearTimeout(window._toastTimer);
   window._toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ─────────── INTENT DETECTION ───────────
+function detectIntent(emailText) {
+  const t = emailText.toLowerCase();
+  const intents = [];
+  if (/\b(how much|cost|price|bill|invoice|charge|amount|total.*(?:cost|\$))/i.test(t)) intents.push('cost');
+  if (/\b(when|date|day)\b/i.test(t) && !/\b(times?|hours?)\b/i.test(t)) intents.push('when');
+  if (/\b(who|which (?:staff|person|worker)|name)\b/i.test(t)) intents.push('who');
+  if (/\b(times?|hours?|how long|duration|from.*to)\b/i.test(t)) intents.push('times');
+  if (/\b(parking|material)/i.test(t)) intents.push('extras');
+  if (!intents.length) intents.push('times'); // default
+  return intents;
+}
+
+function detectGreeting(emailText) {
+  // Try to extract sender name from signature
+  const sigMatch = emailText.match(/(?:regards|thanks|cheers|best|kind regards),?\s*\n?\s*([A-Z][a-z]+)\b/i);
+  if (sigMatch) return sigMatch[1];
+  // Try greeting line "Hi Aman," → use name after "Hi"
+  const greetMatch = emailText.match(/\b(?:dear|hi|hey|hello)\s+([A-Z][a-z]+)/i);
+  return null; // Default to no name
+}
+
+// ─────────── SUMMARY STATS ───────────
+function computeStats(entries) {
+  let totalHrs = 0, totalPpl = 0, totalParking = 0, totalMaterials = 0;
+  entries.forEach(j => {
+    totalHrs += j.totalHrs;
+    totalPpl += j.workers.length;
+    totalParking += j.parking || 0;
+    totalMaterials += j.materials || 0;
+  });
+  return {
+    entryCount: entries.length,
+    totalHrs,
+    totalPpl,
+    totalParking,
+    totalMaterials
+  };
+}
+
+function renderStatsBar(entries) {
+  const el = document.getElementById('stats-bar');
+  if (!entries.length) { el.innerHTML = ''; return; }
+  const s = computeStats(entries);
+  const chips = [];
+  chips.push(`<span class="stat-chip"><span class="stat-chip-value">${s.entryCount}</span> ${s.entryCount===1?'entry':'entries'}</span>`);
+  chips.push(`<span class="stat-chip"><span class="stat-chip-value">${s.totalHrs.toFixed(1)}hr</span> total</span>`);
+  chips.push(`<span class="stat-chip"><span class="stat-chip-value">${s.totalPpl}</span> ${s.totalPpl===1?'person':'people'} across all</span>`);
+  if (s.totalParking > 0) chips.push(`<span class="stat-chip"><span class="stat-chip-value">$${s.totalParking.toFixed(2)}</span> parking</span>`);
+  if (s.totalMaterials > 0) chips.push(`<span class="stat-chip"><span class="stat-chip-value">$${s.totalMaterials.toFixed(2)}</span> materials</span>`);
+  el.innerHTML = `<div class="stats-bar">${chips.join('<div class="stat-divider"></div>')}</div>`;
+}
+
+function renderIntentBanner(intents, emailText) {
+  const el = document.getElementById('intent-banner');
+  if (intents.includes('cost')) {
+    el.innerHTML = `<div class="intent-banner">💡 Email mentions billing / cost. This system shows hours, not invoice amounts — you'll need to add $ figures to the reply yourself.</div>`;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+// ─────────── SMART DRAFT GENERATION ───────────
+let currentTone = 'formal';
+let currentMatches = [];
+let currentFuzzyGrouped = null;
+let currentIntents = [];
+
+function fmtTime(d, long = false) {
+  if (long) return d.toLocaleDateString('en-AU', { weekday:'long', day:'numeric', month:'long' });
+  return d.toLocaleDateString('en-AU', { weekday:'short', day:'numeric', month:'short' });
+}
+
+function workerNamesFor(j) {
+  return j.workers.map(w => w.name).filter(Boolean).join(', ');
+}
+
+function generateDraft(tone, matches, fuzzyGrouped, intents) {
+  const showWorkers = intents.includes('who');
+  const lines = [];
+
+  // Greeting
+  if (tone === 'formal') {
+    lines.push('Hi there,', '', 'Thank you for reaching out. Please find the summary of the jobs you asked about:', '');
+  } else if (tone === 'friendly') {
+    lines.push('Hey,', '', 'Here are the details you asked about:', '');
+  } else { // brief
+    // No greeting
+  }
+
+  // Body
+  if (matches && matches.length) {
+    // Date-aware mode
+    matches.forEach(m => {
+      if (m.noDataOnDate) {
+        lines.push(`• ${m.jobName} on ${fmtTime(m.date, tone==='formal')} — no entries recorded for this day`);
+        return;
+      }
+      m.entries.forEach(j => {
+        const tw = groupTimeWindows(j.workers);
+        let line;
+        if (tone === 'formal') {
+          line = `• ${m.jobName} — ${fmtTime(m.date, true)}`;
+          line += `\n   ${j.totalHrs.toFixed(1)} hours · ${tw.times} · ${tw.peopleLabel}`;
+          if (showWorkers) line += `\n   Workers: ${workerNamesFor(j)}`;
+          const ex = [];
+          if (j.parking > 0) ex.push(`Parking $${j.parking.toFixed(2)}`);
+          if (j.materials > 0) ex.push(`Materials $${j.materials.toFixed(2)}`);
+          if (ex.length) line += `\n   ${ex.join(' · ')}`;
+        } else if (tone === 'friendly') {
+          line = `• ${fmtTime(m.date)} — ${m.jobName}: ${j.totalHrs.toFixed(1)}hr, ${tw.times}, ${tw.peopleLabel}`;
+          if (showWorkers) line += ` (${workerNamesFor(j)})`;
+          const ex = [];
+          if (j.parking > 0) ex.push(`parking $${j.parking.toFixed(2)}`);
+          if (j.materials > 0) ex.push(`materials $${j.materials.toFixed(2)}`);
+          if (ex.length) line += `. ${ex.join(', ')}.`;
+        } else { // brief
+          line = `${fmtTime(m.date)} · ${m.jobName}: ${j.totalHrs.toFixed(1)}hr, ${tw.times}, ${tw.peopleLabel}`;
+          if (showWorkers) line += ` (${workerNamesFor(j)})`;
+          const ex = [];
+          if (j.parking > 0) ex.push(`P $${j.parking.toFixed(2)}`);
+          if (j.materials > 0) ex.push(`M $${j.materials.toFixed(2)}`);
+          if (ex.length) line += ` · ${ex.join(', ')}`;
+        }
+        lines.push(line);
+      });
+    });
+  } else if (fuzzyGrouped) {
+    // Fuzzy fallback mode
+    Object.keys(fuzzyGrouped).forEach(name => {
+      const entries = fuzzyGrouped[name].sort((a,b) => {
+        if (a.wk !== b.wk) return b.wk.localeCompare(a.wk);
+        return DAYS.indexOf(b.day) - DAYS.indexOf(a.day);
+      });
+      entries.forEach(j => {
+        const date = entryDate(j);
+        const tw = groupTimeWindows(j.workers);
+        let line;
+        if (tone === 'formal') {
+          line = `• ${name} — ${fmtTime(date, true)}`;
+          line += `\n   ${j.totalHrs.toFixed(1)} hours · ${tw.times} · ${tw.peopleLabel}`;
+          if (showWorkers) line += `\n   Workers: ${workerNamesFor(j)}`;
+          const ex = [];
+          if (j.parking > 0) ex.push(`Parking $${j.parking.toFixed(2)}`);
+          if (j.materials > 0) ex.push(`Materials $${j.materials.toFixed(2)}`);
+          if (ex.length) line += `\n   ${ex.join(' · ')}`;
+        } else if (tone === 'friendly') {
+          line = `• ${fmtTime(date)} — ${name}: ${j.totalHrs.toFixed(1)}hr, ${tw.times}, ${tw.peopleLabel}`;
+          if (showWorkers) line += ` (${workerNamesFor(j)})`;
+        } else {
+          line = `${fmtTime(date)} · ${name}: ${j.totalHrs.toFixed(1)}hr, ${tw.times}, ${tw.peopleLabel}`;
+        }
+        lines.push(line);
+      });
+    });
+  }
+
+  lines.push('');
+
+  // Closing
+  if (tone === 'formal') {
+    lines.push('Please let me know if you have any further questions or require additional information.', '', 'Kind regards,', 'Aman', 'LALH Services');
+  } else if (tone === 'friendly') {
+    lines.push('Let me know if you need anything else!', '', 'Cheers,', 'Aman');
+  } else {
+    lines.push('Cheers,', 'Aman');
+  }
+
+  return lines.join('\n');
+}
+
+function renderDraft() {
+  const text = generateDraft(currentTone, currentMatches, currentFuzzyGrouped, currentIntents);
+  document.getElementById('draft-output').textContent = text;
+  document.getElementById('draft-section').style.display = 'block';
+}
+
+async function copyDraft() {
+  const text = document.getElementById('draft-output').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('✓ Email reply copied');
+  } catch(e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✓ Copied');
+  }
+}
+
+function openInMail() {
+  const text = document.getElementById('draft-output').textContent;
+  const subject = encodeURIComponent('RE: Job timing confirmation');
+  const body = encodeURIComponent(text);
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+// Tone tabs
+document.querySelectorAll('.tone-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tone-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTone = tab.dataset.tone;
+    if (currentMatches.length || currentFuzzyGrouped) renderDraft();
+  });
+});
+
+// Insert at cursor helper (for date chips)
+function insertAtCursor(text) {
+  const ta = document.getElementById('email-text');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  ta.value = ta.value.slice(0, start) + text + ta.value.slice(end);
+  ta.focus();
+  ta.setSelectionRange(start + text.length, start + text.length);
 }
 
 // Range tabs
