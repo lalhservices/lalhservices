@@ -16,7 +16,7 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Weekly Wages</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -413,6 +413,228 @@
   .exporting .share-card-btn { display: none !important; }
   .exporting .pay-badge { opacity: 0.85; }
 
+  /* Hold reason input */
+  .hold-reason-wrap {
+    margin-top: 6px;
+    width: 100%;
+  }
+  .hold-reason-input {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-family: var(--font);
+    border: 1.5px solid #e07070;
+    border-radius: 6px;
+    background: #fff8f8;
+    color: #7a1e1e;
+    text-align: center;
+    outline: none;
+    letter-spacing: 0.01em;
+    transition: all 0.15s;
+  }
+  .hold-reason-input::placeholder { color: #c48888; font-style: italic; }
+  .hold-reason-input:focus {
+    border-color: #c0362a;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(224,112,112,0.15);
+  }
+  .exporting .hold-reason-input { border-style: none !important; background: transparent !important; }
+
+  /* Weekly status counter */
+  #status-counter {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 10px 14px;
+    background: #fafafa;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    margin: 14px 0 0 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  #status-counter .sc-total {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+  #status-counter .sc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  #status-counter .sc-paid { background: #e8f5ee; color: #2a7a56; border: 1px solid #5db882; }
+  #status-counter .sc-pending { background: #fff3e0; color: #e07800; border: 1px solid #f0a830; }
+  #status-counter .sc-hold { background: #fde8e8; color: #c0362a; border: 1px solid #e07070; }
+  #status-counter .sc-divider {
+    width: 1px; height: 18px; background: var(--border2); margin: 0 2px;
+  }
+
+  /* ─── Branded Payslip Template (off-screen until exported) ─── */
+  #payslip-template {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    width: 440px;
+    background: #ffffff;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    color: #1a1a1a;
+    padding: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
+    z-index: -1;
+  }
+  .payslip-header {
+    background: linear-gradient(135deg, #0d1a30 0%, #1e3a63 100%);
+    color: #fff;
+    padding: 24px 28px;
+    position: relative;
+  }
+  .payslip-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #f4d374, #c8a84b, #f4d374);
+  }
+  .payslip-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    color: #f4d374;
+    margin: 0 0 4px 0;
+  }
+  .payslip-header .psh-sub {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    font-weight: 700;
+  }
+  .payslip-header .psh-right {
+    position: absolute;
+    top: 24px; right: 28px;
+    text-align: right;
+    font-size: 10px;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .payslip-header .psh-right .psh-week {
+    font-size: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #f4d374;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+    text-transform: none;
+    font-weight: 800;
+  }
+
+  .payslip-body {
+    padding: 22px 28px;
+  }
+  .payslip-name {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #888;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .payslip-person {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #0d1a30;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #ececec;
+  }
+  .payslip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    font-size: 13px;
+    color: #333;
+    border-bottom: 1px dashed #ececec;
+  }
+  .payslip-row .psr-label {
+    color: #666;
+    font-weight: 500;
+  }
+  .payslip-row .psr-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: #0d1a30;
+    font-size: 13px;
+  }
+  .payslip-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 14px 0 0 0;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #0d1a30, #1e3a63);
+    color: #fff;
+    border-radius: 10px;
+  }
+  .payslip-total .pst-label {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: rgba(255,255,255,0.8);
+  }
+  .payslip-total .pst-val {
+    font-size: 24px;
+    font-weight: 900;
+    color: #f4d374;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.5px;
+  }
+  .payslip-status {
+    margin-top: 12px;
+    text-align: center;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+  .payslip-status.paid    { background: #e8f5ee; color: #2a7a56; border: 1px solid #5db882; }
+  .payslip-status.pending { background: #fff3e0; color: #e07800; border: 1px solid #f0a830; }
+  .payslip-status.hold    { background: #fde8e8; color: #c0362a; border: 1px solid #e07070; }
+
+  .payslip-footer {
+    padding: 16px 28px;
+    background: #fafafa;
+    border-top: 1px solid #ececec;
+    font-size: 10px;
+    color: #888;
+    letter-spacing: 0.08em;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .payslip-footer .psf-strong {
+    font-weight: 700;
+    color: #444;
+    letter-spacing: 0.1em;
+    font-size: 10px;
+  }
+
   /* Toast */
   #img-toast {
     position: fixed; bottom: 60px; left: 50%;
@@ -555,6 +777,13 @@
       <div><div class="sf-label">Labour</div><div class="sf-pay" id="sf-labour">$0.00</div></div>
       <div><div class="sf-label">Extras</div><div class="sf-pay" id="sf-extras" style="color:var(--green)">$0.00</div></div>
       <div><div class="sf-label">Grand Total</div><div class="sf-pay" id="sf-pay">$0.00</div></div>
+    </div>
+    <div id="status-counter">
+      <span class="sc-total" id="sc-total-amt">$0.00</span>
+      <div class="sc-divider"></div>
+      <span class="sc-chip sc-paid" id="sc-paid-chip">✓ 0 paid</span>
+      <span class="sc-chip sc-pending" id="sc-pending-chip">● 0 pending</span>
+      <span class="sc-chip sc-hold" id="sc-hold-chip" style="display:none">⚠ 0 hold</span>
     </div>
   </div>
 </div>
@@ -890,8 +1119,9 @@ function renderSummary() {
     const payEntry = getPayEntry(pid);
     const status = payEntry.status;
     const paidDate = payEntry.paidDate;
+    const holdReason = payEntry.holdReason || '';
     h += `<div class="summary-card" id="card_${pid}" style="border-top-color:${p.color}">
-      <button class="share-card-btn" onclick="exportCardAsImage(${pid}, event)" title="Save as image">📷</button>
+      <button class="share-card-btn" onclick="exportCardAsImage(${pid}, event)" title="Save as payslip image">📷</button>
       <div class="summary-name">${esc(p.name)}</div>
       <div class="summary-grid">
         <div><div class="summary-lbl">Hours</div><div class="summary-val-hours" style="color:${p.color}">${fmt(hrs)||'0h'}</div></div>
@@ -906,6 +1136,10 @@ function renderSummary() {
       <div class="summary-meta">${dw} day${dw!==1?'s':''} · $${p.rate}/hr</div>
       <button class="pay-badge ${status}" id="paybadge_${pid}" onclick="cyclePayStatus(${pid})">${getPayLabel(status)}</button>
       <div class="paid-date-line" id="paiddate_${pid}" style="display:${status==='paid' && paidDate ? 'block' : 'none'}">${status==='paid' && paidDate ? 'Paid ' + formatPaidDate(paidDate) : ''}</div>
+      <div class="hold-reason-wrap" id="holdwrap_${pid}" style="display:${status==='hold' ? 'block' : 'none'}">
+        <input type="text" class="hold-reason-input" id="holdreason_${pid}" placeholder="why hold?" value="${esc(holdReason)}" maxlength="80"
+               oninput="setHoldReason(${pid}, this.value)" onblur="savePayStatus()" />
+      </div>
     </div>`;
   });
   document.getElementById('summary-cards').innerHTML = h;
@@ -915,6 +1149,30 @@ function renderSummary() {
   document.getElementById('sf-labour').textContent = '$'+totalLabour.toFixed(2);
   document.getElementById('sf-extras').textContent = '$'+totalEx.toFixed(2);
   document.getElementById('sf-pay').textContent = '$'+allPay().toFixed(2);
+  updateStatusCounter();
+}
+
+function updateStatusCounter() {
+  let paid = 0, pending = 0, hold = 0, totalAmt = 0;
+  S.people.forEach(p => {
+    const e = getPayEntry(p.id);
+    const gt = grandTot(p.id);
+    totalAmt += gt;
+    if (e.status === 'paid') paid++;
+    else if (e.status === 'hold') hold++;
+    else pending++;
+  });
+  const totEl = document.getElementById('sc-total-amt');
+  const paidEl = document.getElementById('sc-paid-chip');
+  const pendingEl = document.getElementById('sc-pending-chip');
+  const holdEl = document.getElementById('sc-hold-chip');
+  if (totEl) totEl.textContent = '$' + totalAmt.toFixed(2) + ' total';
+  if (paidEl) paidEl.textContent = '✓ ' + paid + ' paid';
+  if (pendingEl) pendingEl.textContent = '● ' + pending + ' pending';
+  if (holdEl) {
+    holdEl.textContent = '⚠ ' + hold + ' hold';
+    holdEl.style.display = hold > 0 ? '' : 'none';
+  }
 }
 
 // ── Actions ──
@@ -1636,12 +1894,16 @@ function payStatusKey() {
   return 'wages_paid_' + getISOWeekKey(G.currentOffset);
 }
 
-// Normalize any entry (legacy string or new object) into { status, paidDate }
+// Normalize any entry (legacy string or new object) into { status, paidDate, holdReason }
 function getPayEntry(pid) {
   const raw = payStatus[pid];
-  if (!raw) return { status: 'pending', paidDate: null };
-  if (typeof raw === 'string') return { status: raw, paidDate: null };
-  return { status: raw.status || 'pending', paidDate: raw.paidDate || null };
+  if (!raw) return { status: 'pending', paidDate: null, holdReason: null };
+  if (typeof raw === 'string') return { status: raw, paidDate: null, holdReason: null };
+  return {
+    status: raw.status || 'pending',
+    paidDate: raw.paidDate || null,
+    holdReason: raw.holdReason || null
+  };
 }
 
 async function loadPayStatus() {
@@ -1676,14 +1938,16 @@ function todayISO() {
 function cyclePayStatus(pid) {
   const cur = getPayEntry(pid);
   const next = cur.status === 'pending' ? 'paid' : cur.status === 'paid' ? 'hold' : 'pending';
-  // When transitioning TO paid, stamp today's date
-  // When leaving paid, clear the date
+  // Build new entry
   if (next === 'paid') {
-    payStatus[pid] = { status: 'paid', paidDate: todayISO() };
+    payStatus[pid] = { status: 'paid', paidDate: todayISO(), holdReason: null };
+  } else if (next === 'hold') {
+    // Keep existing hold reason if there is one, otherwise empty
+    payStatus[pid] = { status: 'hold', paidDate: null, holdReason: cur.holdReason || '' };
   } else {
-    payStatus[pid] = { status: next, paidDate: null };
+    payStatus[pid] = { status: 'pending', paidDate: null, holdReason: null };
   }
-  // Update badge in place
+  // Update badge
   const badge = document.getElementById('paybadge_' + pid);
   if (badge) {
     badge.className = 'pay-badge ' + next;
@@ -1700,7 +1964,25 @@ function cyclePayStatus(pid) {
       dateLine.style.display = 'none';
     }
   }
+  // Show/hide hold reason input
+  const holdWrap = document.getElementById('holdwrap_' + pid);
+  if (holdWrap) {
+    holdWrap.style.display = next === 'hold' ? 'block' : 'none';
+    if (next === 'hold') {
+      const inp = document.getElementById('holdreason_' + pid);
+      if (inp) setTimeout(() => inp.focus(), 60);
+    }
+  }
   savePayStatus();
+  updateStatusCounter();
+}
+
+// Save hold reason on input (debounced via blur)
+function setHoldReason(pid, val) {
+  const cur = getPayEntry(pid);
+  if (cur.status !== 'hold') return;
+  payStatus[pid] = { status: 'hold', paidDate: null, holdReason: val };
+  // Note: savePayStatus is called on blur (via inline handler) to avoid Supabase spam
 }
 
 function getPayLabel(status) {
@@ -1709,42 +1991,107 @@ function getPayLabel(status) {
   return '● Pending';
 }
 
-// ── Save card as image (for sending to staff) ──
+// Helper: get the week's Mon-Sun date range as "23 Nov – 29 Nov 2026"
+function getWeekDateRange(offset) {
+  try {
+    const now = new Date();
+    const day = now.getDay() || 7;
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - day + 1 + (offset * 7));
+    mon.setHours(0,0,0,0);
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    const fmt = (d) => d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
+    const yr = sun.getFullYear();
+    return `${fmt(mon)} – ${fmt(sun)} ${yr}`;
+  } catch(e) {
+    return '';
+  }
+}
+
+// ── Save payslip as branded image (for sending to staff) ──
 async function exportCardAsImage(pid, ev) {
   if (ev) { ev.preventDefault(); ev.stopPropagation(); }
   if (typeof html2canvas === 'undefined') {
     showImgToast('⚠ Image library not loaded — refresh and try again');
     return;
   }
-  const card = document.getElementById('card_' + pid);
-  if (!card) return;
   const person = S.people.find(p => p.id === pid);
-  const personName = person ? person.name : 'staff';
+  if (!person) return;
+  const personName = person.name;
+  const weekKey = getISOWeekKey(G.currentOffset);
+  const dateRange = getWeekDateRange(G.currentOffset);
 
-  // Hide the share button during capture
-  card.classList.add('exporting');
+  // Gather all the numbers
+  const hrs = totalHrs(pid);
+  const wages = totalWages(pid);
+  const gt = grandTot(pid);
+  const extras = gt - wages;
+  const dw = DAYS.filter(d=>!S.schedule[pid]?.[d]?.off && entryHrs(S.schedule[pid]?.[d])>0).length;
+  const payEntry = getPayEntry(pid);
+
+  // Fill the payslip template
+  const T = document.getElementById('payslip-template');
+  if (!T) { showImgToast('⚠ Payslip template missing'); return; }
+
+  document.getElementById('ps-week').textContent = weekKey.replace(/^\d{4}-/, '');
+  document.getElementById('ps-person').textContent = personName;
+  document.getElementById('ps-period').textContent = dateRange;
+  document.getElementById('ps-hours').textContent = (fmt(hrs) || '0h');
+  document.getElementById('ps-days').textContent = dw + (dw === 1 ? ' day' : ' days');
+  document.getElementById('ps-rate').textContent = '$' + person.rate.toFixed(2) + '/hr';
+  document.getElementById('ps-wages').textContent = '$' + wages.toFixed(2);
+
+  const exRow = document.getElementById('ps-extras-row');
+  if (extras > 0) {
+    exRow.style.display = 'flex';
+    document.getElementById('ps-extras').textContent = '+$' + extras.toFixed(2);
+  } else {
+    exRow.style.display = 'none';
+  }
+  document.getElementById('ps-total').textContent = '$' + gt.toFixed(2);
+
+  // Status pill
+  const psStatus = document.getElementById('ps-status');
+  psStatus.className = 'payslip-status ' + payEntry.status;
+  if (payEntry.status === 'paid') {
+    psStatus.textContent = '✓ Paid · ' + formatPaidDate(payEntry.paidDate || todayISO());
+  } else if (payEntry.status === 'hold') {
+    psStatus.textContent = '⚠ On Hold' + (payEntry.holdReason ? ' · ' + payEntry.holdReason : '');
+  } else {
+    psStatus.textContent = '● Pending';
+  }
+
+  // Generated timestamp
+  const now = new Date();
+  document.getElementById('ps-gen').textContent = now.toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
+
+  // Make template visible off-screen for rendering
+  T.style.top = '0px';
+  T.style.left = '0px';
+  T.style.transform = 'translate(-9999px, 0)';
 
   try {
-    const canvas = await html2canvas(card, {
+    const canvas = await html2canvas(T, {
       backgroundColor: '#ffffff',
-      scale: 2.5,  // higher res for crispness on phones
+      scale: 2.5,
       logging: false,
-      useCORS: true
+      useCORS: true,
+      width: 440,
+      windowWidth: 440
     });
 
     canvas.toBlob((blob) => {
       if (!blob) { showImgToast('⚠ Could not create image'); return; }
-      const weekKey = getISOWeekKey(G.currentOffset);
       const safeName = personName.replace(/[^a-z0-9]/gi, '_');
-      const filename = `${safeName}_${weekKey}_wages.png`;
+      const filename = `${safeName}_${weekKey}_payslip.png`;
 
-      // Prefer Web Share API on mobile for direct share-to-WhatsApp etc.
       const file = new File([blob], filename, { type: 'image/png' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         navigator.share({
           files: [file],
-          title: `${personName} — ${weekKey} wages`,
-          text: `${personName} wages summary for ${weekKey}`
+          title: `${personName} — ${weekKey} payslip`,
+          text: `${personName} payslip for ${dateRange}`
         }).then(() => showImgToast('✓ Shared'))
           .catch(() => { downloadBlob(blob, filename); });
       } else {
@@ -1755,7 +2102,10 @@ async function exportCardAsImage(pid, ev) {
     console.error('Image export failed:', e);
     showImgToast('⚠ Image export failed');
   } finally {
-    card.classList.remove('exporting');
+    // Move template back off-screen
+    T.style.top = '-9999px';
+    T.style.left = '-9999px';
+    T.style.transform = '';
   }
 }
 
@@ -1974,6 +2324,56 @@ cloudLoadState();
   }
 </style>
 <a href="./" id="home-fab" title="Back to Home">🏠</a>
+
+<!-- Off-screen payslip template for image export -->
+<div id="payslip-template">
+  <div class="payslip-header">
+    <h1>LALH SERVICES</h1>
+    <div class="psh-sub">Payslip · Navjot Services</div>
+    <div class="psh-right">
+      <div>Week</div>
+      <div class="psh-week" id="ps-week">W—</div>
+    </div>
+  </div>
+  <div class="payslip-body">
+    <div class="payslip-name">Payable To</div>
+    <div class="payslip-person" id="ps-person">—</div>
+    <div class="payslip-row">
+      <span class="psr-label">Pay Period</span>
+      <span class="psr-val" id="ps-period">—</span>
+    </div>
+    <div class="payslip-row">
+      <span class="psr-label">Hours Worked</span>
+      <span class="psr-val" id="ps-hours">—</span>
+    </div>
+    <div class="payslip-row">
+      <span class="psr-label">Days Worked</span>
+      <span class="psr-val" id="ps-days">—</span>
+    </div>
+    <div class="payslip-row">
+      <span class="psr-label">Hourly Rate</span>
+      <span class="psr-val" id="ps-rate">—</span>
+    </div>
+    <div class="payslip-row">
+      <span class="psr-label">Wages</span>
+      <span class="psr-val" id="ps-wages">—</span>
+    </div>
+    <div class="payslip-row" id="ps-extras-row" style="display:none">
+      <span class="psr-label">Extras <span style="font-size:10px;color:#aaa">(parking, materials)</span></span>
+      <span class="psr-val" style="color:#2a7a56" id="ps-extras">—</span>
+    </div>
+    <div class="payslip-total">
+      <span class="pst-label">Total Pay</span>
+      <span class="pst-val" id="ps-total">—</span>
+    </div>
+    <div class="payslip-status" id="ps-status">●  Pending</div>
+  </div>
+  <div class="payslip-footer">
+    <div class="psf-strong">Navjot Services · ABN 53 965 989 534</div>
+    <div>Masterson's Commercial Cleaning Services</div>
+    <div style="margin-top:4px;color:#aaa;">Generated <span id="ps-gen">—</span></div>
+  </div>
+</div>
 
 </body>
 </html>
