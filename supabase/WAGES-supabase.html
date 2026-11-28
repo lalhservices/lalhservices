@@ -369,6 +369,14 @@
   .pay-badge.pending  { background: #fff3e0; color: #e07800; border: 1.5px solid #f0a830; }
   .pay-badge.paid     { background: #e8f5ee; color: #2a7a56; border: 1.5px solid #5db882; }
   .pay-badge.hold     { background: #fde8e8; color: #c0362a; border: 1.5px solid #e07070; }
+  .pay-badge.running  { background: #e8f0fb; color: #1e4a8c; border: 1.5px solid #5b86d9; position: relative; padding-right: 26px; }
+  .pay-badge.running::after {
+    content: ''; position: absolute; top: 50%; right: 10px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #5b86d9; transform: translateY(-50%);
+    animation: pulseRun 1.4s infinite ease-in-out;
+  }
+  @keyframes pulseRun { 0%,100% { opacity: 0.25; transform: translateY(-50%) scale(0.7); } 50% { opacity: 1; transform: translateY(-50%) scale(1); } }
   .pay-badge:hover    { filter: brightness(0.95); }
 
   /* Paid date line (shown under badge when paid) */
@@ -475,6 +483,7 @@
   #status-counter .sc-paid { background: #e8f5ee; color: #2a7a56; border: 1px solid #5db882; }
   #status-counter .sc-pending { background: #fff3e0; color: #e07800; border: 1px solid #f0a830; }
   #status-counter .sc-hold { background: #fde8e8; color: #c0362a; border: 1px solid #e07070; }
+  #status-counter .sc-running { background: #e8f0fb; color: #1e4a8c; border: 1px solid #5b86d9; }
   #status-counter .sc-divider {
     width: 1px; height: 18px; background: var(--border2); margin: 0 2px;
   }
@@ -622,6 +631,7 @@
   .payslip-status.paid    { background: #e8f5ee; color: #2a7a56; border: 1px solid #5db882; }
   .payslip-status.pending { background: #fff3e0; color: #e07800; border: 1px solid #f0a830; }
   .payslip-status.hold    { background: #fde8e8; color: #c0362a; border: 1px solid #e07070; }
+  .payslip-status.running { background: #e8f0fb; color: #1e4a8c; border: 1px solid #5b86d9; }
 
   .payslip-footer {
     padding: 16px 28px;
@@ -786,8 +796,9 @@
     <div id="status-counter">
       <span class="sc-total" id="sc-total-amt">$0.00</span>
       <div class="sc-divider"></div>
+      <span class="sc-chip sc-running" id="sc-running-chip" style="display:none">🔵 0 running</span>
+      <span class="sc-chip sc-pending" id="sc-pending-chip" style="display:none">● 0 pending</span>
       <span class="sc-chip sc-paid" id="sc-paid-chip">✓ 0 paid</span>
-      <span class="sc-chip sc-pending" id="sc-pending-chip">● 0 pending</span>
       <span class="sc-chip sc-hold" id="sc-hold-chip" style="display:none">⚠ 0 hold</span>
     </div>
   </div>
@@ -1122,7 +1133,8 @@ function renderSummary() {
     const pid=p.id, hrs=totalHrs(pid), wages=totalWages(pid), park=totalPark(pid), gt=grandTot(pid);
     const dw = DAYS.filter(d=>!S.schedule[pid]?.[d]?.off && entryHrs(S.schedule[pid]?.[d])>0).length;
     const payEntry = getPayEntry(pid);
-    const status = payEntry.status;
+    const rawStatus = payEntry.status;                    // stored: pending|paid|hold
+    const displayStatus = getDisplayStatus(rawStatus);    // shown: running|pending|paid|hold
     const paidDate = payEntry.paidDate;
     const holdReason = payEntry.holdReason || '';
     h += `<div class="summary-card" id="card_${pid}" style="border-top-color:${p.color}">
@@ -1139,9 +1151,9 @@ function renderSummary() {
       </div>
       <div class="summary-bars">${DAYS.map(d=>{const e=S.schedule[pid]?.[d]||{};const hh=entryHrs(e);return `<div class="summary-bar" style="background:${e.off?'var(--border2)':hh>0?p.color:'var(--border2)'}" title="${d}: ${e.off?'Off':hh>0?(fmt(hh)||'–'):'–'}"></div>`;}).join('')}</div>
       <div class="summary-meta">${dw} day${dw!==1?'s':''} · $${p.rate}/hr</div>
-      <button class="pay-badge ${status}" id="paybadge_${pid}" onclick="cyclePayStatus(${pid})">${getPayLabel(status)}</button>
-      <div class="paid-date-line" id="paiddate_${pid}" style="display:${status==='paid' && paidDate ? 'block' : 'none'}">${status==='paid' && paidDate ? 'Paid ' + formatPaidDate(paidDate) : ''}</div>
-      <div class="hold-reason-wrap" id="holdwrap_${pid}" style="display:${status==='hold' ? 'block' : 'none'}">
+      <button class="pay-badge ${displayStatus}" id="paybadge_${pid}" onclick="cyclePayStatus(${pid})">${getPayLabel(displayStatus)}</button>
+      <div class="paid-date-line" id="paiddate_${pid}" style="display:${rawStatus==='paid' && paidDate ? 'block' : 'none'}">${rawStatus==='paid' && paidDate ? 'Paid ' + formatPaidDate(paidDate) : ''}</div>
+      <div class="hold-reason-wrap" id="holdwrap_${pid}" style="display:${rawStatus==='hold' ? 'block' : 'none'}">
         <input type="text" class="hold-reason-input" id="holdreason_${pid}" placeholder="why hold?" value="${esc(holdReason)}" maxlength="80"
                oninput="setHoldReason(${pid}, this.value)" onblur="savePayStatus()" />
       </div>
@@ -1158,22 +1170,32 @@ function renderSummary() {
 }
 
 function updateStatusCounter() {
-  let paid = 0, pending = 0, hold = 0, totalAmt = 0;
+  let paid = 0, pending = 0, running = 0, hold = 0, totalAmt = 0;
+  const current = isCurrentWeek();
   S.people.forEach(p => {
     const e = getPayEntry(p.id);
     const gt = grandTot(p.id);
     totalAmt += gt;
     if (e.status === 'paid') paid++;
     else if (e.status === 'hold') hold++;
+    else if (current) running++;
     else pending++;
   });
   const totEl = document.getElementById('sc-total-amt');
   const paidEl = document.getElementById('sc-paid-chip');
   const pendingEl = document.getElementById('sc-pending-chip');
+  const runningEl = document.getElementById('sc-running-chip');
   const holdEl = document.getElementById('sc-hold-chip');
   if (totEl) totEl.textContent = '$' + totalAmt.toFixed(2) + ' total';
   if (paidEl) paidEl.textContent = '✓ ' + paid + ' paid';
-  if (pendingEl) pendingEl.textContent = '● ' + pending + ' pending';
+  if (runningEl) {
+    runningEl.textContent = '🔵 ' + running + ' running';
+    runningEl.style.display = running > 0 ? '' : 'none';
+  }
+  if (pendingEl) {
+    pendingEl.textContent = '● ' + pending + ' pending';
+    pendingEl.style.display = pending > 0 ? '' : 'none';
+  }
   if (holdEl) {
     holdEl.textContent = '⚠ ' + hold + ' hold';
     holdEl.style.display = hold > 0 ? '' : 'none';
@@ -1952,11 +1974,12 @@ function cyclePayStatus(pid) {
   } else {
     payStatus[pid] = { status: 'pending', paidDate: null, holdReason: null };
   }
-  // Update badge
+  // Update badge (show "Running" instead of "Pending" on current week)
   const badge = document.getElementById('paybadge_' + pid);
   if (badge) {
-    badge.className = 'pay-badge ' + next;
-    badge.textContent = getPayLabel(next);
+    const displayNext = getDisplayStatus(next);
+    badge.className = 'pay-badge ' + displayNext;
+    badge.textContent = getPayLabel(displayNext);
   }
   // Update paid date line
   const dateLine = document.getElementById('paiddate_' + pid);
@@ -1993,7 +2016,22 @@ function setHoldReason(pid, val) {
 function getPayLabel(status) {
   if (status === 'paid') return '✓ Paid';
   if (status === 'hold') return '⚠ Hold';
+  if (status === 'running') return '🔵 Running';
   return '● Pending';
+}
+
+// Is the currently-viewed week THE current real-world week?
+function isCurrentWeek() {
+  return G.currentOffset === 0;
+}
+
+// Map stored status → display status.
+// "pending" on the current week displays as "running" (live, auto).
+// Paid/Hold always display as themselves, past-week pending stays "pending".
+function getDisplayStatus(rawStatus) {
+  if (rawStatus === 'paid' || rawStatus === 'hold') return rawStatus;
+  if (isCurrentWeek()) return 'running';
+  return 'pending';
 }
 
 // Helper: get the week's Mon-Sun date range as "23 Nov – 29 Nov 2026"
@@ -2062,13 +2100,16 @@ async function exportCardAsImage(pid, ev) {
   }
   document.getElementById('ps-total').textContent = '$' + gt.toFixed(2);
 
-  // Status pill
+  // Status pill — mirrors the WAGES badge behaviour
   const psStatus = document.getElementById('ps-status');
-  psStatus.className = 'payslip-status ' + payEntry.status;
+  const psDisplayStatus = getDisplayStatus(payEntry.status);
+  psStatus.className = 'payslip-status ' + psDisplayStatus;
   if (payEntry.status === 'paid') {
     psStatus.textContent = '✓ Paid · ' + formatPaidDate(payEntry.paidDate || todayISO());
   } else if (payEntry.status === 'hold') {
     psStatus.textContent = '⚠ On Hold' + (payEntry.holdReason ? ' · ' + payEntry.holdReason : '');
+  } else if (psDisplayStatus === 'running') {
+    psStatus.textContent = '🔵 Running · Week in progress';
   } else {
     psStatus.textContent = '● Pending';
   }
