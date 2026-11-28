@@ -482,8 +482,8 @@
   /* ─── Branded Payslip Template (off-screen until exported) ─── */
   #payslip-template {
     position: fixed;
-    top: -9999px;
-    left: -9999px;
+    top: 0;
+    left: 0;
     width: 440px;
     background: #ffffff;
     font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
@@ -492,7 +492,15 @@
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
-    z-index: -1;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-100vw);
+    z-index: 0;
+  }
+  #payslip-template.capturing {
+    opacity: 0;
+    transform: translateX(0);
+    z-index: 100;
   }
   .payslip-header {
     background: linear-gradient(135deg, #0d1a30 0%, #1e3a63 100%);
@@ -2012,12 +2020,18 @@ function getWeekDateRange(offset) {
 // ── Save payslip as branded image (for sending to staff) ──
 async function exportCardAsImage(pid, ev) {
   if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  console.log('[payslip] export triggered for pid=', pid);
   if (typeof html2canvas === 'undefined') {
-    showImgToast('⚠ Image library not loaded — refresh and try again');
+    console.error('[payslip] html2canvas is not loaded');
+    showImgToast('⚠ Image library not loaded — refresh the page');
     return;
   }
   const person = S.people.find(p => p.id === pid);
-  if (!person) return;
+  if (!person) {
+    console.error('[payslip] person not found for pid=', pid);
+    showImgToast('⚠ Person not found');
+    return;
+  }
   const personName = person.name;
   const weekKey = getISOWeekKey(G.currentOffset);
   const dateRange = getWeekDateRange(G.currentOffset);
@@ -2066,10 +2080,12 @@ async function exportCardAsImage(pid, ev) {
   const now = new Date();
   document.getElementById('ps-gen').textContent = now.toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
 
-  // Make template visible off-screen for rendering
-  T.style.top = '0px';
-  T.style.left = '0px';
-  T.style.transform = 'translate(-9999px, 0)';
+  // Enable capturing mode (template is fully rendered but invisible via opacity)
+  T.classList.add('capturing');
+  showImgToast('⌛ Generating payslip…');
+
+  // Give the browser one tick to apply layout + fonts
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 80)));
 
   try {
     const canvas = await html2canvas(T, {
@@ -2077,8 +2093,8 @@ async function exportCardAsImage(pid, ev) {
       scale: 2.5,
       logging: false,
       useCORS: true,
-      width: 440,
-      windowWidth: 440
+      allowTaint: true,
+      width: 440
     });
 
     canvas.toBlob((blob) => {
@@ -2092,20 +2108,17 @@ async function exportCardAsImage(pid, ev) {
           files: [file],
           title: `${personName} — ${weekKey} payslip`,
           text: `${personName} payslip for ${dateRange}`
-        }).then(() => showImgToast('✓ Shared'))
+        }).then(() => showImgToast('✓ Payslip shared'))
           .catch(() => { downloadBlob(blob, filename); });
       } else {
         downloadBlob(blob, filename);
       }
     }, 'image/png');
   } catch(e) {
-    console.error('Image export failed:', e);
-    showImgToast('⚠ Image export failed');
+    console.error('Payslip export failed:', e);
+    showImgToast('⚠ Payslip export failed · ' + (e.message || 'see console'));
   } finally {
-    // Move template back off-screen
-    T.style.top = '-9999px';
-    T.style.left = '-9999px';
-    T.style.transform = '';
+    T.classList.remove('capturing');
   }
 }
 
@@ -2370,7 +2383,6 @@ cloudLoadState();
   </div>
   <div class="payslip-footer">
     <div class="psf-strong">Navjot Services · ABN 53 965 989 534</div>
-    <div>Masterson's Commercial Cleaning Services</div>
     <div style="margin-top:4px;color:#aaa;">Generated <span id="ps-gen">—</span></div>
   </div>
 </div>
