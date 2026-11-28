@@ -2053,7 +2053,7 @@ async function exportCardAsImage(pid, ev) {
   document.getElementById('ps-period').textContent = dateRange;
   document.getElementById('ps-hours').textContent = (fmt(hrs) || '0h');
   document.getElementById('ps-days').textContent = dw + (dw === 1 ? ' day' : ' days');
-  document.getElementById('ps-rate').textContent = '$' + person.rate.toFixed(2) + '/hr';
+  document.getElementById('ps-rate').textContent = '$' + (parseFloat(person.rate) || 0).toFixed(2) + '/hr';
   document.getElementById('ps-wages').textContent = '$' + wages.toFixed(2);
 
   const exRow = document.getElementById('ps-extras-row');
