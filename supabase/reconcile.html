@@ -182,6 +182,118 @@
   }
   .save-badge.show { opacity: 1; }
 
+  /* Per-staff wages breakdown */
+  .auto-sum-hint {
+    font-size: 9px; color: var(--gold-500);
+    letter-spacing: 0.05em;
+    text-transform: none;
+    font-weight: 500;
+    font-style: italic;
+    margin-left: 6px;
+  }
+  #f-wage-amt[readonly] {
+    background: rgba(200,168,75,0.08);
+    border-color: rgba(200,168,75,0.2);
+    color: var(--gold-200);
+    cursor: default;
+  }
+  .breakdown-wrap {
+    margin-top: 14px;
+    padding: 12px 14px 14px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+  }
+  .breakdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+  }
+  .breakdown-title {
+    font-size: 10px; color: var(--text-muted);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    font-weight: 700;
+  }
+  .breakdown-total {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px; font-weight: 800;
+    color: var(--gold-300);
+    letter-spacing: 0.02em;
+  }
+  .breakdown-row {
+    display: grid;
+    grid-template-columns: 1fr 140px auto;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-name {
+    font-size: 13px;
+    color: #fff;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .breakdown-color-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .breakdown-row input {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 7px;
+    padding: 7px 10px;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    width: 100%;
+    text-align: right;
+  }
+  .breakdown-row input:focus {
+    outline: none;
+    border-color: var(--gold-500);
+    background: rgba(0,0,0,0.5);
+  }
+  .breakdown-sys-btn {
+    background: rgba(200,168,75,0.1);
+    border: 1px solid rgba(200,168,75,0.25);
+    color: var(--gold-300);
+    padding: 7px 10px;
+    border-radius: 7px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .breakdown-sys-btn:hover {
+    background: rgba(200,168,75,0.2);
+    color: var(--gold-200);
+  }
+  .breakdown-sys-val {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }
+  @media (max-width: 580px) {
+    .breakdown-row {
+      grid-template-columns: 1fr 110px auto;
+      gap: 8px;
+    }
+    .breakdown-name { font-size: 12px; }
+    .breakdown-row input { font-size: 12px; padding: 6px 8px; }
+    .breakdown-sys-btn { padding: 6px 8px; font-size: 9px; }
+  }
+
   .url-row { display: flex; gap: 6px; }
   .url-row input { flex: 1; }
   .url-btn {
@@ -413,9 +525,9 @@
   <div class="section">
     <div class="section-label">Wages Paid Out</div>
     <div class="fields">
-      <div class="field"><label>Total Wages Paid</label>
+      <div class="field"><label>Total Wages Paid <span class="auto-sum-hint">(auto-sum of breakdown below)</span></label>
         <div class="input-with-copy">
-          <input type="number" step="0.01" id="f-wage-amt" placeholder="0.00" oninput="save()">
+          <input type="number" step="0.01" id="f-wage-amt" placeholder="0.00" readonly>
           <button type="button" class="copy-btn" onclick="copyFromSystem('wages')">↙ SYSTEM</button>
         </div>
       </div>
@@ -424,6 +536,16 @@
           <input type="date" id="f-wage-date" oninput="save()">
           <button type="button" class="copy-btn" onclick="setToday('f-wage-date')">TODAY</button>
         </div>
+      </div>
+    </div>
+    <!-- Per-person wages breakdown -->
+    <div class="breakdown-wrap" id="breakdown-wrap">
+      <div class="breakdown-header">
+        <div class="breakdown-title">Per-Staff Breakdown</div>
+        <div class="breakdown-total" id="breakdown-total">$0.00</div>
+      </div>
+      <div class="breakdown-rows" id="breakdown-rows">
+        <div style="padding:20px;text-align:center;color:rgba(255,255,255,0.35);font-size:12px;">Loading staff…</div>
       </div>
     </div>
   </div>
@@ -460,6 +582,8 @@ let offset = -1; // default to last week (Monday morning habit = reconcile what 
 let currentWk = null;
 let currentData = {};
 let saveTimer = null;
+let systemCache = { invoiceInclGst: 0, wages: 0, wagesPerPerson: {} };
+let peopleCache = []; // [{id, name, color, rate, systemWage}]
 
 function calcH(from, to) {
   if (!from || !to) return 0;
@@ -518,9 +642,10 @@ async function load() {
   currentData = map[`reconcile_${wk}`] ? JSON.parse(map[`reconcile_${wk}`]) : {};
   populateFields(currentData);
 
-  // Compute system totals
+  // Compute system totals (also fills systemCache + peopleCache)
   const system = computeSystem(wk, map);
   renderCompare(system);
+  renderBreakdown();
 }
 
 function computeSystem(wk, map) {
@@ -559,21 +684,31 @@ function computeSystem(wk, map) {
   const roster = JSON.parse(map[`roster_wk_${wk}`] || '{}');
 
   let wages = 0;
+  const wagesPerPerson = {};
+  const peopleOut = [];
   people.forEach(p => {
+    let personWage = 0;
     DAYS.forEach(day => {
       const e = (roster[p.id] || {})[day];
       if (!e || e.off) return;
       if (e.timeFrom && e.timeTo) {
         const h = calcH(e.timeFrom, e.timeTo);
-        wages += h * parseFloat(p.rate || 30);
+        personWage += h * parseFloat(p.rate || 30);
       }
-      wages += parseFloat(e.parking || 0) || 0;
-      wages += parseFloat(e.materials || 0) || 0;
-      wages += parseFloat(e.fuel || 0) || 0;
+      personWage += parseFloat(e.parking || 0) || 0;
+      personWage += parseFloat(e.materials || 0) || 0;
+      personWage += parseFloat(e.fuel || 0) || 0;
     });
+    wages += personWage;
+    wagesPerPerson[p.id] = personWage;
+    peopleOut.push({ id: p.id, name: p.name, color: p.color || '#c8a84b', rate: parseFloat(p.rate || 30), systemWage: personWage });
   });
 
-  return { invoiceInclGst, wages };
+  // Keep caches for breakdown rendering + sys fill buttons
+  peopleCache = peopleOut;
+  systemCache = { invoiceInclGst, wages, wagesPerPerson };
+
+  return { invoiceInclGst, wages, wagesPerPerson };
 }
 
 function renderCompare(system) {
@@ -656,14 +791,93 @@ function populateFields(d) {
   document.getElementById('f-notes').value = d.notes || '';
 }
 
+// ── Per-staff wages breakdown ──
+function renderBreakdown() {
+  const container = document.getElementById('breakdown-rows');
+  if (!container) return;
+  if (!peopleCache.length) {
+    container.innerHTML = '<div style="padding:16px;text-align:center;color:rgba(255,255,255,0.35);font-size:12px;">No staff on roster for this week.</div>';
+    updateBreakdownTotal();
+    return;
+  }
+  const breakdown = currentData.wagesBreakdown || {};
+  container.innerHTML = peopleCache.map(p => {
+    const savedVal = breakdown[p.id] !== undefined ? breakdown[p.id] : '';
+    const sysVal = (p.systemWage || 0).toFixed(2);
+    return `<div class="breakdown-row">
+      <div class="breakdown-name">
+        <span class="breakdown-color-dot" style="background:${p.color}"></span>
+        ${esc(p.name)}
+        <span class="breakdown-sys-val">· sys $${sysVal}</span>
+      </div>
+      <input type="number" step="0.01" data-pid="${p.id}" placeholder="0.00" value="${esc(savedVal)}"
+             oninput="onBreakdownInput()" />
+      <button type="button" class="breakdown-sys-btn" onclick="fillBreakdownSys(${p.id})">↙ SYS</button>
+    </div>`;
+  }).join('');
+  updateBreakdownTotal();
+}
+
+function esc(s) {
+  return String(s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function readBreakdownFromDOM() {
+  const out = {};
+  document.querySelectorAll('.breakdown-row input[data-pid]').forEach(inp => {
+    const pid = inp.dataset.pid;
+    const v = inp.value.trim();
+    if (v !== '') out[pid] = v;
+  });
+  return out;
+}
+
+function updateBreakdownTotal() {
+  let sum = 0;
+  let hasAny = false;
+  document.querySelectorAll('.breakdown-row input[data-pid]').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v) && inp.value.trim() !== '') { sum += v; hasAny = true; }
+  });
+  const totalEl = document.getElementById('breakdown-total');
+  if (totalEl) totalEl.textContent = '$' + sum.toFixed(2);
+  // Only overwrite the main Total Wages Paid field when breakdown has entries
+  // (otherwise preserve the legacy wagesAmount value for past weeks)
+  if (hasAny) {
+    const amtEl = document.getElementById('f-wage-amt');
+    if (amtEl) amtEl.value = sum.toFixed(2);
+  }
+}
+
+function onBreakdownInput() {
+  updateBreakdownTotal();
+  save();
+}
+
+function fillBreakdownSys(pid) {
+  const sysVal = (systemCache.wagesPerPerson && systemCache.wagesPerPerson[pid]) || 0;
+  const inp = document.querySelector(`.breakdown-row input[data-pid="${pid}"]`);
+  if (inp) {
+    inp.value = sysVal.toFixed(2);
+    onBreakdownInput();
+    flashToast('✓ Filled from system');
+  }
+}
+
 function save() {
+  const breakdown = readBreakdownFromDOM();
+  // Total wages = sum of breakdown (if any entered) OR whatever was in the field
+  let totalWages = 0;
+  Object.values(breakdown).forEach(v => { const n = parseFloat(v); if (!isNaN(n)) totalWages += n; });
+
   currentData = {
     invoiceNo: document.getElementById('f-inv-no').value,
     invoiceAmount: document.getElementById('f-inv-amt').value,
     invoiceDate: document.getElementById('f-inv-date').value,
     invoicePaidDate: document.getElementById('f-inv-paid-date').value,
     invoiceUrl: document.getElementById('f-inv-url').value,
-    wagesAmount: document.getElementById('f-wage-amt').value,
+    wagesAmount: totalWages > 0 ? totalWages.toFixed(2) : (document.getElementById('f-wage-amt').value || ''),
+    wagesBreakdown: breakdown,
     wagesDate: document.getElementById('f-wage-date').value,
     notes: document.getElementById('f-notes').value,
     lastUpdated: new Date().toISOString()
@@ -707,11 +921,20 @@ function parseInvDate(s) {
 function copyFromSystem(type) {
   if (type === 'invoice') {
     document.getElementById('f-inv-amt').value = systemCache.invoiceInclGst.toFixed(2);
+    save();
+    flashToast('✓ Copied from system');
   } else if (type === 'wages') {
-    document.getElementById('f-wage-amt').value = systemCache.wages.toFixed(2);
+    // Fill EVERY per-person input with its system value
+    const perPerson = systemCache.wagesPerPerson || {};
+    document.querySelectorAll('.breakdown-row input[data-pid]').forEach(inp => {
+      const pid = parseInt(inp.dataset.pid);
+      const sysVal = perPerson[pid] || 0;
+      inp.value = sysVal > 0 ? sysVal.toFixed(2) : '';
+    });
+    updateBreakdownTotal();
+    save();
+    flashToast('✓ Filled all from system');
   }
-  save();
-  flashToast('✓ Copied from system');
 }
 
 function setToday(fieldId) {
