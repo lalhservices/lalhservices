@@ -584,6 +584,7 @@ let currentData = {};
 let saveTimer = null;
 let systemCache = { invoiceInclGst: 0, wages: 0, wagesPerPerson: {} };
 let peopleCache = []; // [{id, name, color, rate, systemWage}]
+let _breakdownTouched = false; // once the user has typed in a breakdown input (or had saved values), total is always driven by sum
 
 function calcH(from, to) {
   if (!from || !to) return 0;
@@ -795,6 +796,8 @@ function populateFields(d) {
 function renderBreakdown() {
   const container = document.getElementById('breakdown-rows');
   if (!container) return;
+  // If saved data already has breakdown entries, we're in breakdown mode from the start
+  _breakdownTouched = !!(currentData.wagesBreakdown && Object.keys(currentData.wagesBreakdown).length > 0);
   if (!peopleCache.length) {
     container.innerHTML = '<div style="padding:16px;text-align:center;color:rgba(255,255,255,0.35);font-size:12px;">No staff on roster for this week.</div>';
     updateBreakdownTotal();
@@ -841,15 +844,16 @@ function updateBreakdownTotal() {
   });
   const totalEl = document.getElementById('breakdown-total');
   if (totalEl) totalEl.textContent = '$' + sum.toFixed(2);
-  // Only overwrite the main Total Wages Paid field when breakdown has entries
-  // (otherwise preserve the legacy wagesAmount value for past weeks)
-  if (hasAny) {
+  // Once user has touched breakdown (or saved data had one), always drive the main
+  // total from the sum — even when the sum goes back to 0 after clearing a value.
+  if (hasAny || _breakdownTouched) {
     const amtEl = document.getElementById('f-wage-amt');
-    if (amtEl) amtEl.value = sum.toFixed(2);
+    if (amtEl) amtEl.value = sum > 0 ? sum.toFixed(2) : '';
   }
 }
 
 function onBreakdownInput() {
+  _breakdownTouched = true;
   updateBreakdownTotal();
   save();
 }
@@ -876,7 +880,11 @@ function save() {
     invoiceDate: document.getElementById('f-inv-date').value,
     invoicePaidDate: document.getElementById('f-inv-paid-date').value,
     invoiceUrl: document.getElementById('f-inv-url').value,
-    wagesAmount: totalWages > 0 ? totalWages.toFixed(2) : (document.getElementById('f-wage-amt').value || ''),
+    // When in breakdown mode, wagesAmount ALWAYS mirrors the breakdown sum (even if 0)
+    // When not in breakdown mode, fall back to whatever's showing (legacy weeks)
+    wagesAmount: _breakdownTouched
+      ? (totalWages > 0 ? totalWages.toFixed(2) : '')
+      : (document.getElementById('f-wage-amt').value || ''),
     wagesBreakdown: breakdown,
     wagesDate: document.getElementById('f-wage-date').value,
     notes: document.getElementById('f-notes').value,
