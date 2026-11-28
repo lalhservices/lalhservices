@@ -483,7 +483,7 @@
   #payslip-template {
     position: fixed;
     top: 0;
-    left: 0;
+    left: -9999px;
     width: 440px;
     background: #ffffff;
     font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
@@ -492,15 +492,12 @@
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
-    opacity: 0;
     pointer-events: none;
-    transform: translateX(-100vw);
     z-index: 0;
+    /* opacity stays 1 so html2canvas renders the content */
   }
   #payslip-template.capturing {
-    opacity: 0;
-    transform: translateX(0);
-    z-index: 100;
+    /* no visual change needed — opacity already 1, html2canvas reads it fine from off-screen */
   }
   .payslip-header {
     background: linear-gradient(135deg, #0d1a30 0%, #1e3a63 100%);
