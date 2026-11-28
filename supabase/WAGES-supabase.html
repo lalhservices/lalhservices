@@ -371,6 +371,66 @@
   .pay-badge.hold     { background: #fde8e8; color: #c0362a; border: 1.5px solid #e07070; }
   .pay-badge:hover    { filter: brightness(0.95); }
 
+  /* Paid date line (shown under badge when paid) */
+  .paid-date-line {
+    font-size: 10px;
+    color: #2a7a56;
+    text-align: center;
+    margin-top: 6px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  }
+
+  /* Share button on each card */
+  .share-card-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.08);
+    color: #666;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    z-index: 2;
+  }
+  .share-card-btn:hover {
+    background: rgba(0,0,0,0.08);
+    color: #222;
+    transform: scale(1.1);
+  }
+  .summary-card { position: relative; }
+
+  /* Hide share button when rendering to image */
+  .exporting .share-card-btn { display: none !important; }
+  .exporting .pay-badge { opacity: 0.85; }
+
+  /* Toast */
+  #img-toast {
+    position: fixed; bottom: 60px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #2a7a56; color: #fff;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    z-index: 10001;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    letter-spacing: 0.05em;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  #img-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
   .sf-hours { font-family: var(--font-head); font-size: 28px; color: var(--accent); font-weight: 800; }
   .sf-pay   { font-family: var(--font-head); font-size: 28px; color: var(--text);   font-weight: 800; }
 
@@ -411,6 +471,7 @@
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
 // Context-aware Home button — route staff back to staff.html, admin to admin index
@@ -826,8 +887,11 @@ function renderSummary() {
   S.people.forEach(p => {
     const pid=p.id, hrs=totalHrs(pid), wages=totalWages(pid), park=totalPark(pid), gt=grandTot(pid);
     const dw = DAYS.filter(d=>!S.schedule[pid]?.[d]?.off && entryHrs(S.schedule[pid]?.[d])>0).length;
-    const status = payStatus[pid] || 'pending';
-    h += `<div class="summary-card" style="border-top-color:${p.color}">
+    const payEntry = getPayEntry(pid);
+    const status = payEntry.status;
+    const paidDate = payEntry.paidDate;
+    h += `<div class="summary-card" id="card_${pid}" style="border-top-color:${p.color}">
+      <button class="share-card-btn" onclick="exportCardAsImage(${pid}, event)" title="Save as image">📷</button>
       <div class="summary-name">${esc(p.name)}</div>
       <div class="summary-grid">
         <div><div class="summary-lbl">Hours</div><div class="summary-val-hours" style="color:${p.color}">${fmt(hrs)||'0h'}</div></div>
@@ -841,6 +905,7 @@ function renderSummary() {
       <div class="summary-bars">${DAYS.map(d=>{const e=S.schedule[pid]?.[d]||{};const hh=entryHrs(e);return `<div class="summary-bar" style="background:${e.off?'var(--border2)':hh>0?p.color:'var(--border2)'}" title="${d}: ${e.off?'Off':hh>0?(fmt(hh)||'–'):'–'}"></div>`;}).join('')}</div>
       <div class="summary-meta">${dw} day${dw!==1?'s':''} · $${p.rate}/hr</div>
       <button class="pay-badge ${status}" id="paybadge_${pid}" onclick="cyclePayStatus(${pid})">${getPayLabel(status)}</button>
+      <div class="paid-date-line" id="paiddate_${pid}" style="display:${status==='paid' && paidDate ? 'block' : 'none'}">${status==='paid' && paidDate ? 'Paid ' + formatPaidDate(paidDate) : ''}</div>
     </div>`;
   });
   document.getElementById('summary-cards').innerHTML = h;
@@ -1563,10 +1628,20 @@ let _lastTyped = 0;
 document.addEventListener('input', () => { _lastTyped = Date.now(); });
 
 // ── Payment Status ──
-let payStatus = {}; // { personId: 'pending'|'paid'|'hold' }
+// Supports both legacy string format ('pending'|'paid'|'hold')
+// and new object format { status, paidDate }
+let payStatus = {};
 
 function payStatusKey() {
   return 'wages_paid_' + getISOWeekKey(G.currentOffset);
+}
+
+// Normalize any entry (legacy string or new object) into { status, paidDate }
+function getPayEntry(pid) {
+  const raw = payStatus[pid];
+  if (!raw) return { status: 'pending', paidDate: null };
+  if (typeof raw === 'string') return { status: raw, paidDate: null };
+  return { status: raw.status || 'pending', paidDate: raw.paidDate || null };
 }
 
 async function loadPayStatus() {
@@ -1582,15 +1657,48 @@ async function savePayStatus() {
   } catch(e) {}
 }
 
+// Format YYYY-MM-DD → "28 Nov 2026"
+function formatPaidDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function todayISO() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function cyclePayStatus(pid) {
-  const cur = payStatus[pid] || 'pending';
-  const next = cur === 'pending' ? 'paid' : cur === 'paid' ? 'hold' : 'pending';
-  payStatus[pid] = next;
+  const cur = getPayEntry(pid);
+  const next = cur.status === 'pending' ? 'paid' : cur.status === 'paid' ? 'hold' : 'pending';
+  // When transitioning TO paid, stamp today's date
+  // When leaving paid, clear the date
+  if (next === 'paid') {
+    payStatus[pid] = { status: 'paid', paidDate: todayISO() };
+  } else {
+    payStatus[pid] = { status: next, paidDate: null };
+  }
   // Update badge in place
   const badge = document.getElementById('paybadge_' + pid);
   if (badge) {
     badge.className = 'pay-badge ' + next;
-    badge.textContent = next === 'paid' ? '✓ Paid' : next === 'hold' ? '⚠ Hold' : '● Pending';
+    badge.textContent = getPayLabel(next);
+  }
+  // Update paid date line
+  const dateLine = document.getElementById('paiddate_' + pid);
+  if (dateLine) {
+    if (next === 'paid') {
+      dateLine.textContent = 'Paid ' + formatPaidDate(todayISO());
+      dateLine.style.display = 'block';
+    } else {
+      dateLine.textContent = '';
+      dateLine.style.display = 'none';
+    }
   }
   savePayStatus();
 }
@@ -1599,6 +1707,81 @@ function getPayLabel(status) {
   if (status === 'paid') return '✓ Paid';
   if (status === 'hold') return '⚠ Hold';
   return '● Pending';
+}
+
+// ── Save card as image (for sending to staff) ──
+async function exportCardAsImage(pid, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  if (typeof html2canvas === 'undefined') {
+    showImgToast('⚠ Image library not loaded — refresh and try again');
+    return;
+  }
+  const card = document.getElementById('card_' + pid);
+  if (!card) return;
+  const person = S.people.find(p => p.id === pid);
+  const personName = person ? person.name : 'staff';
+
+  // Hide the share button during capture
+  card.classList.add('exporting');
+
+  try {
+    const canvas = await html2canvas(card, {
+      backgroundColor: '#ffffff',
+      scale: 2.5,  // higher res for crispness on phones
+      logging: false,
+      useCORS: true
+    });
+
+    canvas.toBlob((blob) => {
+      if (!blob) { showImgToast('⚠ Could not create image'); return; }
+      const weekKey = getISOWeekKey(G.currentOffset);
+      const safeName = personName.replace(/[^a-z0-9]/gi, '_');
+      const filename = `${safeName}_${weekKey}_wages.png`;
+
+      // Prefer Web Share API on mobile for direct share-to-WhatsApp etc.
+      const file = new File([blob], filename, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({
+          files: [file],
+          title: `${personName} — ${weekKey} wages`,
+          text: `${personName} wages summary for ${weekKey}`
+        }).then(() => showImgToast('✓ Shared'))
+          .catch(() => { downloadBlob(blob, filename); });
+      } else {
+        downloadBlob(blob, filename);
+      }
+    }, 'image/png');
+  } catch(e) {
+    console.error('Image export failed:', e);
+    showImgToast('⚠ Image export failed');
+  } finally {
+    card.classList.remove('exporting');
+  }
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showImgToast('✓ Image saved');
+}
+
+function showImgToast(msg) {
+  let t = document.getElementById('img-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'img-toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._imgToastTimer);
+  window._imgToastTimer = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
 async function pollForChanges() {
